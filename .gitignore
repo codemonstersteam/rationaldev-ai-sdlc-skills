@@ -1,0 +1,24 @@
+# Env
+.env
+.env.local
+
+# Build artifacts
+/bin/
+/dist/
+*.exe
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite
+*.db
+*.sqlite

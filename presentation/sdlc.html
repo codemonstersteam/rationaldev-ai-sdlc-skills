@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rationaldev — AI-first рациональный SDLC · izi</title>
+<style>
+  :root{
+    --bg:#06070b; --bg2:#0b0d14; --ink:#e8ecf4; --mut:#7c869b; --line:#1c2233;
+    --cy:#00e5ff; --mg:#ff2d8e; --lm:#c6ff3a; --am:#ffb020; --au:#ffd166;
+    --glow:0 0 24px rgba(0,229,255,.35);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace}
+  .slide{position:fixed;inset:0;display:none;flex-direction:column;
+    padding:6.2vh 7vw;opacity:0;transition:opacity .35s ease}
+  .slide.on{display:flex;opacity:1}
+  .slide::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(900px 500px at 88% -8%,rgba(0,229,255,.10),transparent 60%),
+      radial-gradient(700px 500px at -6% 108%,rgba(255,45,142,.10),transparent 60%);}
+  .wrap{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
+  .topbar{display:flex;justify-content:space-between;align-items:center;
+    font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+  .topbar .tag{color:var(--cy)}
+  .kicker{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem;
+    font-size:.74rem;letter-spacing:.28em;text-transform:uppercase;color:var(--cy)}
+  .kicker::before{content:"";width:26px;height:2px;background:var(--cy);box-shadow:var(--glow)}
+  h1{font-size:clamp(2rem,5vw,4.2rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.1vw,2.5rem);line-height:1.08;font-weight:700;letter-spacing:-.01em;margin-bottom:2.4vh}
+  .lead{color:var(--mut);font-size:clamp(.95rem,1.4vw,1.2rem);line-height:1.5;max-width:62ch}
+  .footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;
+    font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+  .dots{display:flex;gap:7px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);transition:.3s}
+  .dots i.act{background:var(--cy);box-shadow:var(--glow);transform:scale(1.15)}
+  .neon{color:var(--cy)} .pink{color:var(--mg)} .lime{color:var(--lm)} .amb{color:var(--am)} .gold{color:var(--au)}
+  .grid{display:grid;gap:1.1rem}
+  .card{background:linear-gradient(180deg,var(--bg2),#080a11);border:1px solid var(--line);
+    border-radius:14px;padding:1.2rem 1.3rem;position:relative}
+  .card h3{font-size:.95rem;font-weight:650;margin-bottom:.45rem;display:flex;align-items:center;gap:.5rem}
+  .card p{color:var(--mut);font-size:.84rem;line-height:1.45}
+  .badge{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+    padding:.22rem .5rem;border-radius:999px;white-space:nowrap}
+  .b-ok{color:var(--lm);border:1px solid rgba(198,255,58,.4);background:rgba(198,255,58,.07)}
+  .b-need{color:var(--am);border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.08)}
+  .b-block{color:var(--mg);border:1px solid rgba(255,45,142,.4);background:rgba(255,45,142,.08)}
+  .pipe{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap}
+  .stage{flex:1;min-width:120px;border:1px solid var(--line);border-radius:12px;
+    padding:.9rem .8rem;background:var(--bg2);position:relative;display:flex;flex-direction:column}
+  .stage .s-role{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:.3rem}
+  .stage .s-name{font-weight:650;font-size:.92rem;margin-bottom:.55rem}
+  .stage.ci{border-color:rgba(0,229,255,.45);box-shadow:inset 0 0 0 1px rgba(0,229,255,.08)}
+  .stage.cd{border-color:rgba(255,45,142,.35)}
+  .arrow{align-self:center;color:var(--mut);font-size:1.1rem}
+  .gate{align-self:flex-start;margin-top:auto;font-size:.6rem;letter-spacing:.05em;font-weight:700;
+    padding:.28rem .52rem;border-radius:7px;color:var(--au);white-space:nowrap;
+    border:1px solid rgba(255,209,102,.5);background:rgba(255,209,102,.12);
+    box-shadow:0 0 14px rgba(255,209,102,.12)}
+  .legend{display:flex;gap:1.3rem;font-size:.68rem;letter-spacing:.06em;color:var(--mut);margin-bottom:.7rem;flex-wrap:wrap}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:.45rem;vertical-align:middle}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th,td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+  td .mono{font-size:.78rem;color:var(--neon)}
+  tr:last-child td{border-bottom:none}
+  .big{font-size:clamp(2.4rem,6vw,5rem);font-weight:800;letter-spacing:-.03em;line-height:1}
+  .stat{display:flex;flex-direction:column;gap:.3rem}
+  .stat .l{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.74rem;
+    border:1px solid var(--line);border-radius:8px;padding:.32rem .6rem;background:var(--bg2)}
+  .sig{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:12px;padding:1rem;background:var(--bg2)}
+  .sig .n{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .sig .v{font-weight:700;font-size:1.05rem}
+  .verd{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
+  .v-g{color:var(--lm);border:1px solid rgba(198,255,58,.4);background:rgba(198,255,58,.07)}
+  .v-y{color:var(--am);border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.08)}
+  .v-r{color:var(--mg);border:1px solid rgba(255,45,142,.4);background:rgba(255,45,142,.08)}
+  .nav{position:fixed;inset:0;z-index:4;display:flex}
+  .nav .l,.nav .r{flex:1;cursor:pointer}
+  .prog{position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--cy),var(--mg));z-index:6;transition:width .35s}
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{overflow:visible;height:auto;background:var(--bg)}
+    .prog,.nav{display:none!important}
+    .slide{display:flex!important;position:relative!important;inset:auto!important;
+      width:1280px;height:720px;opacity:1!important;overflow:hidden;
+      break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .slide:last-child{break-after:auto;page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+<div class="prog" id="prog"></div>
+
+<!-- 1 — COVER -->
+<section class="slide on">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div style="margin:auto 0">
+      <div class="kicker">Рациональный SDLC · агенты izi</div>
+      <h1>Дерзкая разработка.<br><span class="neon">Человек + Машина.</span> Ничего лишнего.</h1>
+      <p class="lead" style="margin-top:1.6rem">Рациональная разработка с научно-обоснованным подходом к <span class="gold">проектированию корректности программ</span> и минимально необходимым составом тестов. <span class="neon">Математика и логика.</span></p>
+      <div style="margin-top:1.8rem">
+        <div style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:.7rem">В сердце проектирования и имплементации — труды великих инженеров, большей частью из IBM</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <span class="chip mono">Wirth</span>
+          <span class="chip mono">Hughes</span>
+          <span class="chip mono">Michtom</span>
+          <span class="chip mono">Linger</span>
+          <span class="chip mono">Mills</span>
+          <span class="chip mono">Witt</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span>1 — Обложка</span><div class="dots" id="d1"></div><span>rationaldev · izi</span></div>
+  </div>
+</section>
+
+<!-- 2 — КОМАНДА -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Суть модели</div>
+    <h2>Команда в основе — <span class="neon">человек + машина</span></h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card"><h3 class="neon">Discovery</h3><p>Инженер-разработчик <b>совместно с ИИ</b>: гипотезы, требования, продуктовая проработка. Аналитика здесь — отдельной роли-аналитика нет.</p></div>
+      <div class="card"><h3 class="pink">Delivery</h3><p>Агенты <b>izi</b> + дирижёр (человек): от плана до здоровой фичи в проде. Рутину ведут агенты, решения на границах — человек.</p></div>
+    </div>
+    <p class="lead" style="margin-top:1.4rem">Граница входа агентов — момент, когда задача сформулирована. Продуктовые решения, акцепт плана и мерж остаются за человеком. Ключевой принцип — <span class="gold">асимметрия генератор/критик</span>: кто создаёт артефакт, тот его не принимает.</p>
+    <div class="footer"><span>2 — Команда</span><div class="dots" id="d2"></div><span>человек дирижирует, агенты выполняют</span></div>
+  </div>
+</section>
+
+<!-- 3 — ФУНДАМЕНТ -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Научный фундамент</div>
+    <h2>Стоим на трудах <span class="neon">великих инженеров</span></h2>
+    <table>
+      <tr><th>Труд</th><th>Авторы</th></tr>
+      <tr><td><i>Systematic Programming: An Introduction</i></td><td class="mono">Niklaus Wirth</td></tr>
+      <tr><td><i>A Structured Approach to Programming</i></td><td class="mono">Joan K. Hughes · Jay I. Michtom</td></tr>
+      <tr><td><i>Structured Programming: Theory and Practice</i></td><td class="mono">Richard C. Linger · Harlan D. Mills · Bernard I. Witt</td></tr>
+    </table>
+    <p class="lead" style="margin-top:1.4rem">Плюс цикл статей автора. Ключевые идеи: <span class="gold">программа = дерево модулей</span> (Wirth), <span class="gold">корректность по построению</span> (Mills, Cleanroom), бизнес-логика отделена от I/O, математическая композиция модулей. «Качество достигается проектированием, а не тестированием».</p>
+    <div class="footer"><span>3 — Фундамент</span><div class="dots" id="d3"></div><span>на их именах названы агенты izi</span></div>
+  </div>
+</section>
+
+<!-- 4 — ДЕРЗКАЯ РАЗРАБОТКА -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Дерзкая разработка</div>
+    <h2>Чего <span class="pink">нет</span> и что <span class="lime">есть</span></h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card" style="border-color:rgba(255,45,142,.35)">
+        <h3 class="pink">Убрано — лишнее</h3>
+        <p>· Тестовые среды и стенды<br>· Кольца раскатки и обязательный Kubernetes<br>· Отдельные роли QA / аналитика / SRE<br>· Тяжёлый governance (tech-radar)</p>
+      </div>
+      <div class="card" style="border-color:rgba(198,255,58,.35)">
+        <h3 class="lime">Оставлено — только экспертиза</h3>
+        <p>· CI + канареечные релизы прямо в прод за тогглом<br>· Вариативные среды: VM / контейнер / serverless<br>· Компонентные + контрактные тесты · маткомпозиция<br>· 4 золотых сигнала · security-scan · утилиты RRA в CI</p>
+      </div>
+    </div>
+    <div class="footer"><span>4 — Дерзкая разработка</span><div class="dots" id="d4"></div><span>ничего лишнего — только рациональный подход</span></div>
+  </div>
+</section>
+
+<!-- 5 — ПРОЦЕСС -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Процесс целиком</div>
+    <h2>CI → канарейка · <span class="gold">3 человеческих гейта</span></h2>
+    <div class="legend"><span><i style="background:var(--cy)"></i>агентский шаг</span><span><i style="background:var(--mg)"></i>канарейка в прод</span><span><i style="background:var(--au)"></i>human gate</span></div>
+    <div class="pipe">
+      <div class="stage"><span class="s-role">Planning</span><span class="s-name neon">Wirth</span><span class="gate">→ Gate #1 акцепт</span></div>
+      <div class="arrow">→</div>
+      <div class="stage"><span class="s-role">Plan review</span><span class="s-name neon">Mills</span><span class="gate">асимметрия</span></div>
+      <div class="arrow">→</div>
+      <div class="stage"><span class="s-role">Implementation</span><span class="s-name lime">Hughes</span><span class="gate">тоггл OFF</span></div>
+      <div class="arrow">→</div>
+      <div class="stage ci"><span class="s-role">CI</span><span class="s-name neon">RRA + security</span><span class="gate">component · contract</span></div>
+      <div class="arrow">→</div>
+      <div class="stage"><span class="s-role">Code review</span><span class="s-name lime">Linger</span><span class="gate">→ Gate #2 мерж</span></div>
+      <div class="arrow">→</div>
+      <div class="stage cd"><span class="s-role">Release &amp; Health</span><span class="s-name pink">Michtom</span><span class="gate">→ Gate #3 приёмка</span></div>
+    </div>
+    <p class="lead" style="margin-top:1.6rem">Мерж триггерит <span class="pink">канареечный выкат прямо в прод</span> за фиче-тогглом. Доля растёт 1% → 5% → 25% → 100% только по зелёным сигналам. Полная схема — <span class="mono neon">docs/SDLC.svg</span>.</p>
+    <div class="footer"><span>5 — Процесс</span><div class="dots" id="d5"></div><span>дешёвое-первым, асимметрия генератор/критик</span></div>
+  </div>
+</section>
+
+<!-- 6 — АГЕНТЫ izi -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Агенты izi</div>
+    <h2>6 ролей · имена <span class="neon">великих инженеров</span></h2>
+    <table>
+      <tr><th>Роль (общая)</th><th>Агент</th><th>Почему он</th></tr>
+      <tr><td>Planner</td><td class="mono">Wirth</td><td>дерево модулей, пошаговое уточнение → генерация плана</td></tr>
+      <tr><td>Plan Reviewer</td><td class="mono">Mills</td><td>Cleanroom, корректность по построению → верификация плана</td></tr>
+      <tr><td>Implementer</td><td class="mono">Hughes</td><td>прикладное структурное кодирование → пишет код</td></tr>
+      <tr><td>Fixer / Code Review</td><td class="mono">Linger</td><td>функциональная верификация + безопасность → ревью кода</td></tr>
+      <tr><td>Release &amp; Health</td><td class="mono">Michtom</td><td>системность и обратная связь → канарейка + 4 сигнала</td></tr>
+      <tr><td>Orchestrator (человек)</td><td class="mono">Witt</td><td>теория ↔ практика → держит границы на Human Gates</td></tr>
+    </table>
+    <p class="lead" style="margin-top:1.2rem"><span class="gold">izi</span> — строгая рациональность, поданная легко («make it as simple as possible», по Вирту).</p>
+    <div class="footer"><span>6 — Агенты izi</span><div class="dots" id="d6"></div><span>роль = модуль с контрактом вход/выход</span></div>
+  </div>
+</section>
+
+<!-- 7 — ТЕСТЫ -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Качество без тестовых сред</div>
+    <h2>Три рубежа — и ни одного <span class="pink">лишнего</span></h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="card"><h3 class="neon">Композиция</h3><p>Корректность модулей доказывается математически: предусловие/постусловие, один data-аргумент, <span class="mono">Result&lt;T,E&gt;</span>. <b>program-design</b>.</p></div>
+      <div class="card"><h3 class="lime">Компонентные</h3><p>Поведение сервиса как чёрного ящика — Gherkin-сценарии. Заменяют отдельную QA-дисциплину.</p></div>
+      <div class="card"><h3 class="amb">Контрактные</h3><p>Границы между компонентами как netlist, проверяет <b>pinout</b> (openapi / asyncapi / netlist). Падение = блок до прода.</p></div>
+    </div>
+    <p class="lead" style="margin-top:1.6rem">Внутренняя корректность — композицией, поведение — компонентными тестами, межсервисные границы — контрактами, здоровье в проде — 4 золотыми сигналами. Тестовые среды не нужны.</p>
+    <div class="footer"><span>7 — Тесты</span><div class="dots" id="d7"></div><span>качество проектированием, не тестированием</span></div>
+  </div>
+</section>
+
+<!-- 8 — РЕЛИЗ / СИГНАЛЫ -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Релиз · Release &amp; Health (Michtom)</div>
+    <h2>Канарейка под <span class="gold">4 золотыми сигналами</span></h2>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="sig"><span class="n">Latency</span><span class="v neon">задержка</span><span style="font-size:.74rem;color:var(--mut)">p50/p99, отдельно для ошибок</span></div>
+      <div class="sig"><span class="n">Traffic</span><span class="v neon">нагрузка</span><span style="font-size:.74rem;color:var(--mut)">RPS, ожидаемый трафик</span></div>
+      <div class="sig"><span class="n">Errors</span><span class="v neon">ошибки</span><span style="font-size:.74rem;color:var(--mut)">5xx, исключения, DLQ/ретраи</span></div>
+      <div class="sig"><span class="n">Saturation</span><span class="v neon">насыщение</span><span style="font-size:.74rem;color:var(--mut)">CPU, память, пулы, лаг очереди</span></div>
+    </div>
+    <p class="lead" style="margin-top:1.4rem">После каждого шага канарейки — сравнение с baseline на достаточном окне. Плюс бизнес-<span class="gold">guardrail</span> и SLI фичи. Вердикт:</p>
+    <div class="verd">
+      <span class="badge v-g">GREEN → расширить долю</span>
+      <span class="badge v-y">YELLOW → держать, продлить</span>
+      <span class="badge v-r">RED → откат (тоггл OFF)</span>
+    </div>
+    <p class="lead" style="margin-top:1.2rem;font-size:.92rem">Анти-gaming: нельзя ослаблять SLO, глушить алерты, расширять долю на YELLOW/RED. <b>Нет данных ≠ зелёно.</b></p>
+    <div class="footer"><span>8 — Релиз и сигналы</span><div class="dots" id="d8"></div><span>откат всегда дешевле починки в проде</span></div>
+  </div>
+</section>
+
+<!-- 9 — CI / RRA -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">CI как страж дисциплины</div>
+    <h2>CI валидирует решения <span class="neon">утилитами RRA</span></h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="card"><h3 class="neon">Экосистема RRA</h3><p>В CI работают аудиторы рациональной дисциплины: <span class="mono">rra-docs-another</span> (качество доки, JTBD), <span class="mono">rra-audit-repo</span> (I/O-граница), <span class="mono">rra-docs</span> (гейт дисциплины). Репозиторий проверяет сам себя.</p></div>
+      <div class="card"><h3 class="pink">Security-scan</h3><p>Отдельный шаг: SAST, зависимости, секреты. «Секрет в коде = блок мержа». Правила безопасной разработки вшиты в дизайн и реализацию — раньше, чем статика в CI.</p></div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.4rem">
+      <span class="chip">component</span><span class="chip">contract · pinout</span><span class="chip">lint</span>
+      <span class="chip neon">RRA-утилиты</span><span class="chip pink">security-scan</span>
+    </div>
+    <div class="footer"><span>9 — CI</span><div class="dots" id="d9"></div><span>жёсткие нарушения = блок слияния</span></div>
+  </div>
+</section>
+
+<!-- 10 — ИТОГ -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Итог</div>
+    <h2>База для агентов <span class="neon">проектирования и разработки</span></h2>
+    <p class="lead">На этих ролях и скиллах строятся агенты <span class="gold">izi</span> — в честь Вирта (и его Оберона), Хьюза, Михтома, Лингера, Миллса и Витта. Тяжёлый научный фундамент, простой опыт.</p>
+    <div style="display:flex;gap:2.5rem;margin-top:auto;padding-top:2vh">
+      <div class="stat"><span class="l">Ролей-агентов</span><span class="big neon">6</span></div>
+      <div class="stat"><span class="l">Человеческих гейтов</span><span class="big lime">3</span></div>
+      <div class="stat"><span class="l">Золотых сигналов</span><span class="big amb">4</span></div>
+      <div class="stat"><span class="l">Тестовых сред</span><span class="big pink">0</span></div>
+    </div>
+    <div class="footer"><span>10 — Итог</span><div class="dots" id="d10"></div><span>rationaldev · izi · в честь Оберона</span></div>
+  </div>
+</section>
+
+<div class="nav"><div class="l" onclick="go(-1)"></div><div class="r" onclick="go(1)"></div></div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];let i=0;
+  const prog=document.getElementById('prog');
+  slides.forEach((_,n)=>{const row=document.getElementById('d'+(n+1));if(row){slides.forEach(()=>{row.appendChild(document.createElement('i'));});}});
+  function render(){
+    slides.forEach((s,n)=>s.classList.toggle('on',n===i));
+    document.querySelectorAll('.dots').forEach(row=>{[...row.children].forEach((b,m)=>b.classList.toggle('act',m===i));});
+    prog.style.width=((i+1)/slides.length*100)+'%';
+  }
+  function go(d){i=Math.min(slides.length-1,Math.max(0,i+d));render();}
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();go(1);}
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(-1);}
+    if(e.key==='Home'){i=0;render();} if(e.key==='End'){i=slides.length-1;render();}
+  });
+  render();
+</script>
+</body>
+</html>

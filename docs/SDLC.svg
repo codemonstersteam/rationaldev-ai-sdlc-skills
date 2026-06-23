@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1520" font-family="-apple-system,Segoe UI,Inter,Roboto,sans-serif">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0d14"/><stop offset="1" stop-color="#080a11"/>
+    </linearGradient>
+    <linearGradient id="gate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15120a"/><stop offset="1" stop-color="#0d0b07"/>
+    </linearGradient>
+    <marker id="arr" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L11,6 L0,12 Z" fill="#9aa3b8"/>
+    </marker>
+    <marker id="arrR" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L11,6 L0,12 Z" fill="#ff2d8e"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="1520" fill="#06070b"/>
+
+  <!-- title -->
+  <text x="48" y="50" fill="#00e5ff" font-size="13" letter-spacing="4">RATIONALDEV · AI-FIRST SDLC · izi</text>
+  <text x="48" y="82" fill="#e8ecf4" font-size="27" font-weight="700">Целевой процесс: CI → канарейка</text>
+  <text x="48" y="108" fill="#7c869b" font-size="13.5">Команда = человек + машина · нет тестовых сред · 3 человеческих гейта · 4 золотых сигнала</text>
+
+  <!-- 1. Задача -->
+  <rect x="350" y="150" width="340" height="48" rx="24" fill="none" stroke="#1c2233"/>
+  <text x="520" y="179" fill="#e8ecf4" font-size="14.5" text-anchor="middle">Задача сформулирована (конец Discovery)</text>
+  <line x1="520" y1="200" x2="520" y2="244" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 2. Входной gate (human) -->
+  <rect x="220" y="246" width="600" height="72" rx="14" fill="url(#gate)" stroke="#ffb020"/>
+  <text x="248" y="289" fill="#ffb020" font-size="18">◆</text>
+  <text x="520" y="282" fill="#ffb020" font-size="14" text-anchor="middle" font-weight="700">ВХОДНОЙ GATE · инженер-дирижёр (Witt)</text>
+  <text x="520" y="303" fill="#9aa3b8" font-size="12.5" text-anchor="middle">задача готова и agent-ready? → запуск Delivery / переформулировать</text>
+  <line x1="520" y1="318" x2="520" y2="362" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 3. PLANNING -->
+  <rect x="310" y="364" width="420" height="72" rx="12" fill="url(#card)" stroke="#1c2233"/>
+  <text x="332" y="392" fill="#00e5ff" font-size="15" font-weight="700">PLANNING · Planner = Wirth</text>
+  <text x="332" y="416" fill="#9aa3b8" font-size="12.5">program-design · architecture · security · observability</text>
+  <line x1="520" y1="436" x2="520" y2="480" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 4. PLAN REVIEW -->
+  <rect x="310" y="482" width="420" height="72" rx="12" fill="url(#card)" stroke="#1c2233"/>
+  <text x="332" y="510" fill="#00e5ff" font-size="15" font-weight="700">PLAN REVIEW · Plan Reviewer = Mills</text>
+  <text x="332" y="534" fill="#9aa3b8" font-size="12.5">асимметрия: ревьюер ≠ генератор · doc-quality-review</text>
+  <!-- loop back to PLANNING -->
+  <path d="M310,518 C250,518 250,400 308,400" fill="none" stroke="#9aa3b8" stroke-width="3" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+  <text x="232" y="455" fill="#9aa3b8" font-size="11" text-anchor="middle">проблема</text>
+  <text x="232" y="470" fill="#9aa3b8" font-size="11" text-anchor="middle">→ назад</text>
+  <line x1="520" y1="554" x2="520" y2="598" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 5. HG#1 -->
+  <rect x="220" y="600" width="600" height="72" rx="14" fill="url(#gate)" stroke="#ffb020"/>
+  <text x="248" y="643" fill="#ffb020" font-size="18">◆</text>
+  <text x="520" y="636" fill="#ffb020" font-size="14" text-anchor="middle" font-weight="700">HUMAN GATE #1 · акцепт плана</text>
+  <text x="520" y="657" fill="#9aa3b8" font-size="12.5" text-anchor="middle">дирижёр принимает plan.md — источник правды</text>
+  <line x1="520" y1="672" x2="520" y2="716" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 6. IMPLEMENTATION -->
+  <rect x="310" y="718" width="420" height="72" rx="12" fill="url(#card)" stroke="#1c2233"/>
+  <text x="332" y="746" fill="#c6ff3a" font-size="15" font-weight="700">IMPLEMENTATION · Implementer = Hughes</text>
+  <text x="332" y="770" fill="#9aa3b8" font-size="12.5">program-implementation · новый функционал за фиче-тогглом (OFF)</text>
+  <line x1="520" y1="790" x2="520" y2="834" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 7. CI -->
+  <rect x="300" y="836" width="440" height="86" rx="12" fill="url(#card)" stroke="#00e5ff"/>
+  <text x="322" y="864" fill="#00e5ff" font-size="15" font-weight="700">CI PIPELINE</text>
+  <text x="322" y="887" fill="#e8ecf4" font-size="12.5">component · contract (pinout) · lint</text>
+  <text x="322" y="907" fill="#ff2d8e" font-size="12.5">+ RRA-утилиты (валидация дисциплины) · + security-scan</text>
+  <!-- classify loop back to IMPL -->
+  <path d="M300,879 C230,879 230,754 308,754" fill="none" stroke="#ff2d8e" stroke-width="3" stroke-dasharray="5 5" marker-end="url(#arrR)"/>
+  <text x="208" y="810" fill="#ff2d8e" font-size="11" text-anchor="middle">ошибка</text>
+  <text x="208" y="825" fill="#ff2d8e" font-size="11" text-anchor="middle">классиф.</text>
+  <line x1="520" y1="922" x2="520" y2="966" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 8. CODE REVIEW -->
+  <rect x="310" y="968" width="420" height="72" rx="12" fill="url(#card)" stroke="#1c2233"/>
+  <text x="332" y="996" fill="#c6ff3a" font-size="15" font-weight="700">CODE REVIEW · Fixer = Linger</text>
+  <text x="332" y="1020" fill="#9aa3b8" font-size="12.5">классификация дефекта (план vs реализация) · security-находки</text>
+  <line x1="520" y1="1040" x2="520" y2="1084" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 9. HG#2 -->
+  <rect x="220" y="1086" width="600" height="72" rx="14" fill="url(#gate)" stroke="#ffb020"/>
+  <text x="248" y="1129" fill="#ffb020" font-size="18">◆</text>
+  <text x="520" y="1122" fill="#ffb020" font-size="14" text-anchor="middle" font-weight="700">HUMAN GATE #2 · мерж</text>
+  <text x="520" y="1143" fill="#9aa3b8" font-size="12.5" text-anchor="middle">мерж → триггерит канареечный выкат прямо в прод</text>
+  <line x1="520" y1="1158" x2="520" y2="1202" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 10. CANARY block -->
+  <rect x="130" y="1204" width="780" height="180" rx="16" fill="#0b0d14" stroke="#ff2d8e"/>
+  <text x="156" y="1234" fill="#ff2d8e" font-size="15" font-weight="700">КАНАРЕЙКА ПРЯМО В ПРОД · Release &amp; Health = Michtom</text>
+  <text x="156" y="1256" fill="#9aa3b8" font-size="12.5">за фиче-тогглом · вариативная среда (VM / контейнер / serverless, не обяз. k8s)</text>
+
+  <!-- доли -->
+  <g font-size="13" text-anchor="middle">
+    <rect x="156" y="1276" width="96" height="32" rx="16" fill="none" stroke="#c6ff3a"/><text x="204" y="1297" fill="#c6ff3a">1%</text>
+    <rect x="278" y="1276" width="96" height="32" rx="16" fill="none" stroke="#c6ff3a"/><text x="326" y="1297" fill="#c6ff3a">5%</text>
+    <rect x="400" y="1276" width="96" height="32" rx="16" fill="none" stroke="#c6ff3a"/><text x="448" y="1297" fill="#c6ff3a">25%</text>
+    <rect x="522" y="1276" width="96" height="32" rx="16" fill="none" stroke="#c6ff3a"/><text x="570" y="1297" fill="#c6ff3a">100%</text>
+    <line x1="252" y1="1292" x2="276" y2="1292" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+    <line x1="374" y1="1292" x2="398" y2="1292" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+    <line x1="496" y1="1292" x2="520" y2="1292" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- golden signals -->
+  <text x="660" y="1290" fill="#00e5ff" font-size="13" font-weight="700">4 золотых сигнала</text>
+  <text x="660" y="1308" fill="#9aa3b8" font-size="11.5">Latency · Traffic · Errors · Saturation</text>
+
+  <!-- verdict -->
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="156" y="1330" width="180" height="32" rx="7" fill="none" stroke="#c6ff3a"/><text x="246" y="1351" fill="#c6ff3a">GREEN → расширить</text>
+    <rect x="350" y="1330" width="170" height="32" rx="7" fill="none" stroke="#ffb020"/><text x="435" y="1351" fill="#ffb020">YELLOW → держать</text>
+    <rect x="534" y="1330" width="200" height="32" rx="7" fill="none" stroke="#ff2d8e"/><text x="634" y="1351" fill="#ff2d8e">RED → откат (тоггл OFF)</text>
+  </g>
+  <text x="772" y="1351" fill="#9aa3b8" font-size="11">vs baseline · SLO · error budget</text>
+  <line x1="520" y1="1384" x2="520" y2="1428" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- 11. HG#3 -->
+  <rect x="200" y="1430" width="640" height="74" rx="14" fill="url(#gate)" stroke="#ffb020"/>
+  <text x="228" y="1474" fill="#ffb020" font-size="18">◆</text>
+  <text x="520" y="1466" fill="#ffb020" font-size="14" text-anchor="middle" font-weight="700">HUMAN GATE #3 · приёмка прод-релиза</text>
+  <text x="520" y="1488" fill="#9aa3b8" font-size="12.5" text-anchor="middle">стабильный GREEN после канарейки + ручная проверка непокрытого</text>
+</svg>
