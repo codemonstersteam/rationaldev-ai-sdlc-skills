@@ -7,7 +7,6 @@
 ## Todo
 
 ### Инфраструктура репозитория
-- [ ] Первый коммит и публикация на GitHub (`codemonstersteam/rationaldev-ai-sdlc-skills`)
 - [ ] Сверить сквозные номера версий доков/скиллов (часть осталась `v1.0`, observability — `v2.0`)
 - [ ] `docs/02_MEASUREMENT.md §2.4` — переименовать «Платформа данных / Аналитика-отчётность» → «Отчётность» (analytics как роль убран)
 
@@ -40,3 +39,4 @@
 - [x] `CONCEPT.md`, `README.md`, `GLOSSARY.md`, `CLAUDE.md` переработаны
 - [x] Диаграмма `docs/SDLC.svg` (заменила растровый `.jpeg`) перерисована под CI → канарейку
 - [x] Презентация `presentation/sdlc.html` (10 слайдов) под новый процесс, открывается локально
+- [x] Первый коммит и публикация на GitHub: `codemonstersteam/rationaldev-ai-sdlc-skills` (private)
