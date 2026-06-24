@@ -38,6 +38,12 @@
 
 Доработать `skills/lib/documentation` и `skills/lib/program-design` в соответствии с вводными ниже. Источник — результаты сессии `pinout-openapi`; референс-образцы готовы: use case по Коберну и C2/C3 — [`c4.md`](https://github.com/codemonstersteam/pinout-openapi/blob/main/docs/design/contract-validate/c4.md), C1 — [концепт pinout](https://github.com/codemonstersteam/pinout), модель ошибок — `messages.md`/`risk-coverage.md`, README по скиллу.
 
+**Статус: ✅ реализовано в скиллах.** Все строки ниже внесены в процедуры:
+- `documentation`: роутер (C4-диаграммы, use case, таблица сбоев); Pass A5b (таблица сбоев + модель ошибок); Pass B3 (C4 по уровням); Pass B4 (use case по Коберну); STOP-правило + финальный чеклист (doc-gate).
+- `program-design`: Шаг 3 (единый `Request` + развилка=логика, D1; «C4 по уровням»); Шаг 4 (модель ошибок); Шаг 8.1 (развилки в юнитах) + Шаг 8.6 (трассировка UC→слайс→тест); Шаг 10 (`c4.md` в пакет); Шаг 12 (Conformance-gate + пункты хендофф-чеклиста).
+- `component-tests`: «Граница со слоем юнитов» (развилки = юниты, D1); «Формула» (режимы отказа = Extensions use case + двусторонняя сверка).
+- Роли: `plan-reviewer` (conformance-проверка + STOP); `planner` (подключён `documentation`).
+
 | Задача | Куда | Должна покрыть |
 |---|---|---|
 | **Документация только по скиллу (gate)** | `skills/lib/program-design` + `skills/lib/documentation` | выходной артефакт `program-design` обязан пройти `documentation`; **запрет создавать README/architecture/доки вне скилла** («не по скиллу»). Чеклист-gate в обоих скиллах + anti-gaming (нельзя писать прозу мимо процедур A/B/C) |
