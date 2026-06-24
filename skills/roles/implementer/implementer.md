@@ -19,6 +19,7 @@
 - `component-tests/` — компонентные тесты сервиса как чёрного ящика.
 - `git-conventions/` — Trunk-Based Development: ветки, коммиты, PR.
 - `documentation/`, `md-formatting/` — обновить README/доки по триггеру изменения.
+- `communication/` — прагматичный стиль вывода (token-saving): минимальные патчи, без воды. Не распространяется на обязательные артефакты и чеклисты (anti-gaming).
 
 ## Вход (проверка полноты — иначе STOP)
 - `.agent/planner/plan.md` (заморожен после Human Gate #1).

@@ -18,6 +18,7 @@
 - `component-tests/` — оценить/дополнить компонентное покрытие.
 - `git-conventions/` — корректность веток/коммитов/PR.
 - `program-implementation/` — дисциплина внесения правок срезами.
+- `communication/` — прагматичный стиль вывода (token-saving): минимальный фикс, без воды. Не распространяется на ревью-вердикты, чеклисты и STOP (anti-gaming).
 
 ## Вход (проверка полноты — иначе STOP)
 - PR от Implementer + сигналы CI (unit/component/contract/lint/security scan).
