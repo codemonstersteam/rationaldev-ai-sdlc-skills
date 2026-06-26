@@ -89,4 +89,24 @@ for (const [role, m] of Object.entries(META)) {
     n++
   }
 }
-console.log(`generated ${n} agent files for ${Object.keys(META).length} roles × 3 runners`)
+// --- Codex: собрать роутер + блоки ролей в один AGENTS.codex.md ---
+// (у Codex нет файловых субагентов — роли укладываются в AGENTS.md)
+const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
+let codex = `# AGENTS.md — харнес rationaldev (Codex)
+
+Мультиагентный SDLC-харнес. Codex не имеет файловых субагентов — роли заданы ниже,
+скиллы лежат в \`.agents/skills/\` (грузятся по имени). Точка входа — роль
+**orchestrator** (дирижёр-роутер): классифицирует уровень задачи и ведёт по ролям.
+
+Human-gates обязательны (за человеком). Рабочая память — \`.agent/memory.md\` (skill
+\`memory\`); трассировка решений — \`.agent/decisions.log\`.
+`
+for (const role of ORDER) {
+  const body = readFileSync(join(SHARED, `${role}.md`), "utf8").trimEnd()
+  codex += `\n---\n\n${body}\n`
+}
+const instrDir = join(ROOT, "instructions")
+mkdirSync(instrDir, { recursive: true })
+writeFileSync(join(instrDir, "AGENTS.codex.md"), codex)
+
+console.log(`generated ${n} agent files for ${Object.keys(META).length} roles × 3 runners + AGENTS.codex.md`)
