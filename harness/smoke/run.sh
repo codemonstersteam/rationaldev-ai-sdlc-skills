@@ -44,4 +44,41 @@ sh "$REPO/install.sh" codex "$P" >/dev/null
 [ "$(head -1 "$P/AGENTS.md")" = "ORIGINAL OPERATOR RULES" ] || fail "existing AGENTS.md затёрт"; ok
 [ -f "$P/AGENTS.harness.md" ] || fail "инструкции харнеса не положены рядом"; ok
 
-echo "PASS $pass/11 — harness install smoke"
+# === enforcement (--hard) ===
+GC="$REPO/harness/enforcement/claude/gate-check.sh"
+LD="$REPO/harness/enforcement/claude/log-decision.sh"
+
+# OpenCode --hard кладёт плагин
+P="$TMP/oc-hard"; mkdir -p "$P"
+sh "$REPO/install.sh" opencode "$P" --hard >/dev/null
+[ -e "$P/.opencode/plugins/rational-guardrail.ts" ] || fail "opencode --hard: нет плагина"; ok
+
+# Claude --hard кладёт хуки и settings
+P="$TMP/cl-hard"; mkdir -p "$P"
+sh "$REPO/install.sh" claude "$P" --hard >/dev/null
+[ -e "$P/.claude/hooks/gate-check.sh" ] || fail "claude --hard: нет хука gate-check"; ok
+grep -q "PreToolUse" "$P/.claude/settings.json" || fail "claude --hard: settings без хуков"; ok
+
+# OpenCode-плагин: детерминированный смоук (Gate #1 + decisions.log)
+node "$REPO/harness/enforcement/opencode/guardrail.smoke.ts" >/dev/null || fail "opencode guardrail smoke упал"; ok
+
+# Claude gate-check: implementer без апрува → блок (exit != 0)
+D="$TMP/gate-block"; mkdir -p "$D"
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | sh "$GC" 2>/dev/null ); then fail "gate не заблокировал implementer без апрува"; fi; ok
+
+# Claude gate-check: implementer с апрувом → проход
+D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates"
+: > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"
+( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | sh "$GC" ) || fail "gate заблокировал при апруве"; ok
+
+# Claude gate-check: не-implementer проходит свободно
+D="$TMP/gate-planner"; mkdir -p "$D"
+( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | sh "$GC" ) || fail "gate заблокировал planner"; ok
+
+# Claude log-decision: дописывает decisions.log
+D="$TMP/loghook"; mkdir -p "$D"
+( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | sh "$LD" )
+grep -q "role=planner" "$D/.agent/decisions.log" || fail "log-decision не записал роль"; ok
+grep -q "via=claude-hook" "$D/.agent/decisions.log" || fail "log-decision без метки via"; ok
+
+echo "PASS $pass — harness smoke (установка + enforcement)"

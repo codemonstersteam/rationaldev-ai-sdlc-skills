@@ -89,16 +89,41 @@ esac
 
 place_instruction "$INSTR_SRC" "$INSTR_DST"
 
-# --- enforcement (--hard, Slice 6) ---
+# --- enforcement (--hard) ---
 HARDMSG="off (enforcement инструкцией)"
 if [ "$HARD" = yes ]; then
   ADAPTER="$BUNDLE/harness/enforcement/$RUNNER"
-  if [ -d "$ADAPTER" ]; then
-    HARDMSG="on → адаптер $RUNNER подключён"
-    # фактическое подключение адаптера реализуется в Slice 6
-  else
-    HARDMSG="запрошен, но адаптер ещё не реализован (Slice 6) — пропущено"
-  fi
+  case "$RUNNER" in
+    opencode)
+      [ "$SCOPE" = global ] && pdir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins" || pdir="$PROJ/.opencode/plugins"
+      mkdir -p "$pdir"
+      ln -sfn "$ADAPTER/rational-guardrail.ts" "$pdir/rational-guardrail.ts"
+      HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
+      ;;
+    claude)
+      [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
+      mkdir -p "$cbase/hooks"
+      ln -sfn "$ADAPTER/gate-check.sh"   "$cbase/hooks/gate-check.sh"
+      ln -sfn "$ADAPTER/log-decision.sh" "$cbase/hooks/log-decision.sh"
+      gc="$cbase/hooks/gate-check.sh"; ld="$cbase/hooks/log-decision.sh"
+      sjson='{
+  "hooks": {
+    "PreToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] } ],
+    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ]
+  }
+}'
+      if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then
+        printf '%s\n' "$sjson" > "$cbase/settings.harness.json"
+        HARDMSG="on → хуки в $cbase/hooks; settings.json есть → слей $cbase/settings.harness.json вручную"
+      else
+        printf '%s\n' "$sjson" > "$cbase/settings.json"
+        HARDMSG="on → Claude-хуки ($cbase/settings.json)"
+      fi
+      ;;
+    codex)
+      HARDMSG="инструкция (Codex без жёсткого enforce — harness/enforcement/codex/README.md)"
+      ;;
+  esac
 fi
 
 echo "rationaldev harness → $RUNNER ($SCOPE)"

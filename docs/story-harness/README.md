@@ -58,9 +58,17 @@ cd rationaldev-ai-sdlc-skills
 ## Жёсткий режим `--hard` (опционально)
 
 `--hard` доустанавливает enforcement-адаптер раннера (жёсткие гейты + гарантированный
-`decisions.log`): OpenCode — плагин, Claude — хуки `settings.json`, Codex — остаётся на
-инструкции. **Адаптеры реализуются в Slice 6**; без них база работает на инструкциях
-единообразно на всех трёх.
+`decisions.log`): OpenCode — TS-плагин, Claude — хуки `settings.json`, Codex — остаётся
+на инструкции. Адаптеры готовы — `harness/enforcement/` (контракт и проверка там же).
+Без `--hard` база работает на инструкциях единообразно на всех трёх.
+
+Апрув Gate #1 (после акцепта плана) фиксируется маркером:
+
+```sh
+mkdir -p .agent/gates && touch .agent/gates/gate1.approved
+```
+
+Без него `--hard` блокирует делегирование роли `implementer`.
 
 ### Когда чего хватает
 
