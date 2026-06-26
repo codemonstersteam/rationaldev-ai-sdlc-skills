@@ -1,0 +1,81 @@
+<!--
+  Шаблон вложенной get-started страницы.
+  Тот же читатель, что у лендинга — но решивший «годится, начинаю».
+  Job: дойти до видимого результата за 30 минут.
+
+  Правила:
+  - Один файл. Не подпапка. Слабая модель плохо держит навигацию.
+  - Если шагов больше 30 — режем на пути A/B/C, не в подпапки.
+  - Каждый шаг = одна команда + ожидаемый вывод.
+  - Verification после каждого пути — обязательна.
+-->
+
+# Get started
+
+<<SLOT_INTRO_ONE_PARAGRAPH>>
+
+## Что нужно
+
+- <<SLOT_PREREQ_1>>
+- <<SLOT_PREREQ_2>>
+- <<SLOT_PREREQ_3>>
+
+## Путь A — попробовать локально
+
+<<SLOT_PATH_A_INTRO_ONE_LINE>>
+
+1. <<SLOT_PATH_A_STEP_1>>
+   ```
+   <<SLOT_PATH_A_STEP_1_CMD>>
+   ```
+   Ожидаемый вывод: `<<SLOT_PATH_A_STEP_1_OUT>>`
+
+2. <<SLOT_PATH_A_STEP_2>>
+   ```
+   <<SLOT_PATH_A_STEP_2_CMD>>
+   ```
+   Ожидаемый вывод: `<<SLOT_PATH_A_STEP_2_OUT>>`
+
+3. <<SLOT_PATH_A_STEP_3>>
+   ```
+   <<SLOT_PATH_A_STEP_3_CMD>>
+   ```
+   Ожидаемый вывод: `<<SLOT_PATH_A_STEP_3_OUT>>`
+
+### Проверка пути A
+
+<<SLOT_PATH_A_VERIFICATION>>
+
+## Путь B — подключиться к существующей платформе
+
+<<SLOT_PATH_B_INTRO_ONE_LINE>>
+
+1. <<SLOT_PATH_B_STEP_1>>
+2. <<SLOT_PATH_B_STEP_2>>
+3. <<SLOT_PATH_B_STEP_3>>
+
+### Проверка пути B
+
+<<SLOT_PATH_B_VERIFICATION>>
+
+## Если не сработало
+
+<!-- 3–5 типичных проблем. Каждая: симптом → причина → решение. -->
+
+**<<SLOT_ISSUE_1_SYMPTOM>>**
+Причина: <<SLOT_ISSUE_1_CAUSE>>
+Решение: <<SLOT_ISSUE_1_FIX>>
+
+**<<SLOT_ISSUE_2_SYMPTOM>>**
+Причина: <<SLOT_ISSUE_2_CAUSE>>
+Решение: <<SLOT_ISSUE_2_FIX>>
+
+**<<SLOT_ISSUE_3_SYMPTOM>>**
+Причина: <<SLOT_ISSUE_3_CAUSE>>
+Решение: <<SLOT_ISSUE_3_FIX>>
+
+## Дальше
+
+- <<SLOT_NEXT_STEP_1>>
+- <<SLOT_NEXT_STEP_2>>
+- <<SLOT_NEXT_STEP_3>>

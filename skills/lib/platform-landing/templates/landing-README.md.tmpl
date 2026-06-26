@@ -1,0 +1,62 @@
+<!--
+  Шаблон лендинга платформы. Один читатель — инженер-потребитель.
+  Job: за 60 секунд решить «годится ли мне» + сделать первый шаг.
+
+  Жёсткие лимиты (grep-проверяемые):
+  - hero one-liner: ≤ 12 слов
+  - why: ровно 3 буллета
+  - hello-world: ≤ 10 строк кода/команд
+  - what-you-build: 3 use case'а, по одной строке каждый
+  - всего ≤ 120 строк
+
+  Запрещённый контент (роутится в другие файлы):
+  - архитектурные диаграммы → docs/architecture.md
+  - манифест, принципы → docs/manifesto.md
+  - длинный quickstart → docs/get-started.md
+  - troubleshooting → docs/get-started.md
+  - детальный roadmap → docs/roadmap.md
+-->
+
+# <<SLOT_NAME>>
+
+> <<SLOT_TAGLINE>>
+
+<<SLOT_STATUS_BADGE>>
+
+---
+
+## Зачем
+
+<<SLOT_WHY_BULLET_1>>
+
+<<SLOT_WHY_BULLET_2>>
+
+<<SLOT_WHY_BULLET_3>>
+
+## Как это выглядит
+
+```<<SLOT_HELLO_WORLD_LANG>>
+<<SLOT_HELLO_WORLD_BODY>>
+```
+
+→ **[Подключиться шаг за шагом](docs/get-started.md)**
+
+## Что можно собрать
+
+- <<SLOT_USE_CASE_1>>
+- <<SLOT_USE_CASE_2>>
+- <<SLOT_USE_CASE_3>>
+
+## Из чего состоит
+
+| Компонент | Что делает | Ссылка |
+|-----------|------------|--------|
+<<SLOT_COMPONENT_ROWS>>
+
+## Где сейчас
+
+<<SLOT_CURRENT_STEP_ONE_LINE>>
+
+## Вопросы
+
+<<SLOT_HELP_ONE_LINE>>
