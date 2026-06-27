@@ -38,7 +38,7 @@
 - [ ] PR смержен в main, CI на main зелёный
 
 **Ссылки на источники:**
-- Скилл реализации: `skills/program-implementation/SKILL.md`
+- Скилл реализации: `program-implementation`
 - Граф вызовов: `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n>»
 - Gherkin-mapping: раздел `## Gherkin-mapping` в `slices/<n>-<name>.md`
 - <применённые принципы — «голова без ветвления», «подтип, не guard» и т.п.>
@@ -89,7 +89,7 @@
 - [ ] PR смержен в main, CI на main зелёный
 
 **Ссылки на источники:**
-- Скилл реализации: `skills/program-implementation/SKILL.md`
+- Скилл реализации: `program-implementation`
 - Граф вызовов: `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n> <name>»
 - Gherkin-mapping: раздел `## Gherkin-mapping` в `slices/<n>-<name>.md`
 - Принцип голова без ветвления: `slices/<n>-<name>.md` §«Принцип: голова без ветвления»

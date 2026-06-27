@@ -72,7 +72,8 @@ skills/
     program-design/ program-implementation/ component-tests/    # техники
     contract-tests/ http-io/ llm-client/ git-conventions/ documentation/
     communication/ memory/ doc-quality-review/ md-formatting/ platform-landing/
-  roles/<role>/<role>.md   # манифест: грузит из ../../lib/, контракт вход/выход/STOP
+  roles/<role>/<role>.md   # манифест (генерится): грузит скиллы по имени, контракт вход/выход/STOP
+  INDEX.json               # реестр скиллов + карта роль→скиллы (генерится)
 
 # роли (6 + дирижёр): planner (Wirth) · plan-reviewer (Mills) · implementer (Hughes)
 #   · fixer (Linger) · release-health (Michtom) · orchestrator (Witt, человек)
