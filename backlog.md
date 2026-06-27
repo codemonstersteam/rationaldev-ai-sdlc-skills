@@ -10,17 +10,17 @@
 Снять тройной дрейф идентичности роли и два формата скиллов. Эпик-первопричина —
 одна сущность размазана по 2–3 файлам в 2–3 синтаксисах. Порядок по ROI: A → B → D → C → E.
 
-- [ ] **A · P0 — единый источник правды роли.** Свернуть идентичность роли в frontmatter
+- [x] **A · P0 — единый источник правды роли.** Идентичность роли свёрнута в frontmatter
   `harness/agents/_shared/<role>.md` (`role/izi/tier/mode/temperature/steps/step/gates/
   inputs/outputs/skills/permission/description`), перенеся туда хардкод `META` из
   `gen-agents.mjs` и поля из `skills/roles/`. Генератор читает frontmatter, а не `META`.
   Решить судьбу `skills/roles/`: удалить или **генерировать** из того же источника.
   _DoD:_ `META` в `gen-agents.mjs` пуст; правка роли — в одном файле; проекции
   claude/opencode/codex перегенерируются; `skills/roles/` не правится руками.
-- [ ] **B · P0 — единый формат скиллов.** Перевести 4 плоских доменных скилла
-  (`architecture.md`, `code-style.md`, `observability.md`, `security.md`) в каталог
-  `dir/SKILL.md` + frontmatter (`name`, `description` в форме когда/когда-НЕ, `version`).
-  _DoD:_ все скиллы — `skills/lib/<name>/SKILL.md` с frontmatter; плоских `.md` нет.
+- [x] **B · P0 — единый формат скиллов.** 4 плоских доменных скилла переведены в
+  `skills/lib/<name>/SKILL.md` + frontmatter (`name`, `description` когда/когда-НЕ,
+  `version`). Побочно починен баг: `install.sh` линкует только `<dir>/SKILL.md`, т.е.
+  плоские скиллы вообще не устанавливались. Все 17 скиллов теперь единого формата.
 - [ ] **D · P0 — реестр скиллов + CI-инвариант.** Генерировать `skills/INDEX.json`
   (`name/path/version/status: stable|backlog/description`) из frontmatter. Добавить в
   `rra-audit-repo`: (1) каждый скилл из `skills:` роли существует и `status: stable`,
@@ -50,7 +50,7 @@
 - [ ] **P3 (опц., только под нагрузку)** `load-capacity`, `high-availability`
 
 ### Согласованность методологии
-- [ ] Прогнать `doc-quality-review` по обновлённым ролям и `skills/lib/observability.md`
+- [ ] Прогнать `doc-quality-review` по обновлённым ролям и `skills/lib/observability/SKILL.md`
 - [ ] Проверить, что все манифесты ролей ссылаются только на существующие скиллы (после удаления tech-radar/qa/analytics)
 
 ## Done

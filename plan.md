@@ -67,11 +67,11 @@
 
 ```
 skills/
-  lib/                 # канонические тела скиллов, по одной копии
-    architecture.md security.md code-style.md observability.md  # домены (.md)
-    program-design/ program-implementation/ component-tests/    # техники (папки)
-    http-io/ llm-client/ git-conventions/ documentation/
-    doc-quality-review/ md-formatting/ platform-landing/
+  lib/                 # канонические тела скиллов, по одной копии (все — <name>/SKILL.md)
+    architecture/ security/ code-style/ observability/          # домены
+    program-design/ program-implementation/ component-tests/    # техники
+    contract-tests/ http-io/ llm-client/ git-conventions/ documentation/
+    communication/ memory/ doc-quality-review/ md-formatting/ platform-landing/
   roles/<role>/<role>.md   # манифест: грузит из ../../lib/, контракт вход/выход/STOP
 
 # роли (6 + дирижёр): planner (Wirth) · plan-reviewer (Mills) · implementer (Hughes)
