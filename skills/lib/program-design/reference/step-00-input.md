@@ -4,9 +4,14 @@
 
 **In:** FRD/task, API contract, failure table, Gherkin scenarios, AGENTS/CLAUDE/README. **Out:** decision to start designing or stop.
 
+These artifacts are **produced by the `requirements-intake` skill** (BRD → FRD → use cases →
+draft contract + failure-mode map), not assumed to exist externally. Step 0 only checks they
+are present and frozen.
+
 **Mandatory input artifacts:**
 
-- FRD or equivalent (a phrase or two about the task).
+- **FRD** `requirements/<slug>.md` from `requirements-intake` (problem statement, Cockburn
+  use cases, actors & interfaces).
 - **API contract.** For synchronous endpoints — `OpenAPI`. For events and async
   integrations — `AsyncAPI`. A mixed service (HTTP + broker) needs **both**.
 - **Failure table in the README** — the failure-mode map of integrations with mandatory
@@ -19,10 +24,10 @@
   Step 8.
 - `AGENTS.md`, `CLAUDE.md`, `README` — to know the project conventions.
 
-**Hard rule.** If the contract (`OpenAPI`/`AsyncAPI`) is missing, the README failure table is
-missing, or Gherkin component scenarios for the future slice endpoints are not written —
-**design does not start**. You MUST stop, report to the operator, and propose freezing the
-missing artifacts first as a separate task.
+**Hard rule.** If the FRD, the contract (`OpenAPI`/`AsyncAPI`), the README failure table, or
+the Gherkin component scenarios for the future slice endpoints are missing — **design does
+not start**. You MUST stop and run `requirements-intake` first (it produces the FRD, the
+draft contract and the failure-mode map), then write the Gherkin scenarios, then return.
 
 Without a contract there's nothing to design a slice on: no source of truth for the request
 shape, the response, or the error codes. Without the failure table it's unclear which failure

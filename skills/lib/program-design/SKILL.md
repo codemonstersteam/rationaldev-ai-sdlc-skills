@@ -1,6 +1,6 @@
 ---
 name: program-design
-description: Designing a program by the discipline of rational development. Use when an FRD/task and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the API contract or the README failure-mode map is missing — design them first as a separate task. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum.
+description: Designing a program by the discipline of rational development. Use when an FRD (from the `requirements-intake` skill) and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the FRD, the API contract, or the README failure-mode map is missing — run `requirements-intake` first. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum.
 version: "1.0"
 ---
 
@@ -8,8 +8,10 @@ version: "1.0"
 
 ## Purpose
 
-The planner's skill. **In:** a functional requirement (FRD, task description).
-**Out:** a design package the implementer uses to build the program.
+The planner's skill. **In:** a functional-requirements document (FRD) produced by the
+`requirements-intake` skill (problem statement, Cockburn use cases, interfaces, draft
+contract + failure-mode map). **Out:** a design package the implementer uses to build the
+program.
 
 > Roles are work modes, not necessarily different models. One model can play both
 > roles in sequence; what matters is the mode switch and the artifact handoff (the
@@ -38,8 +40,8 @@ map below). Each step's file has its own "In/Out".
 
 | Step | Does | Main out |
 |-----|------------|---------------|
-| 0 | Check mandatory input artifacts (contract, failure table, Gherkin) | decision "design / stop" |
-| 1 | State the task in one phrase | `docs/intent/<slug>.md` |
+| 0 | Check mandatory input artifacts (FRD, contract, failure table, Gherkin) | decision "design / stop" |
+| 1 | Confirm the FRD from `requirements-intake` (problem statement + use cases + interfaces) | verified `requirements/<slug>.md` |
 | 2 | List the external inputs of the slices | slice table |
 | 3 | Design each slice's module tree | tree + head-pipe pseudocode |
 | 4 | Describe the message catalog | `messages.md` (types, `Result<T, Error>`) |
@@ -60,7 +62,7 @@ the whole skill. By the Step-index above, find the step number and open its file
 | Step | Detail file |
 |-----|-------------|
 | 0 | `reference/step-00-input.md` — check mandatory input artifacts |
-| 1 | `reference/step-01-intent.md` — task in one phrase |
+| 1 | `reference/step-01-requirements.md` — confirm the FRD from `requirements-intake` |
 | 2 | `reference/step-02-inputs.md` — list slice inputs |
 | 3 | `reference/step-03-module-tree.md` — module tree, hard rules, C4, head-pipe pseudocode |
 | 4 | `reference/step-04-messages.md` — message catalog + error model |
