@@ -1,347 +1,175 @@
 ---
 name: http-io
-description: Проектирование I/O-объекта поверх HTTP к внешнему дозируемому (rate-limited / metered) сервису — LLM, linter-as-service, embeddings, любой внешний API. Применять, когда слайсу нужен исходящий HTTP-вызов и важно НЕ перегрузить поставщика и НЕ отправить лишний контекст. Спина скилла — два бюджета (нагрузки и payload), считаются в дизайне слайса ДО кода. Поток: curl-проба → машинная спека провайдера (OpenAPI/AsyncAPI; если у поставщика её нет — пишем свою) → из неё выводятся клиент, стаб и фикстуры юнит/компонентных тестов; бюджеты протягиваются в тесты как ассершены. Для LLM-специфики (OpenAI-совместимый протокол, response_format, фан-аут по ролям-потребителям) — см. скилл llm-client как специализацию. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): два бюджета-формулы, таблицы-решения, чеклисты, STOP-правила.
+description: Designing an I/O object over HTTP to a metered / rate-limited external service — LLM, linter-as-a-service, embeddings, any external API. Use when a slice needs an outbound HTTP call and you must NOT overload the provider or send excess context. Backbone — two budgets (load and payload), computed in the slice design BEFORE code. Flow — curl probe → provider machine spec (OpenAPI/AsyncAPI; if the provider has none, write your own) → client, stub and unit/component test fixtures derived from it; budgets carried into tests as assertions. For LLM specifics (OpenAI-compatible protocol, response_format, fan-out over consumer roles) see the llm-client skill. Built for a weak model (Qwen3.5-397B-A17B, ~17B active): two budget formulas, decision tables, checklists, STOP rules.
 version: "1.0"
 ---
 
-# http-io — дисциплина исходящих HTTP-вызовов к дозируемому сервису
+# http-io — discipline for outbound HTTP to a metered service
 
-Скилл обобщает уроки реальной реализации I/O-объекта `LLMClient` (девлог слайса)
-на любой I/O-объект, скрывающий HTTP к внешнему сервису с тарификацией или
-лимитами: LLM, линтер-как-сервис, embeddings, корпоративный API. Локальные I/O —
-объект доступа к файловой системе, sink в stdout/файл — сюда **не относятся**: у
-них нет ни поставщика, которого можно перегрузить, ни дозируемого контекста.
+Applies to any I/O object hiding HTTP to a billed or rate-limited service (LLM,
+linter-as-a-service, embeddings, corporate API). Local I/O (filesystem, stdout/file
+sink) is **out of scope** — no provider to overload, no metered context.
 
-> **Главный тезис девлога:** дефекты I/O-объекта закрывались не в кодинге, а в
-> дизайне и в верификации-до-кода. Этот скилл переносит решения на этап
-> проектирования слайса. Для LLM-частностей — скилл [`llm-client`](../llm-client/SKILL.md).
+> **Core lesson:** I/O-object defects are closed in **design and verify-before-code**,
+> not in coding. For LLM specifics — the [`llm-client`](../llm-client/SKILL.md) skill.
 
----
+## Two budgets — design parameters, not defaults
 
-## Два бюджета — проектные параметры, не дефолты
+Every call to a metered service has two independent limits, computed **in the slice
+design card before the first line of I/O code**, fixed in config, then **carried into
+tests as assertions** — not "discovered" after the first 429.
 
-Любой исходящий вызов к дозируемому сервису имеет два независимых ограничения.
-Оба считаются **в дизайн-карте слайса до первой строки I/O-кода**, фиксируются
-в конфиге и затем **протягиваются в тесты как ассершены** (раздел «От curl к
-тестам»), а не «всплывают» после первого 429.
-
-| Бюджет | Вопрос | Где зафиксирован |
+| Budget | Question | Where fixed |
 |---|---|---|
-| **Нагрузки** | сколько запросов × как часто ≤ окно поставщика? | пауза/конкуррентность в I/O-объекте, тир в доке |
-| **Payload** | что и сколько байт уходит в один запрос? | whitelist входа в конфиге |
+| **Load** | how many requests × how often ≤ provider window? | pause/concurrency in the I/O object |
+| **Payload** | what and how many bytes go in one request? | input whitelist in config |
 
-«Отправить всё» и «звать в цикле без паузы» — не дефолты, а **отложенные
-аварии**. Дизайн обязан явно ответить на оба вопроса.
+"Send everything" and "loop without a pause" are not defaults — they are **deferred outages**.
 
----
+## Load budget — don't overload the provider
 
-## Бюджет нагрузки — не перегружать поставщика
-
-### Считается формулой, до кода
+Computed by formula, before code:
 
 ```
-N_вызовов_за_команду × токены_на_вызов  ≤  TPM-окно тира
-N_вызовов_за_команду                    ≤  RPM-окно тира
+N_calls_per_command × tokens_per_call  ≤  tier TPM window
+N_calls_per_command                    ≤  tier RPM window
 ```
 
-Например, слайс с фан-аутом по N ролям-потребителям × ~15k токенов = десятки
-тысяч токенов за ~секунды. На младшем тире это превышает TPM-окно (одно окно —
-1 минута) → второй вызов ловит 429, и пауза не помогает, пока окно не
-сбросится (урок девлога).
+Fan-out over N consumer roles × ~15k tokens = tens of thousands of tokens in seconds;
+on a low tier this exceeds the 1-minute TPM window → the second call hits 429, and a
+pause won't help until the window resets.
 
-### Лимиты читаем у поставщика, не хардкодим
+**Read limits from the provider, don't hardcode** (tiers/TPM/RPM change per model — a
+table in code rots): **response headers** (`*-ratelimit-tokens-remaining`,
+`*-tokens-reset`, `retry-after`) are runtime truth; the **provider console** is for the
+design-time "do we fit at all" estimate.
 
-Тиры и TPM/RPM **меняются и зависят от модели** — таблицу в коде держать нельзя,
-она протухнет. Два надёжных источника:
+**Pacing ladder — adaptive, not a fixed sleep.** A fixed `callDelayMs` is a floor, not
+a solution. Pick the first matching row top-down; which rung is a **design decision**,
+fixed in the slice card with the numbers:
 
-1. **Заголовки ответа** (пример Anthropic): `anthropic-ratelimit-requests-remaining`,
-   `anthropic-ratelimit-tokens-remaining`, `anthropic-ratelimit-tokens-reset`,
-   `retry-after`. Это источник истины в рантайме.
-2. **Консоль поставщика** — для проектной оценки «влезаем ли вообще».
-
-### Пацинг: адаптивный, не фиксированный sleep
-
-Фиксированная пауза `callDelayMs` между вызовами (как в первой версии метода
-`Ask`) — это **пол**, а не решение. Правильная лестница, от простого к точному:
-
-1. **Последовательно + пауза** — годится, пока `N` мало и команда не на горячем
-   пути. Пауза в конфиге, не хардкод.
-2. **Backoff по `Retry-After`** — на 429 не падать сразу, а уважить заголовок:
-   спать ровно `Retry-After` секунд и повторить (с потолком повторов). Это
-   снимает большинство 429 без раздувания фиксированной паузы.
-3. **Адаптивный пацинг по `*-tokens-remaining`** — если в окне осталось мало
-   токенов, притормозить перед следующим вызовом. Опционально, когда `N` растёт.
-4. **Ограниченная конкуррентность** — если нужна скорость: семафор на `k`
-   одновременных вызовов, `k` подобран под RPM. Не «все сразу».
-
-> Решение, какую ступень брать, — **проектное**, зависит от `N` слайса и тира.
-> Зафиксировать в дизайн-карте слайса вместе с числами.
-
-Таблица-роутер (разложены те же четыре ступени; бери первую подходящую строку
-сверху вниз):
-
-| Условие (N вызовов, горячий путь?) | Ступень |
+| Condition (N calls, hot path?) | Rung |
 |---|---|
-| `N` мало, команда **не** на горячем пути | 1. Последовательно + пауза (из конфига) |
-| ловим 429 (поставщик отдаёт `Retry-After`) | 2. Backoff по `Retry-After` (с потолком повторов) |
-| `N` растёт, окно тира поджимает (`*-tokens-remaining` мало) | 3. Адаптивный пацинг по `*-tokens-remaining` |
-| нужна скорость и тир позволяет | 4. Ограниченная конкуррентность (семафор на `k` под RPM) |
+| `N` small, command **not** on a hot path | 1. Sequential + pause (from config) |
+| catching 429 (provider sends `Retry-After`) | 2. Backoff on `Retry-After` (with a retry cap) |
+| `N` growing, window tightening (`*-tokens-remaining` low) | 3. Adaptive pacing on remaining tokens |
+| need speed and the tier allows | 4. Bounded concurrency (semaphore of `k`, sized to RPM) |
 
-### Маппинг 429 — отдельная семантика
+429 is a **normal scenario**, not an edge case: backoff-and-retry (rung 2+) or a domain
+sentinel (`ErrLLMRateLimited`) — never a "generic HTTP error".
 
-429 — **штатный сценарий**, не edge case. В I/O-объекте: либо backoff-и-повтор
-(если выбрана ступень 2+), либо доменная sentinel-ошибка (`ErrLLMRateLimited` и
-аналоги). Не «общий HTTP error».
+## Payload budget — don't send excess context
 
----
-
-## Бюджет payload — не слать лишний контекст
-
-### Оценка размера, до кода
+Computed from target-data size, before code:
 
 ```
-токены ≈ байты / 4            (грубо, для англ/смешанного текста)
-Σ(размер входа) / 4 × N_вызовов  должно влезать в TPM-окно
+tokens ≈ bytes / 4                       (rough, English/mixed text)
+Σ(input size) / 4 × N_calls  must fit the TPM window
 ```
 
-Например, целевой репозиторий ~850 KB markdown → ~230k токенов на вызов, ×N
-ролей ≈ под миллион токенов за команду — кратно выше TPM младшего тира. Это
-считается из размера целевых данных **на этапе дизайна**, не после первого
-запуска.
-
-### Whitelist входа в конфиге — обязателен
-
-Граница контекста — проектное решение. «Что именно отправляем?» — явный список в
-конфиге, а не «всё подряд рекурсивно»:
+A ~850 KB markdown repo ≈ ~230k tokens/call × N roles ≈ ~1M tokens/command — far above
+a low tier's TPM. **Input whitelist in config is mandatory** — the context boundary is
+a design decision, an explicit list, not "everything recursively":
 
 ```yaml
-# whitelist входа: I/O-объект читает только перечисленное
-inputs:
+inputs:            # the I/O object reads only what's listed
   - README.md
-  - CONTRIBUTING.md
   - AGENTS.md
 ```
 
-I/O-объект читает только перечисленное, отсутствующее пропускает. Без whitelist
-крупный вход съедает TPM на первом же вызове.
+**Don't send** binaries, vendored/generated, duplicates, or anything the layer doesn't
+need to decide. **If still too big:** truncate-with-log (silent truncation reads as
+"assessed in full" — violates *no silent caps*), chunk-and-aggregate, or delta.
 
-### Что НЕ отправлять
+## Verify before code — curl-first
 
-- бинарники, vendored/`node_modules`, генерённое;
-- дубли (один и тот же корпус в N промптов — если контент общий, дешевле
-  один раз; иногда общий осознанно);
-- то, что не нужно слою для решения (слой оценивает свой срез данных, не весь
-  объём).
+A minimal curl before writing the client catches most I/O defects. Check by hand:
+1. **endpoint** — exact path (`/v1/chat/completions`, not `/chat/completions` — a missing `/v1` returns 400);
+2. **auth** — which header (`Authorization: Bearer` vs `x-api-key`);
+3. **payload/response shape** — fields, nesting;
+4. **error bodies** — what 4xx/5xx returns; how to tell quota from invalid;
+5. **(LLM)** `response_format` — a working variant, see [`llm-client`](../llm-client/SKILL.md).
 
-### Если документ всё равно велик
+curl proves the format is live **first**, then you code the request structure.
 
-- **truncation с логом** — обрезать до лимита и **сказать об этом** в отчёте/логе.
-  Молчаливая обрезка читается как «оценили целиком», хотя это не так (принцип
-  «no silent caps»);
-- **chunking** — разбить и агрегировать, если слою это корректно;
-- **дельта** — для слоёв, работающих с изменениями, слать только изменённое, не
-  весь файл.
+## Provider spec — source of truth (OpenAPI / AsyncAPI)
 
----
+curl proves the contract is live; the **spec freezes it**. Order: curl probe → contract
+as a machine spec → client, stub and fixtures derived from it (one source, three
+artifacts don't diverge). Provider has a spec → use it; **no spec** (documented only in
+prose) → **write your own** at `api-specification/providers/<name>.openapi.yaml`.
 
-## Верификация до кода — curl-first
-
-Несколько дефектов I/O-объекта нашёл бы минимальный curl до написания клиента
-(урок девлога). Перед реализацией I/O-объекта проверить руками:
-
-1. **endpoint** — точный путь (для OpenAI-слоя Anthropic: `/v1/chat/completions`,
-   а не `/chat/completions` — пропавший `/v1` дал 400, урок девлога);
-2. **auth** — какой заголовок (`Authorization: Bearer` vs `x-api-key`);
-3. **форма payload и ответа** — поля, вложенность;
-4. **тело ошибок** — что приходит на 4xx/5xx, как отличить квоту от невалида;
-5. **(LLM)** `response_format` — рабочий вариант, см. [`llm-client`](../llm-client/SKILL.md)
-   (`json_object` Anthropic не поддерживает — только `json_schema + strict +
-   additionalProperties:false`, несколько итераций curl, урок девлога).
-
-Сначала curl убеждает, что формат живой, **потом** кодируется структура запроса.
-Это дешевле итераций курл-диагностики на уже написанном коде.
-
----
-
-## Спека провайдера — источник истины (OpenAPI / AsyncAPI)
-
-Curl доказывает, что контракт живой; **спека его замораживает.** Идеальный
-порядок: curl-проба → проверенный контракт оформляется машинной спекой → из неё
-выводятся клиент, стаб и фикстуры. Тогда три артефакта не разъезжаются — у них
-один источник.
-
-- **У поставщика есть машинная спека** (OpenAPI/AsyncAPI) — берём её как источник
-  истины, не переписываем формы руками.
-- **Спеки нет** (частый случай: OpenAI-слой Anthropic задокументирован прозой, не
-  машинно под наше использование) — **пишем свою** на проверенный curl-ом контракт
-  и кладём рядом с контрактом сервиса:
-  `api-specification/providers/<name>.openapi.yaml` (параллель к
-  `api-specification/openapi.yaml` и машинной схеме отчёта сервиса).
-
-**Какую спеку:**
-
-| Спека | Когда | Что описывает |
+| Spec | When | Describes |
 |---|---|---|
-| **OpenAPI** | sync request/response (`POST /chat/completions`) | эндпоинт, auth, схема запроса (вкл. `response_format`), схема ответа, тела ошибок 4xx/5xx |
-| **AsyncAPI** | стрим/события (SSE токен-стрим, вебхуки, очереди) | каналы, формат сообщений, порядок событий |
+| **OpenAPI** | sync request/response | endpoint, auth, request schema (incl. `response_format`), response schema, 4xx/5xx bodies |
+| **AsyncAPI** | stream/events (SSE, webhooks, queues) | channels, message format, event order |
 
-**Дисциплина объёма:** спекаем **только те эндпоинты и поля, что реально
-используем**, не весь API провайдера. Это та же граница, что и у payload-бюджета
-— не моделируем то, что не отправляем и не читаем.
+**Scope:** spec only the endpoints and fields you actually use — same boundary as the payload budget.
 
-**Что спека даёт дальше:**
-- **клиент** — request/response-структуры выводятся из схем спеки, не из догадок;
-- **стаб** — обязан соответствовать той же спеке (один контракт у клиента и
-  стаба → стаб не «врёт» относительно реального провайдера);
-- **тесты** — happy-ответ валидируется против схемы из спеки (как отчёт сервиса
-  против его машинной схемы); фикстуры ошибок — из описанных тел 4xx/5xx.
+## From curl to tests
 
----
+The spec carries into both test layers; the two budget formulas become **assertions**.
 
-## От curl к тестам — с учётом формул
+- **Unit** (`logic.go`, pure leaves) — the I/O object itself is **not** unit-tested
+  (infra). Unit-test the pure logic extracted around it: `estimateTokens` (`bytes/4`),
+  `selectInputs` (whitelist), `waitFor` (pacing), response parsing (clean + fenced),
+  status → failure-class mapping.
+- **Component** (stub) — one scenario per distinguishable contract branch: happy shape;
+  failure per `error.code` (`rate_limited`→429+`Retry-After`, `unavailable`→5xx,
+  `budget_exceeded`→`usage>limit`); **payload boundary** — stub asserts the body carries
+  only the whitelisted input.
 
-Спека провайдера (выше) — **источник истины**, который протягивается в оба слоя
-тестов. А два бюджета из формул становятся **ассершенами**, не комментариями.
-Что во что превращается:
+> A new component scenario is justified by a **new contract branch**, not "more data".
+> A formula with no new branch (exact token count, exact pause) is a **unit**.
 
-| Зафиксировано спекой / curl | Куда едет |
-|---|---|
-| форма запроса (endpoint, auth, поля, `response_format`) | стаб реализует тот же эндпоинт, соответствует спеке |
-| схема happy-ответа | валидация ответа в компонент-тесте (против машинной схемы) |
-| реальный ответ happy | `testdata/real-responses/` → детерминированный режим стаба + фикстура юнита парсера |
-| варианты ответа (чистый JSON / markdown-fenced / тела ошибок 4xx/5xx) | фикстуры юнита парсера и режимы стаба |
+## I/O object shape
 
-### Юнит-тесты (`logic.go`, чистые листья) — тестируют формулы
+Like all I/O in `internal/io`: an autonomous object hiding its dependency; each method
+is a **pipe** (one message → external call → result/domain error); the only branching
+is mapping an external code to a domain sentinel.
 
-I/O-объект сам юнитами **не** покрывается (infra: success → happy-сценарий,
-failure → сценарий отказа). Юнитим то, что вокруг него — **чистую логику
-бюджетов и парсинга**, оформленную отдельными функциями именно ради тестируемости:
-
-- **оценка токенов** — `estimateTokens(corpus)` против известного размера
-  (формула `байты/4`): на фикстуре N байт ожидаем ~N/4;
-- **whitelist-отбор** — `selectInputs(files, cfg.Inputs)` → ровно перечисленные,
-  отсутствующие пропущены, лишние файлы не попали;
-- **пацинг/backoff** — `waitFor(retryAfter, remaining)` → ожидаемая пауза для
-  выбранной в дизайне ступени (уважение `Retry-After`, потолок повторов);
-- **парсинг ответа** против curl-захваченных фикстур — чистый JSON и
-  markdown-fenced (`extractJSON` как второй эшелон);
-- **маппинг статуса → класс отказа** — 429→transient, 4xx-невалид→permanent,
-  `usage>limit`→quota → нужный sentinel.
-
-### Компонентные тесты (стаб) — контрактные ветки + границы бюджетов
-
-- **happy** — ответ формы, проверенной curl (через `real-responses` режим стаба);
-- **режимы отказа из контракта** — по одному на различимый `error.code`:
-  `rate_limited` → 429 + `Retry-After`, `unavailable` → 5xx,
-  `budget_exceeded` → стаб отдаёт `usage > limit`;
-- **граница payload** — стаб ассертит, что тело запроса несёт **только**
-  whitelisted-вход, а не весь объём: payload-бюджет как наблюдаемое поведение
-  контракта, а не внутренняя деталь.
-
-> **Граница со слоем юнитов** (memory `component-tests-contract-rubric`): узкие
-> фикстуры «под один слой» не плодим. Новый компонент-сценарий оправдан **новой
-> веткой контракта** (новый `error.code`, новый формат ответа), а не «больше
-> данных». Бюджетная формула, которая не даёт новой ветки контракта (точное число
-> токенов, точная пауза backoff), проверяется **юнитом**, не компонентом —
-> компонент проверяет лишь наблюдаемый результат (отдали whitelist / поймали 429).
-
----
-
-## Форма I/O-объекта
-
-Как у всех I/O в `internal/io`: автономный объект, скрывающий зависимость; метод
-— **труба** (одно сообщение → внешний вызов → результат/доменная ошибка);
-единственное ветвление — маппинг кода внешней системы в доменный sentinel.
-
-**Три класса режимов отказа** — обобщение трёх LLM-sentinel на любой сервис:
-
-| Класс | Природа | Что делать | LLM-пример |
+| Failure class | Nature | Action | LLM example |
 |---|---|---|---|
-| **transient** | 429, 5xx, сеть, таймаут | backoff-повтор или sentinel | `ErrLLMRateLimited` / `ErrLLMUnavailable` |
-| **permanent** | 4xx-невалид, decode | sentinel сразу, без повтора | `ErrLLMUnavailable` (parse) |
-| **quota** | `usage > limit`, отсутствие ключа | fail-fast, sentinel | `ErrLLMBudgetExceeded` |
+| **transient** | 429, 5xx, network, timeout | backoff-retry or sentinel | `ErrLLMRateLimited` / `ErrLLMUnavailable` |
+| **permanent** | 4xx-invalid, decode | sentinel at once, no retry | `ErrLLMUnavailable` (parse) |
+| **quota** | `usage > limit`, missing key | fail-fast, sentinel | `ErrLLMBudgetExceeded` |
 
-- ключ/секрет — из env по имени из конфига (`api_key_env`), fail-fast до I/O,
-  если не задан (секретов в YAML нет);
-- защитный лимит токенов (`tokenBudgetLimit`) — предохранитель от аномалий,
-  **выше** реального максимума целевых данных, не ниже (урок девлога: занижение
-  в несколько раз ловит штатный вход как ошибку);
-- таймаут HTTP-клиента задан явно (`http.Client{Timeout: …}`), не «бесконечный».
+Secret from env by config name (`api_key_env`), fail-fast before I/O (no secrets in
+YAML); guard token limit **above** the real max of target data; HTTP timeout explicit.
 
----
+## Stub in Docker Compose
 
-## Стаб в Docker Compose
+The external service in component tests is a **separate HTTP service in Compose** on the
+same endpoint, not an in-code mock (skill [`component-tests`](../component-tests/SKILL.md)).
+Switch mode via `POST /control {"mode":"…"}`; modes match the contract's failure modes
+(`healthy`, `rate_limited`→429, `unavailable`→5xx). LLM stub specifics — [`llm-client`](../llm-client/SKILL.md).
 
-Внешний сервис в компонентных тестах — **отдельный HTTP-сервис в Compose** на том
-же эндпоинте, не in-code мок (скилл [`component-tests`](../component-tests/SKILL.md);
-memory: harness-развилку не пере-обсуждать). Переключение режима через
-`POST /control {"mode":"…"}`; режимы соответствуют различимым режимам отказа из
-контракта (`healthy`, `rate_limited` → 429+`Retry-After`, `unavailable` → 5xx,
-и т.д.). LLM-специфика стаба (маркер `role:<key>`, реальные ответы в
-`testdata/real-responses/`) — в [`llm-client`](../llm-client/SKILL.md).
+## STOP rules
 
----
+Stop and ask the operator, don't guess:
+- Endpoint / auth / payload-response shape not confirmed by **curl** → STOP before code.
+- Provider has no machine spec **and** the contract is unclear from curl → STOP (client and stub will diverge).
+- Load / payload budget **not computed** while the slice fans out or sends a large context → STOP, compute first.
+- Tier limits unknown and no source (headers / console) → STOP: don't hardcode.
+- A failure mode won't fit transient / permanent / quota → STOP: no "generic HTTP error".
 
-## STOP-правила
+## Checklist — design (before I/O code) → implementation
 
-Останавливайся и спрашивай оператора, не угадывай:
+- [ ] endpoint + auth + payload/response shape verified by **curl**
+- [ ] provider machine spec exists, or your own written in `api-specification/providers/`; client and stub derive from it
+- [ ] curl-captured responses (happy + errors) saved as parser unit fixtures and stub modes
+- [ ] **load budget** computed (`N×tokens ≤ TPM`, `N ≤ RPM`); numbers + tier recorded
+- [ ] **pacing rung** chosen, justified by `N`; pause from config, not hardcoded
+- [ ] **payload budget** computed (`Σbytes/4×N < TPM`); **input whitelist** in config
+- [ ] oversized-input strategy: truncate-with-log / chunk / delta
+- [ ] budget formulas are **pure functions** (`estimateTokens`, `selectInputs`, `waitFor`), unit-tested
+- [ ] failure modes classed transient / permanent / quota → domain sentinel (not generic HTTP error)
+- [ ] secret from env (config name), fail-fast; guard token limit above real max; HTTP timeout explicit
+- [ ] `baseURL` includes the version prefix (`/v1`)
+- [ ] (LLM) structured output required — see [`llm-client`](../llm-client/SKILL.md)
+- [ ] **component tests**: happy + transient/permanent/quota + payload boundary (stub asserts only whitelist sent); modes via `/control`
 
-- Endpoint / auth / форма payload-ответа не подтверждены **curl-ом** → STOP до
-  кода: сначала курл-проба, потом структура запроса.
-- У поставщика нет машинной спеки **и** контракт по curl неясен (тела ошибок,
-  вложенность) → STOP: без зафиксированного контракта клиент и стаб разъедутся.
-- Бюджет нагрузки / payload **не посчитан**, а слайс шлёт в цикле (фан-аут) или
-  отправляет большой контекст → STOP: посчитай `N×токены ≤ TPM`, `N ≤ RPM`,
-  `Σбайт/4×N < TPM` в дизайн-карте до кода.
-- Лимиты тира (TPM/RPM) неизвестны и нет источника (заголовки ответа / консоль
-  поставщика) → STOP: лимиты не хардкодим, читаем у поставщика.
-- Режим отказа не удаётся отнести к классу transient / permanent / quota →
-  STOP, спроси: «общий HTTP error» вместо доменного sentinel недопустим.
+## Before commit
 
-## Чеклист дизайна слайса (до первой строки I/O-кода)
-
-Это то, что добавляется в дизайн-карту слайса с HTTP-вызовом **до** реализации:
-
-- [ ] endpoint + auth + форма payload/ответа проверены **curl-ом**
-- [ ] есть машинная спека провайдера; если нет — написана своя (OpenAPI для sync,
-      AsyncAPI для стрима) на проверенный контракт, в `api-specification/providers/`;
-      клиент и стаб выводятся из неё
-- [ ] curl-захваченные ответы (happy + варианты ошибок) сохранены как фикстуры
-      юнита парсера и как режимы стаба
-- [ ] **бюджет нагрузки** посчитан: `N_вызовов × размер ≤ TPM`, `N ≤ RPM`; числа
-      и тир записаны в карте
-- [ ] выбрана ступень пацинга (последовательно+пауза / backoff по `Retry-After` /
-      адаптив / конкуррентность) — обоснована числом `N`
-- [ ] **бюджет payload** посчитан из размера целевых данных: `Σ байт /4 × N < TPM`
-- [ ] **whitelist входа** определён и вынесен в конфиг (не «всё подряд»)
-- [ ] стратегия на слишком большой вход: truncate-с-логом / chunk / дельта
-- [ ] формулы бюджетов оформлены как **чистые функции** (`estimateTokens`,
-      `selectInputs`, `waitFor`) — ради юнит-тестируемости
-- [ ] режимы отказа размечены по классам transient / permanent / quota → sentinel
-- [ ] секрет — из env по имени из конфига, fail-fast до I/O
-- [ ] защитный лимит токенов — выше реального максимума целевых данных
-- [ ] таймаут HTTP-клиента задан явно
-- [ ] режимы стаба перечислены из контракта (по одному на различимый отказ)
-
----
-
-## Чеклист реализации (после дизайна)
-
-- [ ] `baseURL` включает версионный префикс (`/v1`), не просто домен
-- [ ] маппинг внешних кодов → доменные sentinel, не «общий HTTP error»
-- [ ] пацинг/backoff реализован по выбранной ступени; пауза из конфига, не хардкод
-- [ ] вход читается по whitelist из конфига
-- [ ] (LLM) structured output обязателен — см. [`llm-client`](../llm-client/SKILL.md)
-- [ ] **юнит-тесты формул**: токен-оценка, whitelist-отбор, пацинг, парсинг
-      (чистый + fenced), маппинг статуса → класс отказа
-- [ ] **компонент**: happy формы из curl + transient/permanent/quota +
-      граница payload (стаб ассертит, что ушёл только whitelist)
-- [ ] стаб различает режимы через `/control`
-
----
-
-## Перед коммитом
-
-`gofmt -l ./internal/slice/<name>/` (пусто = чисто) и, при новой зависимости,
-`go.sum` закоммичен + копируется в `Dockerfile.runtime` (`COPY go.mod go.sum ./`).
-Подробности — в [`llm-client`](../llm-client/SKILL.md) → «Перед коммитом».
+`gofmt -l ./internal/slice/<name>/` (empty = clean) and, on a new dependency, `go.sum`
+committed + copied into `Dockerfile.runtime`. Details — [`llm-client`](../llm-client/SKILL.md) → "Before commit".
