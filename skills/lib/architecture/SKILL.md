@@ -1,116 +1,128 @@
 ---
 name: architecture
-description: Проектирование изменения в границах модулей + карта сетевой связанности. Применять на PLANNING (planner) и PLAN REVIEW (plan-reviewer): определить затронутые компоненты и смежные системы, зафиксировать новые сетевые проходы для security, удержать изменение agent-ready (1–2 модуля). НЕ применять для внутреннего устройства одного модуля (это program-design) и для написания кода (code-style).
+description: Design a change within module boundaries plus a network-connectivity map. Use during PLANNING (planner) and PLAN REVIEW (plan-reviewer) to identify affected components and adjacent systems, record new network paths for security, and keep the change agent-ready (1–2 modules). Do NOT use for the internals of a single module (that is program-design) or for writing code (code-style).
 version: "1.0"
 ---
 
-# architecture — границы модулей и сетевая связанность
+# architecture — module boundaries and network connectivity
 
-Скилл доменов для planner и plan-reviewer: вписать изменение в существующий ландшафт,
-удержать его в границах модулей (agent-ready) и задокументировать сетевую связанность
-для безопасности.
+A domain skill for planner and plan-reviewer (`large` tier): fit a change into the existing
+landscape, keep it within module boundaries (agent-ready), and document network connectivity
+for security.
 
-## Что ты должен сделать
+## What you must do
 
-При планировании фичи ты обязан:
+When planning a feature you **MUST**:
 
-1. Определить, какие компоненты системы затрагивает задача (сервисы, БД, очереди, внешние API).
-2. Описать, какие **смежные системы** участвуют и как именно происходит взаимодействие (синхронно/асинхронно, протокол, направление).
-3. Зафиксировать новые или изменённые **сетевые проходы** между компонентами — это пойдёт безопасности для открытия доступов на фаерволах.
-4. Проверить изменение на соответствие архитектурным принципам организации (см. ниже).
+1. Identify which system components the task touches (services, DBs, queues, external APIs).
+2. Describe which **adjacent systems** are involved and exactly how they interact (sync/async, protocol, direction).
+3. Record new or changed **network paths** between components — this goes to security for opening firewall access.
+4. Check the change against the org architecture principles below.
 
-## Источники контекста
+## Context sources
 
-Перед планированием подгрузи и используй:
+Before planning, load and use:
 
-- `.agent/network-topology.md` — текущая карта связанности компонентов.
-- `.agent/contracts/` — действующие API-контракты смежных систем.
-- README сервиса и ADR (architecture decision records), если есть в репозитории.
+- `.agent/network-topology.md` — current component connectivity map.
+- `.agent/contracts/` — active API contracts of adjacent systems.
+- Service README and ADRs (architecture decision records), if present in the repo.
 
-Если карты связанности или контрактов нет — это сигнал: задай уточняющий вопрос человеку (дирижёру), не выдумывай топологию.
+If no connectivity map or contracts exist, that is a signal: ask the human (orchestrator) a
+clarifying question. You **MUST NOT** invent topology.
 
-## Архитектурные принципы (must follow)
+## Architecture principles (MUST follow)
 
-- **Слабая связанность через контракты.** Любое межсервисное взаимодействие идёт через явный версионируемый контракт. Изменение контракта несовместимым образом запрещено без плана миграции.
-- **Асинхронность по умолчанию для межсервисного.** Синхронный вызов между сервисами — обоснуй в плане, почему нельзя через событие/очередь.
-- **Без новых прямых обращений к чужой БД.** Доступ к данным другого сервиса — только через его API.
-- **Idempotency для всех операций изменения состояния** (повторные доставки сообщений неизбежны).
-- **Без новых внешних сетевых зависимостей без явного указания в плане** (каждая новая зависимость = новый сетевой проход = задача безопасности).
+- **Decoupling via contracts.** Every inter-service interaction goes through an explicit, versioned contract. An incompatible contract change is **forbidden** without a migration plan.
+- **Async by default for inter-service.** A synchronous call between services **MUST** be justified in the plan — why an event/queue won't do.
+- **No new direct access to another service's DB.** Reach another service's data only through its API.
+- **Idempotency for every state-changing operation** (redeliveries are inevitable).
+- **No new external network dependencies without explicit mention in the plan** (each new dependency = a new network path = a security task).
 
-## Артефакт на выходе
+## Output artifact
 
-В `plan.md` секция `## Архитектура изменения`:
+In `plan.md`, section `## Архитектура изменения`:
 
 ```markdown
 ## Архитектура изменения
 
-### Затрагиваемые компоненты
-- service-payments (изменение)
-- service-notifications (новый consumer события)
+### Affected components
+- service-payments (change)
+- service-notifications (new event consumer)
 
-### Взаимодействия
-| От | К | Тип | Протокол | Направление |
-|----|---|-----|----------|-------------|
+### Interactions
+| From | To | Type | Protocol | Direction |
+|------|----|------|----------|-----------|
 | service-payments | kafka:payments.completed | async | Kafka | publish |
 | service-notifications | kafka:payments.completed | async | Kafka | subscribe |
 
-### Новые сетевые проходы (для security)
-| Источник | Назначение | Порт | Протокол | Обоснование |
-|----------|-----------|------|----------|-------------|
-| service-notifications | smtp-gateway | 587 | TLS | отправка email-уведомлений |
+### New network paths (for security)
+| Source | Destination | Port | Protocol | Rationale |
+|--------|-------------|------|----------|-----------|
+| service-notifications | smtp-gateway | 587 | TLS | sending email notifications |
 
-### Соответствие принципам
-- [x] Взаимодействие через событие, не синхронный вызов
-- [x] Idempotency обеспечена ключом payment_id
-- [ ] Новый сетевой проход — требует тикета в security
+### Principle compliance
+- [x] Interaction via event, not synchronous call
+- [x] Idempotency ensured by payment_id key
+- [ ] New network path — requires a security ticket
 ```
 
-Также обнови `.agent/network-topology.md`, добавив новые связи.
+Also update `.agent/network-topology.md` with the new links.
 
-## Agent-ready архитектура
+## Agent-ready architecture
 
-Ограничение контекста фундаментально и дёшево не уйдёт. Система должна быть нарезана так, чтобы агент мог осмысленно работать на куске, ни разу не загрузив всё целое. Единица работы агента = то, что помещается в его контекст вместе со всем нужным для корректного изменения: код модуля, его контракты, его тесты, его правила. Если для одной задачи нужно держать в голове пол-системы — архитектура не agent-ready.
+The context limit is fundamental and won't go away cheaply. The system **MUST** be sliced so an
+agent can work meaningfully on one piece without ever loading the whole. An agent's unit of work
+= what fits in its context together with everything needed to change it correctly: the module's
+code, its contracts, its tests, its rules. If one task requires holding half the system in mind,
+the architecture is not agent-ready.
 
-При планировании ты обязан удержать изменение в границах модулей. Если задача их нарушает — явно вынеси в план шаг «сначала декомпозиция/рефакторинг границ, потом фича».
+When planning you **MUST** keep the change within module boundaries. If the task breaks them,
+explicitly add a plan step: "first decompose/refactor boundaries, then the feature."
 
-### Требования к модулю
+### Module requirements
 
-1. **Размер ограничен сверху.** Модуль целиком помещается в контекст вместе с тестами и контрактами, с запасом. Ориентир максимального размера: `<КАЛИБРОВАТЬ: ~X строк / Y токенов под рабочее контекстное окно вашей модели>`. Превышение — триггер на декомпозицию.
-2. **Явные и стабильные границы.** Модуль явно описывает, что предоставляет наружу (контракт) и что является внутренним. Внутреннее меняется свободно; внешнее — только через версионируемый контракт. Никакого доступа к внутренностям чужого модуля в обход контракта.
-3. **Минимальная и явная связанность.** Связи наружу перечислимы. Асинхронность через события предпочтительна синхронным вызовам. Циклические зависимости между модулями запрещены (цикл = это один модуль, а не два).
-4. **Локальность контекста.** Рядом с кодом лежит всё для работы только с этим модулем: контракты, тесты всех уровней, локальный README/ADR при неочевидном поведении. Если для понимания модуля надо открыть пять соседних — локальность нарушена.
-5. **Слоистость внутри модуля.** Чёткое разделение слоёв (домен / прикладной / адаптеры инфраструктуры). Предсказуемая однообразная структура важнее «красивой» — агент работает лучше на единообразно устроенных модулях.
-6. **Контракт как единица совместимости.** Межмодульное взаимодействие только через контракт; контракт — первичный артефакт, обновляется до имплементации. Несовместимое изменение — с планом миграции.
-7. **Идемпотентность и отказоустойчивость на границах.** Каждое меняющее состояние взаимодействие идемпотентно; отказ соседнего модуля обрабатывается явно. Это позволяет агенту рассуждать локально, не держа в голове глобальные гонки.
-8. **Тестируемость в изоляции.** Модуль тестируется без поднятия всей системы (соседи — стабы/моки, контракты проверяются отдельно). Если изолированно протестировать нельзя — границы дырявые.
+1. **Bounded size.** The whole module fits in context with its tests and contracts, with margin. Reference ceiling: `<CALIBRATE: ~X lines / Y tokens for your model's working context window>`. Exceeding it triggers decomposition.
+2. **Explicit, stable boundaries.** The module explicitly states what it exposes (contract) and what is internal. Internals change freely; the external surface changes only via a versioned contract. **No** access to another module's internals bypassing its contract.
+3. **Minimal, explicit coupling.** Outbound links are enumerable. Async via events is preferred over sync calls. Cyclic dependencies between modules are **forbidden** (a cycle = one module, not two).
+4. **Context locality.** Everything to work on this module sits next to its code: contracts, tests at all levels, a local README/ADR for non-obvious behavior. If understanding the module requires opening five neighbors, locality is broken.
+5. **Layering inside the module.** Clear separation of layers (domain / application / infrastructure adapters). A predictable uniform structure beats a "pretty" one — agents work better on uniformly built modules.
+6. **Contract as the unit of compatibility.** Inter-module interaction only via contract; the contract is the primary artifact, updated before implementation. An incompatible change ships with a migration plan.
+7. **Idempotency and fault tolerance at boundaries.** Every state-changing interaction is idempotent; a neighbor's failure is handled explicitly. This lets the agent reason locally without holding global races in mind.
+8. **Testability in isolation.** The module is testable without standing up the whole system (neighbors are stubs/mocks, contracts checked separately). If it can't be tested in isolation, the boundaries leak.
 
-### Артефакт на выходе
+### Output artifact
 
-В `plan.md` секция `## Границы изменения`:
+In `plan.md`, section `## Границы изменения`:
 
 ```markdown
 ## Границы изменения
 
-### Затронутые модули
-- module-notifications (основной, изменение в границах)
+### Affected modules
+- module-notifications (primary, change within boundaries)
 
-### Проверка agent-ready
-- [x] Изменение умещается в границы 1 модуля
-- [x] Модуль помещается в контекст с тестами и контрактами
-- [x] Нет обхода чужих границ / прямого доступа к чужой БД
-- [x] Нет вводимых циклических зависимостей
-- [ ] Требуется рефакторинг границ до фичи: нет
+### Agent-ready check
+- [x] Change fits within 1 module's boundaries
+- [x] Module fits in context with tests and contracts
+- [x] No bypassing others' boundaries / direct access to another's DB
+- [x] No new cyclic dependencies introduced
+- [ ] Boundary refactor needed before feature: no
 ```
 
-## Чек-лист самопроверки
+## STOP gate
 
-- [ ] Все затронутые компоненты перечислены
-- [ ] Все смежные системы и тип взаимодействия описаны
-- [ ] Новые сетевые проходы выделены отдельной таблицей для security
-- [ ] Нет несовместимых изменений контрактов без плана миграции
-- [ ] Нет прямого доступа к чужим БД
-- [ ] `network-topology.md` обновлён
-- [ ] Изменение умещается в границы одного-двух модулей (agent-ready)
-- [ ] Затронутые модули помещаются в контекст с тестами и контрактами
-- [ ] Не вводятся циклические зависимости между модулями
-- [ ] Если границы нарушены — в плане есть шаг рефакторинга до фичи
+You **MUST** stop and hand back to the human (orchestrator) — do not invent topology — when the
+connectivity map or contracts are missing, or when the change cannot be kept within 1–2 modules
+without a boundary refactor. Surface the refactor as an explicit plan step first.
+
+## Self-check checklist
+
+- [ ] All affected components listed
+- [ ] All adjacent systems and interaction types described
+- [ ] New network paths broken out into a separate table for security
+- [ ] No incompatible contract changes without a migration plan
+- [ ] No direct access to others' DBs
+- [ ] `network-topology.md` updated
+- [ ] Change fits within one or two modules (agent-ready)
+- [ ] Affected modules fit in context with tests and contracts
+- [ ] No cyclic dependencies introduced between modules
+- [ ] If boundaries are broken, the plan has a refactor step before the feature

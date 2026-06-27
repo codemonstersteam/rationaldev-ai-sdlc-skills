@@ -1,49 +1,38 @@
-<!-- program-design · деталь шага 00. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 00 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 0. Прочитать вход
+### Step 0. Read the input
 
-**Вход:** FRD/задача, контракт API, таблица отказов, Gherkin-сценарии, AGENTS/CLAUDE/README. **Выход:** решение начать проектирование или остановиться.
+**In:** FRD/task, API contract, failure table, Gherkin scenarios, AGENTS/CLAUDE/README. **Out:** decision to start designing or stop.
 
-**Обязательные артефакты на входе:**
+**Mandatory input artifacts:**
 
-- FRD или эквивалент (одна-две фразы про задачу).
-- **Контракт API.** Для синхронных эндпоинтов — `OpenAPI`. Для
-  событий и асинхронных интеграций — `AsyncAPI`. Если сервис
-  смешанный (HTTP + брокер) — оба контракта обязательно.
-- **Таблица отказов в README** — карта режимов отказа интеграций
-  с обязательными колонками: `error.code`, HTTP-статус (или тип
-  события), заголовки (например `Retry-After`), действие клиента,
-  действие оператора. Это раздел «Карта режимов отказа», без него
-  компонентные сценарии отказа описать нельзя.
-- **Компонентные сценарии Gherkin** для эндпоинтов слайсов уже
-  написаны и закоммичены (по `component-tests`):
-  один happy path + сценарий на каждый различимый режим отказа,
-  для каждого эндпоинта будущего slice'а. Это **исполняемая
-  спецификация**, против которой ведётся обратная сверка дизайна
-  на Шаге 8.
-- `AGENTS.md`, `CLAUDE.md`, `README` — чтобы знать конвенции проекта.
+- FRD or equivalent (a phrase or two about the task).
+- **API contract.** For synchronous endpoints — `OpenAPI`. For events and async
+  integrations — `AsyncAPI`. A mixed service (HTTP + broker) needs **both**.
+- **Failure table in the README** — the failure-mode map of integrations with mandatory
+  columns: `error.code`, HTTP status (or event type), headers (e.g. `Retry-After`), client
+  action, operator action. This is the `## Карта режимов отказа` section; without it the
+  component failure scenarios cannot be described.
+- **Gherkin component scenarios** for the slice endpoints already written and committed (per
+  `component-tests`): one happy path + a scenario per distinguishable failure mode, for each
+  future slice endpoint. This is the **executable spec** the design is reconciled against in
+  Step 8.
+- `AGENTS.md`, `CLAUDE.md`, `README` — to know the project conventions.
 
-**Жёсткое правило.** Если контракт (`OpenAPI`/`AsyncAPI`) отсутствует,
-таблица отказов в `README` отсутствует, или компонентные сценарии
-Gherkin для эндпоинтов будущих slice'ов не написаны — **проектирование
-не начинается**. Проектировщик останавливается, сообщает оператору, и предлагает
-сначала зафиксировать недостающие артефакты как отдельную задачу.
+**Hard rule.** If the contract (`OpenAPI`/`AsyncAPI`) is missing, the README failure table is
+missing, or Gherkin component scenarios for the future slice endpoints are not written —
+**design does not start**. You MUST stop, report to the operator, and propose freezing the
+missing artifacts first as a separate task.
 
-Без контракта проектировать слайс не на чем: нет источника истины
-о форме запроса, ответа и кодах ошибок. Без таблицы отказов
-непонятно, какие компонентные сценарии отказа писать (правило
-различимости — см. `component-tests`). Без Gherkin-
-сценариев нечем сверить дизайн на полноту: проектировщик может спроектировать
-slice, который выглядит правильным по контракту, но мимо ожиданий
-исполняемой спецификации (формат `error.code` в ответе, заголовки,
-эффекты на интеграциях). Восстанавливать эти артефакты по ходу
-проектирования = плодить расхождения между контрактом, кодом и
-тестами. Только сначала зафиксированные контракт + Gherkin, потом
-проектирование.
+Without a contract there's nothing to design a slice on: no source of truth for the request
+shape, the response, or the error codes. Without the failure table it's unclear which failure
+component scenarios to write (the distinguishability rule — see `component-tests`). Without
+Gherkin scenarios there's nothing to reconcile the design against for completeness: you might
+design a slice that looks right by the contract but misses the executable spec's expectations
+(`error.code` format in the response, headers, integration effects). Restoring these artifacts
+during design = breeding mismatches between contract, code and tests. Frozen contract +
+Gherkin first, then design.
 
-Если контракт есть, но в нём не описаны 5xx-ответы с `error.code`,
-или таблица отказов пустая, или Gherkin-файлы существуют, но в них
-нет сценариев на режимы отказа из таблицы — это тот же случай:
-остановиться, зафиксировать недостающее с оператором, потом
-продолжить.
-
+If the contract exists but doesn't describe 5xx responses with `error.code`, or the failure
+table is empty, or the Gherkin files exist but lack scenarios for the failure modes from the
+table — same case: stop, freeze the missing pieces with the operator, then continue.

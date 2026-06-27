@@ -1,30 +1,29 @@
-<!-- program-design · деталь шага 10. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 10 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 10. Собрать пакет проектной документации
+### Step 10. Assemble the design package
 
-**Вход:** все артефакты Шагов 1–9. **Выход:** папка `.agent/planner/design/<slug>/` с полным пакетом проектной документации.
+**In:** all artifacts from Steps 1–9. **Out:** folder `.agent/planner/design/<slug>/` with the full design package.
 
-Финальный артефакт проектировщика — папка `.agent/planner/design/<slug>/`:
+The planner's final artifact — the folder `.agent/planner/design/<slug>/`:
 
 ```
 .agent/planner/design/<slug>/
-├── intent.md              # одна фраза + контекст
-├── slices.md              # таблица срезов
-├── messages.md            # каталог сообщений с типами
+├── intent.md              # one phrase + context
+├── slices.md              # slice table
+├── messages.md            # message catalog with types
 ├── slices/
-│   ├── 01-<slice>.md      # дерево модулей (адаптер → головной → логика → I/O)
-│   │                      #   + контракты + антецеденты/консеквенты + тесты
+│   ├── 01-<slice>.md      # module tree (adapter → head → logic → I/O)
+│   │                      #   + contracts + antecedents/consequents + tests
 │   ├── 02-<slice>.md
 │   └── ...
-├── infrastructure.md      # инфраструктурный модуль приложения:
-│                          #   HTTP-сервер / потребитель брокера /
-│                          #   gRPC-сервер / cron — в зависимости
-│                          #   от типов входов slice'ов
-├── contracts-graph.md     # граф вызовов модулей + сверка согласованности
-│                          #   (см. Шаг 9)
-├── c4.md                  # C4: C2 (контейнер) + C3 (дерево модулей) на
-│                          #   Mermaid + системный use case по Коберну
-│                          #   (Шаг 3 «C4 по уровням», Шаг 8.6); C1 — на лэндинге
-└── backlog.md             # тикеты для исполнителя (см. ниже)
+├── infrastructure.md      # app infrastructure module:
+│                          #   HTTP server / broker consumer /
+│                          #   gRPC server / cron — depending on
+│                          #   the slices' input types
+├── contracts-graph.md     # module call graph + consistency reconciliation
+│                          #   (see Step 9)
+├── c4.md                  # C4: C2 (container) + C3 (module tree) in
+│                          #   Mermaid + system Cockburn use case
+│                          #   (Step 3 "C4 by levels", Step 8.6); C1 — on the landing
+└── backlog.md             # tickets for the implementer (see below)
 ```
-

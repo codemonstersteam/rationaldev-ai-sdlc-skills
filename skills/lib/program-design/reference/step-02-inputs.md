@@ -1,30 +1,25 @@
-<!-- program-design · деталь шага 02. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 02 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 2. Перечислить входы slice'ов
+### Step 2. List the slice inputs
 
-**Вход:** задача одной фразой + контракт API. **Выход:** таблица срезов (тип входа, идентификатор, имя slice'а).
+**In:** the task in one phrase + the API contract. **Out:** slice table (input type, identifier, slice name).
 
-Один внешний вход = один vertical slice. Тип входа определяется
-интеграцией:
+One external input = one vertical slice. The input type follows the integration:
 
-- **HTTP-эндпоинт** — для синхронных API.
-- **Топик/очередь брокера** — для асинхронных событий.
-- **gRPC-метод** — для типизированных синхронных вызовов.
-- **CLI / cron / файловый триггер** — для пакетных и фоновых задач.
+- **HTTP endpoint** — for synchronous APIs.
+- **Broker topic/queue** — for asynchronous events.
+- **gRPC method** — for typed synchronous calls.
+- **CLI / cron / file trigger** — for batch and background tasks.
 
-Если входа ещё нет в контракте (`OpenAPI` для синхронных, `AsyncAPI`
-для асинхронных) — спроектировать с оператором. Параметры,
-которые надо зафиксировать, зависят от типа: для HTTP — метод, путь,
-авторизация, идемпотентность; для брокера — топик/очередь, схема
-сообщения, поведение DLQ; для gRPC — метод и proto-схема.
+If an input is not yet in the contract (`OpenAPI` for sync, `AsyncAPI` for async) — design it
+with the operator. The parameters to freeze depend on the type: HTTP — method, path, auth,
+idempotency; broker — topic/queue, message schema, DLQ behavior; gRPC — method and proto schema.
 
-Зафиксировать таблицу:
+Freeze the table:
 
-| # | Тип входа | Идентификатор | Slice (имя) | Краткое описание |
+| # | Input type | Identifier | Slice (name) | Short description |
 |---|-----------|---------------|-------------|------------------|
 
-Где «Тип входа» — `HTTP` / `Broker` / `gRPC` / `CLI`, а
-«Идентификатор» — `POST /v1/registrations` для HTTP,
-`registrations.created` (топик) для Broker, `RegistrationService.Create`
-для gRPC, `registrations:cleanup` для cron.
-
+Where "Input type" is `HTTP` / `Broker` / `gRPC` / `CLI`, and "Identifier" is
+`POST /v1/registrations` for HTTP, `registrations.created` (topic) for Broker,
+`RegistrationService.Create` for gRPC, `registrations:cleanup` for cron.

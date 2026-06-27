@@ -1,134 +1,135 @@
 ---
 name: observability
-description: SLI/SLO/guardrail на PLANNING и канареечный release-health на RELEASE — 4 золотых сигнала (latency/traffic/errors/saturation), вердикт GREEN/YELLOW/RED, откат за фиче-тогглом. Применять planner (закладка SLI/SLO/плана отката в plan.md) и release-health/michtom (выкат в прод + анализ здоровья). Без тестовых сред — канарейка прямо в прод. НЕ применять для контрактов (contract-tests) или поведения чёрного ящика (component-tests).
+description: SLI/SLO/guardrail at PLANNING and canary release-health at RELEASE — 4 golden signals (latency/traffic/errors/saturation), GREEN/YELLOW/RED verdict, rollback behind a feature toggle. Apply for planner (writes SLI/SLO/rollback plan into plan.md) and release-health/michtom (prod rollout + health analysis). No test environments — canary straight to prod. Do NOT apply for contracts (contract-tests) or black-box behavior (component-tests).
 version: "2.0"
 ---
 
-# observability — наблюдаемость и здоровье релиза
+# observability — release observability and health
 
-Дерзкий CD: нет тестовых сред, только CI + канарейка. Агент проверяет, что фича реально
-**установилась и работает** в проде, и решает о расширении канарейки или откате по
-**сигналам**, а не по «деплой прошёл без ошибки».
+Bold CD: no test environments, only CI + canary. The agent verifies that a feature actually
+**deployed and works** in prod, and decides whether to widen the canary or roll back based on
+**signals**, not on "the deploy finished without error".
 
-## Нет тестовых сред — канарейка прямо в прод
+## No test environments — canary straight to prod
 
-Стендов нет. Выкат идёт **канарейкой за фиче-тогглом** прямо в прод на **вариативную
-среду** (VM / контейнер / serverless — не обязательно Kubernetes). Тоггл стартует на малой
-доле трафика и расширяется только по зелёным сигналам.
+There are no test environments. Rollout goes **canary behind a feature toggle** straight to
+prod on a **variable runtime** (VM / container / serverless — not necessarily Kubernetes). The
+toggle starts on a small traffic share and widens only on green signals.
 
-| | Канарейка в проде |
+| | Canary in prod |
 |---|---|
-| Трафик | реальный, малая доля → растёт |
-| Тоггл | OFF → открывается долями (1% → 5% → 25% → 100%) |
-| Главный сигнал | 4 золотых сигнала + SLO + guardrail vs baseline |
-| Функциональная проверка | smoke/health на канареечной доле + ручная проверка дирижёром (Human Gate #3) |
+| Traffic | real, small share → grows |
+| Toggle | OFF → opens in shares (1% → 5% → 25% → 100%) |
+| Primary signal | 4 golden signals + SLO + guardrail vs baseline |
+| Functional check | smoke/health on the canary share + manual check by the orchestrator (Human Gate #3) |
 
-## Принцип
+## Principle
 
-«Задеплоилось» ≠ «работает». Зелёный CI проверяет код до выката; observability проверяет
-систему **после** выката, на реальном трафике канарейки. Раскатка идёт постепенно и
-**каждый шаг подтверждается сигналами**.
+"Deployed" ≠ "works". Green CI checks code before rollout; observability checks the system
+**after** rollout, on real canary traffic. Rollout is gradual and **each step is confirmed by
+signals**.
 
-Базовое правило: **откат всегда дешевле починки в проде.** При сомнении — сначала вернуть
-тоггл/версию в безопасное состояние, потом разбираться.
+Base rule: **rollback is always cheaper than fixing in prod.** When in doubt, first return the
+toggle/version to a safe state, then investigate.
 
-## Что закладывается в план (стадия PLANNING)
+## What goes into the plan (PLANNING stage)
 
-В `plan.md` до имплементации фиксируются:
+Before implementation, `plan.md` MUST fix:
 
-- **SLI** — индикаторы, что фича работает (доля успешных обработок, p99 латентности).
-- **SLO и error budget** — целевые пороги и допустимый бюджет ошибок на окне канарейки.
-- **Smoke/health-проверки** — конкретные запросы/сценарии живости фичи после выката.
-- **Guardrail** — продуктовая метрика, которая не должна просесть от фичи.
-- **План отката** — как мгновенно выключить фичу (тоггл OFF) и при каких условиях откатывать версию.
+- **SLI** — indicators that the feature works (share of successful processings, p99 latency).
+- **SLO and error budget** — target thresholds and the allowable error budget over the canary window.
+- **Smoke/health checks** — concrete requests/scenarios proving the feature is live after rollout.
+- **Guardrail** — a product metric that MUST NOT regress because of the feature.
+- **Rollback plan** — how to instantly disable the feature (toggle OFF) and under what conditions to roll back the version.
 
-## Четыре золотых сигнала (golden signals)
+## Four golden signals
 
-После каждого шага канарейки агент сравнивает канареечную группу с baseline (тот же сервис
-без фичи / предыдущее окно):
+After each canary step the agent compares the canary group with baseline (same service without
+the feature / previous window):
 
-1. **Latency** — задержка, отдельно для успешных и ошибочных ответов.
-2. **Traffic** — нагрузка/RPS: фича получает ожидаемый трафик, нет аномалий.
-3. **Errors** — доля ошибок (5xx, исключения, неуспешные обработки, рост ретраев/DLQ).
-4. **Saturation** — насыщение ресурсов (CPU, память, пулы соединений, лаг очереди).
+1. **Latency** — separately for successful and failed responses.
+2. **Traffic** — load/RPS: the feature gets expected traffic, no anomalies.
+3. **Errors** — error share (5xx, exceptions, failed processings, rising retries/DLQ).
+4. **Saturation** — resource saturation (CPU, memory, connection pools, queue lag).
 
-Дополнительно: **бизнес-guardrail** и **специфичные SLI фичи** из плана.
+Plus: **business guardrail** and **feature-specific SLI** from the plan.
 
-## Канареечный выкат и health (роль Release & Health / Michtom)
+## Canary rollout and health (role Release & Health / Michtom)
 
-Сначала механика выката, затем **независимая** оценка по сигналам (асимметрия внутри роли):
+First the rollout mechanics, then an **independent** signal-based assessment (generator/critic
+asymmetry inside the role):
 
-- **Health-check окружения** — сервис поднялся, liveness/readiness зелёные, зависимости доступны.
-- **Smoke на канареечной доле** — сквозной прогон ключевых путей фичи из плана на реальном, но малом трафике.
-- **Передача дирижёру на ручную проверку** (Human Gate #3) — то, что не покрывают автотесты.
-- Провал smoke/health = фича **не** расширяется; классификация (дефект реализации / конфигурации деплоя) и возврат в цикл или эскалация.
+- **Environment health-check** — service is up, liveness/readiness green, dependencies reachable.
+- **Smoke on the canary share** — end-to-end run of the feature's key paths from the plan on real but small traffic.
+- **Handoff to the orchestrator for a manual check** (Human Gate #3) — what autotests don't cover.
+- Smoke/health failure = the feature is **not** widened; classify (implementation defect / deploy config) and return to the cycle or escalate.
 
-### Вердикт после шага канарейки
+### Verdict after a canary step
 
-- **GREEN — расширять.** Все сигналы и SLI в пределах SLO, guardrail не просел, нет деградации против baseline на окне → расширить долю канарейки.
-- **YELLOW — держать.** Сигналы пограничны / шумят / окна не хватило → не расширять, продлить наблюдение. **Расширять на жёлтом запрещено.**
-- **RED — откат.** Нарушен SLO, всплеск ошибок/латентности, просадка guardrail, аномальное насыщение или горит error budget → **немедленный откат** (тоггл OFF, при необходимости откат версии) + эскалация дирижёру.
+- **GREEN — widen.** All signals and SLI within SLO, guardrail not regressed, no degradation vs baseline over the window → widen the canary share.
+- **YELLOW — hold.** Signals borderline / noisy / window too short → do not widen, extend observation. You MUST NOT widen on yellow.
+- **RED — rollback.** SLO breached, error/latency spike, guardrail regression, abnormal saturation or burning error budget → **immediate rollback** (toggle OFF, version rollback if needed) + escalate to the orchestrator.
 
-Вердикт всегда обоснован числами (что сравнивалось, на каком окне, какой порог) и логируется в трассировку.
+A verdict MUST always be justified with numbers (what was compared, over which window, against which threshold) and logged to the trace.
 
-## Что запрещено (анти-gaming для CD)
+## What is forbidden (anti-gaming for CD)
 
-- Нельзя **ослаблять SLO, пороги алертов или менять определения SLI** ради продолжения раскатки.
-- Нельзя **глушить/мьютить алерты**, чтобы сигнал не мешал продвижению.
-- Нельзя **расширять долю канарейки при YELLOW/RED** или при недостаточном окне.
-- Нельзя **сжигать весь error budget** ради доката фичи.
-- Нельзя трактовать **отсутствие данных** (пустые дашборды, не подключённые метрики) как «зелёно». Нет сигнала = нельзя продвигать.
+- You MUST NOT **weaken SLO, alert thresholds, or change SLI definitions** to keep rolling out.
+- You MUST NOT **silence/mute alerts** so a signal stops blocking progress.
+- You MUST NOT **widen the canary share on YELLOW/RED** or with an insufficient window.
+- You MUST NOT **burn the entire error budget** to push a feature through.
+- You MUST NOT treat **absence of data** (empty dashboards, unconnected metrics) as "green". No signal = no progress.
 
-Нарушение = автоматический откат и эскалация.
+Violation = automatic rollback and escalation.
 
-## Артефакт на выходе
+## Output artifact
 
-### В `plan.md` секция `## Наблюдаемость и проверка работоспособности`:
+### In `plan.md`, section `## Наблюдаемость и проверка работоспособности`:
 
 ```markdown
 ## Наблюдаемость и проверка работоспособности
 
 ### SLI / SLO
-| SLI | Как измеряем | SLO | Окно |
-|-----|--------------|-----|------|
-| Доставляемость уведомлений | delivered / total событий | ≥ 99.5% | 30 мин канарейки |
-| Латентность обработки | p99 от события до отправки | < 2с | 30 мин |
-| Доля ошибок обработки | failed / total | < 0.5% | 30 мин |
+| SLI | How measured | SLO | Window |
+|-----|--------------|-----|--------|
+| Notification deliverability | delivered / total events | ≥ 99.5% | 30 min canary |
+| Processing latency | p99 from event to send | < 2s | 30 min |
+| Processing error share | failed / total | < 0.5% | 30 min |
 
-### Smoke / health (на канареечной доле в проде)
-- HEALTH: readiness сервиса зелёный, зависимости (брокер, шлюз) доступны.
-- SMOKE: тестовое событие для синтетического id → ровно один ожидаемый эффект за < 2с.
+### Smoke / health (on the canary share in prod)
+- HEALTH: service readiness green, dependencies (broker, gateway) reachable.
+- SMOKE: test event for a synthetic id → exactly one expected effect within < 2s.
 
 ### Guardrail
-- Ключевая продуктовая метрика не падает от фичи.
+- Key product metric does not drop because of the feature.
 
-### План раскатки и отката
-- Доли тоггла: 1% → 5% → 25% → 100%, окно наблюдения 30 мин на долю.
-- Откат: тоггл фичи → OFF (мгновенно). Откат версии — если деградация вне фичи.
+### Rollout and rollback plan
+- Toggle shares: 1% → 5% → 25% → 100%, observation window 30 min per share.
+- Rollback: feature toggle → OFF (instant). Version rollback — if degradation is outside the feature.
 ```
 
-### POST-DEPLOY: отчёт `.agent/release-health/release-health.md`:
+### POST-DEPLOY: report `.agent/release-health/release-health.md`:
 
 ```markdown
-## Release health — <фича>
+## Release health — <feature>
 
-| Доля | Окно | Latency p99 | Errors | Guardrail | Вердикт |
-|------|------|-------------|--------|-----------|---------|
-| 1%  | 30м | 1.4с (baseline 1.3с) | 0.1% | -0.0% | GREEN → 5% |
-| 5%  | 30м | 1.5с | 0.2% | -0.1% | GREEN → 25% |
-| 25% | 30м | 1.6с | 0.3% | -0.1% | GREEN → 100% |
-| 100%| 2ч  | 1.6с | 0.3% | -0.1% | GREEN → стабилизация |
+| Share | Window | Latency p99 | Errors | Guardrail | Verdict |
+|-------|--------|-------------|--------|-----------|---------|
+| 1%   | 30m | 1.4s (baseline 1.3s) | 0.1% | -0.0% | GREEN → 5% |
+| 5%   | 30m | 1.5s | 0.2% | -0.1% | GREEN → 25% |
+| 25%  | 30m | 1.6s | 0.3% | -0.1% | GREEN → 100% |
+| 100% | 2h  | 1.6s | 0.3% | -0.1% | GREEN → stabilization |
 
-Решение: фича раскатана на 100%, стабильна 2ч. Кандидат на удаление тоггла — тикет CLEAN-77.
+Decision: feature rolled out to 100%, stable for 2h. Candidate for toggle removal — ticket CLEAN-77.
 ```
 
-## Чек-лист самопроверки
+## Self-check checklist
 
-- [ ] SLI/SLO и guardrail заложены в план до имплементации
-- [ ] Smoke/health-сценарии реально проверяют путь фичи (не «200 на /health»)
-- [ ] Каждый шаг канарейки сравнён с baseline на достаточном окне
-- [ ] Решение GREEN/YELLOW/RED обосновано числами и залогировано
-- [ ] При RED — откат выполнен до разбора, эскалация поднята
-- [ ] Пороги SLO/алертов не ослаблялись ради раскатки
-- [ ] Отсутствие данных не трактуется как «зелёно»
-- [ ] После 100% и стабилизации заведён тикет на удаление тоггла
+- [ ] SLI/SLO and guardrail laid into the plan before implementation
+- [ ] Smoke/health scenarios actually exercise the feature path (not "200 on /health")
+- [ ] Each canary step compared to baseline over a sufficient window
+- [ ] GREEN/YELLOW/RED decision justified with numbers and logged
+- [ ] On RED — rollback done before investigation, escalation raised
+- [ ] SLO/alert thresholds not weakened for the sake of rollout
+- [ ] Absence of data not treated as "green"
+- [ ] After 100% and stabilization a ticket to remove the toggle is filed

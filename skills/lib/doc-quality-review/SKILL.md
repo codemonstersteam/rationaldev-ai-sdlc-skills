@@ -1,173 +1,173 @@
 ---
 name: doc-quality-review
-description: Детерминированная рубрика ревью качества уже написанной документации репозитория по 6 ядровым характеристикам IBM-фреймворка «Developing Quality Technical Information» (Hargis, Carey et al.) — task orientation, accuracy, completeness, clarity, organization, retrievability — адаптированным под markdown-доки. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): ✓/✗-проверки, правило «если ✗ → действие», сводный вердикт и план правок. Применять, когда нужно ОТРЕВЬЮИТЬ существующие README / docs/architecture.md / прочие доки на качество. Не применять для написания доки с нуля — это скилл documentation; характеристики style / concreteness / visual намеренно вне ядра.
+description: Deterministic rubric for reviewing the quality of already-written repository documentation against the 6 core characteristics of IBM's "Developing Quality Technical Information" framework (Hargis, Carey et al.) — task orientation, accuracy, completeness, clarity, organization, retrievability — adapted to markdown docs. Built for any tier: ✓/✗ checks, an "if ✗ → action" rule, a summary verdict, and an edit plan. Apply when you need to REVIEW existing README / docs/architecture.md / other docs for quality. Do NOT use to write a doc from scratch — that is the documentation skill; the style / concreteness / visual characteristics are deliberately out of the core.
 version: "1.0"
 ---
 
-# Ревью качества документации — рубрика 6 характеристик
+# Documentation Quality Review — 6-characteristic rubric
 
-Скилл оценивает **уже написанную** документацию. На вход — файл(ы) доки и тип
-документа. На выход — заполненная рубрика (✓/✗ по каждой проверке), список правок
-и сводный вердикт.
+This skill scores **already-written** documentation. Input: the doc file(s) and the
+document type. Output: a filled rubric (✓/✗ per check), an edit list, and a summary
+verdict.
 
-Источник рубрики: IBM «Developing Quality Technical Information: A Handbook for
-Writers and Editors» (Hargis, Carey и др.). Взято **ядро 6 из 9** характеристик,
-релевантных для dev-доков; проверки переформулированы под markdown-репозиторий.
+Rubric source: IBM "Developing Quality Technical Information: A Handbook for Writers
+and Editors" (Hargis, Carey et al.). The **core 6 of 9** characteristics relevant to
+dev docs are used; checks are reworded for a markdown repository.
 
-> Написать или пересобрать доку (не ревью) — скилл [`documentation`](../documentation/SKILL.md).
-> Найти, куда положить контент, — раздел «Роутер» там же.
-
----
-
-## 0. Как пользоваться
-
-1. Определи тип документа и его JTBD-сегмент (см. `documentation`, раздел 6).
-   Не понял сегмент → STOP (раздел 8), спроси оператора.
-2. Иди по разделам 2–7 по порядку. В каждом — поставь ✓ или ✗ по каждой проверке.
-   ✓ = условие выполнено буквально. Сомнение = ✗ (не натягивай).
-3. Каждый ✗ → возьми действие из колонки «если ✗ → действие». Запиши в план правок.
-4. В конце заполни сводную таблицу (раздел 7→итог) и вердикт.
-5. Не чини сам, если правка меняет смысл или удаляет факт → STOP, спроси.
-
-Шкала вердикта характеристики:
-- **OK** — все проверки ✓.
-- **Правки** — есть ✗, но документ пригоден, чинится точечно.
-- **Переделать** — ✗ больше половины проверок характеристики.
+> To write or rebuild a doc (not review it), use the [`documentation`](../documentation/SKILL.md)
+> skill. To find where content belongs, see its "Router" section.
 
 ---
 
-## 1. Что ревьюим под какой тип
+## 0. How to use
 
-| Тип документа | Какие характеристики применяй |
+1. Identify the document type and its JTBD segment (see `documentation`, section 6).
+   Segment unclear → STOP (section 8), ask the operator.
+2. Go through sections 2–7 in order. In each, mark ✓ or ✗ for every check.
+   ✓ = condition met literally. Any doubt = ✗ (don't stretch it).
+3. Each ✗ → take the action from the "if ✗ → action" column. Record it in the edit plan.
+4. At the end, fill the summary table (section 7 → result) and the verdict.
+5. **MUST NOT** fix it yourself if the edit changes meaning or deletes a fact → STOP, ask.
+
+Per-characteristic verdict scale:
+- **OK** — all checks ✓.
+- **Edits** — some ✗, but the doc is usable and fixable spot-by-spot.
+- **Redo** — more than half the characteristic's checks are ✗.
+
+---
+
+## 1. What to review under which type
+
+| Document type | Characteristics to apply |
 | --- | --- |
-| `README.md` | Все 6 (разделы 2–7) |
+| `README.md` | All 6 (sections 2–7) |
 | `docs/architecture.md` | Task orientation, Accuracy, Completeness, Organization (2,3,4,6) |
-| ADR / devlog / прочее | Accuracy, Clarity, Retrievability (3,5,7) |
+| ADR / devlog / other | Accuracy, Clarity, Retrievability (3,5,7) |
 
 ---
 
-## 2. Task orientation (ориентация на задачу)
+## 2. Task orientation
 
-Документ помогает пользователю сделать его работу, а не описывает функции продукта.
+The doc helps the user get their job done, instead of describing product features.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Документ написан под конкретный JTBD-сегмент (раздел 6 `documentation`), а не «для всех» | Определи целевой сегмент, выкинь чужой контент по роутеру |
-| Текст с точки зрения пользователя («чтобы запустить — сделай X»), а не системы | Перепиши от лица читателя |
-| У каждого блока виден практический смысл (зачем читать) | Добавь одну фразу «зачем» или удали блок |
-| Фокус на реальных задачах (запустить, подключить, доработать), а не на перечне функций | Переформулируй функции в задачи |
-| Заголовки раскрывают задачу («Запуск», «Подключение»), а не абстрактны («Общее») | Переименуй заголовки в задачи |
-| Инструкции разбиты на дискретные шаги, каждый шаг — одно действие | Разбей абзац-инструкцию на нумерованные шаги |
+| Written for a specific JTBD segment (`documentation` section 6), not "for everyone" | Identify the target segment; drop other-segment content per the router |
+| Text is from the user's point of view ("to run it — do X"), not the system's | Rewrite from the reader's point of view |
+| Each block has a visible practical purpose (why read it) | Add one "why" sentence or remove the block |
+| Focus on real tasks (run, connect, extend), not a feature list | Reword features as tasks |
+| Headings reveal the task ("Run", "Connect"), not abstractions ("General") | Rename headings to tasks |
+| Instructions split into discrete steps, each step one action | Break the instruction paragraph into numbered steps |
 
 ---
 
-## 3. Accuracy (точность)
+## 3. Accuracy
 
-Документ соответствует коду и контракту, ничего устаревшего.
+The doc matches the code and contract, nothing stale.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Таблица API и pipe соответствуют `api-specification/` (эндпоинты, методы) | Синхронизируй с контрактом; нет контракта → STOP |
-| Команды запуска реально работают (скопировал — выполнилось) | Исправь команду или пометь TODO в `backlog.md` |
-| Факты согласованы между README, `architecture.md`, ADR (нет противоречий) | Приведи к одному значению; источник истины — контракт/код |
-| Ссылки на связанные документы корректны и ведут куда указано | Почини путь (см. раздел 7) |
-| Нет упоминаний удалённых модулей/флагов/эндпоинтов | Удали устаревшее |
+| API table and pipes match `api-specification/` (endpoints, methods) | Sync with the contract; no contract → STOP |
+| Run commands actually work (copy — it runs) | Fix the command or mark a TODO in `backlog.md` |
+| Facts are consistent across README, `architecture.md`, ADR (no contradictions) | Reconcile to one value; source of truth is contract/code |
+| Links to related docs are correct and lead where stated | Fix the path (see section 7) |
+| No mentions of removed modules/flags/endpoints | Delete the stale references |
 
 ---
 
-## 4. Completeness (полнота)
+## 4. Completeness
 
-Покрыто всё, что нужно задаче, и **только** это.
+Everything the task needs is covered, and **only** that.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Присутствуют все обязательные блоки типа (для README — проходы `documentation`) | Добавь недостающий блок |
-| Каждый эндпоинт из таблицы API имеет pipe-описание | Допиши недостающие pipe |
-| Детали — ровно сколько нужно сегменту, без переусложнения | Срежь лишние детали реализации |
-| Нет контента не из этого файла (концепт-уровень, чужой сервис) | Унеси по роутеру (раздел «Роутер» `documentation`) |
-| Информация не повторяется без пользы (один источник правды) | Замени дубль ссылкой на источник |
+| All mandatory blocks for the type are present (for README — the `documentation` passes) | Add the missing block |
+| Every endpoint in the API table has a pipe description | Write the missing pipe |
+| Detail is exactly what the segment needs, no over-engineering | Cut excess implementation detail |
+| No content that doesn't belong in this file (concept-level, other service) | Move it out per the router (`documentation`, "Router") |
+| Information is not repeated uselessly (single source of truth) | Replace the duplicate with a link to the source |
 
 ---
 
-## 5. Clarity (ясность)
+## 5. Clarity
 
-Однозначно, коротко, термины определены.
+Unambiguous, short, terms defined.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Овервью «что это» — одно предложение ≤ 20 слов, не абзац | Сократи до одного предложения |
-| Нет двусмысленных местоимений/отсылок («это», «он» без явного антецедента) | Замени местоимение существительным |
-| Элементы короткие (предложение ≤ ~25 слов, пункт списка ≤ ~12 слов) | Разбей длинное на части |
-| Каждый новый термин определён при первом употреблении | Дай определение или ссылку на глоссарий |
-| Один термин для одного понятия по всему документу (нет синонимов-путаницы) | Унифицируй терминологию |
-| Похожая информация подана единообразно (одинаковые таблицы/шаблоны) | Приведи к одному формату |
+| The "what it is" overview is one sentence ≤ 20 words, not a paragraph | Cut to a single sentence |
+| No ambiguous pronouns/references ("this", "it" without a clear antecedent) | Replace the pronoun with a noun |
+| Items are short (sentence ≤ ~25 words, list item ≤ ~12 words) | Split the long one into parts |
+| Every new term is defined at first use | Add a definition or a link to the glossary |
+| One term per concept across the whole doc (no synonym confusion) | Unify the terminology |
+| Similar information is presented uniformly (same tables/templates) | Bring it to one format |
 
 ---
 
-## 6. Organization (организация)
+## 6. Organization
 
-Контент в правильном файле, в правильном порядке, видно как части складываются.
+Content is in the right file, in the right order, with parts visibly fitting together.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Каждый кусок — в своём файле по роутеру (один тип контента = одно место) | Перенеси кусок в нужный файл |
-| Порядок блоков — по порядку использования (что это → запуск → вглубь) | Переставь блоки в порядок «лестницы» |
-| Контекст/обоснования отделены от инструкций (ADR отдельно от шагов запуска) | Вынеси обоснования в `docs/adr/` |
-| Иерархия заголовков ровная: у ветки разумное число подпунктов (не 1 и не 15) | Сгруппируй или подними подпункты |
-| Главное выделено, второстепенное подчинено (не всё одним уровнем) | Перестрой уровни заголовков |
-| Видно, как части системы складываются вместе (дерево модулей / лестница ссылок) | Добавь дерево модулей или лестницу контекста |
+| Each piece is in its own file per the router (one content type = one place) | Move the piece to the right file |
+| Block order follows order of use (what it is → run → deeper) | Reorder blocks into the "ladder" order |
+| Context/rationale is separated from instructions (ADR apart from run steps) | Move rationale to `docs/adr/` |
+| Heading hierarchy is even: a branch has a reasonable number of sub-items (not 1, not 15) | Group or promote sub-items |
+| The main thing is emphasized, the secondary subordinated (not all at one level) | Rebuild heading levels |
+| It is visible how the system's parts fit together (module tree / link ladder) | Add a module tree or a context ladder |
 
 ---
 
-## 7. Retrievability (находимость)
+## 7. Retrievability
 
-Читатель быстро находит и переходит куда нужно; ссылки рабочие и осмысленные.
+The reader quickly finds and navigates where needed; links work and are meaningful.
 
-| Проверка | если ✗ → действие |
+| Check | if ✗ → action |
 | --- | --- |
-| Все ссылки резолвятся (нет битых/висячих путей к несуществующим файлам) | Почини путь или создай целевой файл; иначе убери ссылку |
-| Текст ссылки описателен («docs/architecture.md — устройство», не «здесь»/«click») | Перепиши якорь ссылки в осмысленный |
-| В первых строках README есть указатель на корневой репозиторий / concept-документ | Добавь строку-указатель (см. `documentation`, роутер) |
-| Есть лестница вглубь (ссылки на component-tests → architecture → adr → contributing) | Добавь недостающие ссылки лестницы |
-| Заголовки навигабельны: по ним одним понятно содержание (мысленное оглавление) | Переименуй неинформативные заголовки |
-| Целевой раздел ссылки легко найти на той стороне (ссылка ведёт в нужное место, не «в начало большого файла») | Уточни якорь/раздел назначения |
+| All links resolve (no broken/dangling paths to nonexistent files) | Fix the path or create the target file; otherwise remove the link |
+| Link text is descriptive ("docs/architecture.md — the layout", not "here"/"click") | Rewrite the link anchor into something meaningful |
+| README's first lines have a pointer to the root repository / concept doc | Add a pointer line (see `documentation`, router) |
+| There is a ladder deeper (links to component-tests → architecture → adr → contributing) | Add the missing ladder links |
+| Headings are navigable: each alone conveys its content (a mental table of contents) | Rename uninformative headings |
+| The link's target section is easy to find on the other side (lands in the right place, not "at the top of a big file") | Sharpen the destination anchor/section |
 
 ---
 
-## 8. STOP-правила
+## 8. STOP rules
 
-Остановись и спроси оператора, если:
+You MUST stop and ask the operator if:
 
-- Не определяется JTBD-сегмент документа.
-- Правка требует удалить или переписать содержательный факт — спроси, куда его деть.
-- Нет контракта `api-specification/`, а Accuracy требует сверки API.
-- Ссылка висячая, но непонятно — целевой файл должен появиться позже или ссылку убрать.
-- Документ написан человеком и правка масштабная (переделка) — подтверди before.
+- The document's JTBD segment cannot be determined.
+- An edit requires deleting or rewriting a substantive fact — ask where it should go.
+- There is no `api-specification/` contract but Accuracy requires an API cross-check.
+- A link is dangling but it is unclear whether the target file should appear later or the link be removed.
+- The doc was written by a human and the edit is large-scale (a redo) — confirm before.
 
 ---
 
-## 9. Итог ревью
+## 9. Review result
 
-Заполни сводку. Для каждой применённой характеристики — вердикт из раздела 0.
+Fill in the summary. For each applied characteristic — a verdict from section 0.
 
 ```
-Документ: <путь>   Сегмент: <JTBD-сегмент>
+Document: <path>   Segment: <JTBD segment>
 
-| Характеристика     | ✓ / всего | Вердикт      |
-| Task orientation   |   _ / 6   | OK/Правки/…  |
+| Characteristic     | ✓ / total | Verdict      |
+| Task orientation   |   _ / 6   | OK/Edits/…   |
 | Accuracy           |   _ / 5   |              |
 | Completeness       |   _ / 5   |              |
 | Clarity            |   _ / 6   |              |
 | Organization       |   _ / 6   |              |
 | Retrievability     |   _ / 6   |              |
 
-Сводный вердикт: <годен как есть / точечные правки / переделать>
-План правок:
-1. <файл:место> — <что сделать>  (из «если ✗ → действие»)
+Summary verdict: <usable as is / spot edits / redo>
+Edit plan:
+1. <file:place> — <what to do>  (from "if ✗ → action")
 2. ...
 ```
 
-Сводный вердикт:
-- **Годен как есть** — все характеристики OK.
-- **Точечные правки** — есть «Правки», нет «Переделать».
-- **Переделать** — хотя бы одна характеристика «Переделать» → верни в скилл `documentation`.
+Summary verdict:
+- **Usable as is** — all characteristics OK.
+- **Spot edits** — there are "Edits", no "Redo".
+- **Redo** — at least one characteristic is "Redo" → return it to the `documentation` skill.

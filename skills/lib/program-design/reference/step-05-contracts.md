@@ -1,81 +1,71 @@
-<!-- program-design · деталь шага 05. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 05 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 5. Описать контракты модулей
+### Step 5. Describe the module contracts
 
-**Вход:** дерево модулей и каталог сообщений. **Выход:** контракт каждого модуля (Input/Deps/антецедент/консеквент).
+**In:** the module tree and the message catalog. **Out:** each module's contract (Input/Deps/antecedent/consequent).
 
-Для каждого модуля slice'а — **жёсткий шаблон контракта**:
+For each slice module — a **hard contract template**:
 
 ```
-### <ИмяМодуля>
+### <ModuleName>
 
-- **Сигнатура:** `имя(input: Type) -> Result<выход: Type, Error>`
-- **Input (data):** одна доменная структура, или Request DTO, или void.
-                    Если data-аргументов 2+ — это нарушение Шага 3
-                    «жёсткого правила одного аргумента»: возврат на Шаг 3.
+- **Signature:** `name(input: Type) -> Result<out: Type, Error>`
+- **Input (data):** one domain struct, or a Request DTO, or void.
+                    If there are 2+ data arguments — it violates Step 3's
+                    "hard rule of the single argument": return to Step 3.
 - **Dependencies (deps):** `*sql.DB`, `broker.Client`, `clock.Clock`,
-                            `*Logger`, конфиг (`RPConfig`, `JWTConfig`).
-                            Если deps нет — пишем `—`.
-- **Что делает:** одна фраза.
-- **Антецедент:** условия на input.
-- **Консеквент:**
-  - Success: что гарантирует на выходе.
-  - Failure: классы ошибок (`ErrXxx`, `ErrYyy`).
+                            `*Logger`, config (`RPConfig`, `JWTConfig`).
+                            If there are no deps — write `—`.
+- **What it does:** one phrase.
+- **Antecedent:** conditions on the input.
+- **Consequent:**
+  - Success: what it guarantees on output.
+  - Failure: error classes (`ErrXxx`, `ErrYyy`).
 ```
 
-Это поле-в-поле зафиксированный шаблон. Нет «разговорного» описания
-сигнатуры — Input и Dependencies всегда отдельными строками. Это
-страхует от соскальзывания обратно в плоский список аргументов.
+This is a field-by-field frozen template. No "conversational" signature description — Input and
+Dependencies always on separate lines. This insures against sliding back into a flat argument list.
 
-#### Жёсткий чек-лист `Dependencies:` (защита от ошибки сырого I/O)
+#### Hard `Dependencies:` checklist (guard against raw I/O)
 
-При заполнении строки `Dependencies:` каждого контракта — **обязательная
-механическая сверка** с таблицей интеграций (Шаг 6). Если в зависимостях
-появляется сырой клиент внешнего мира — это нарушение Шага 6 ровно той
-же силы, что нарушение «один data-аргумент» в Шаге 3: возврат к Шагу 3,
-ввести автономный I/O-объект (`Store`/`Client`/`Publisher`/`Consumer`),
-сделать модуль его методом, в `Dependencies:` поставить `—`.
+When filling each contract's `Dependencies:` line — a **mandatory mechanical reconciliation**
+against the integration table (Step 6). If a raw external-world client appears in the
+dependencies — it's a Step 6 violation of exactly the same force as the "single data argument"
+violation in Step 3: return to Step 3, introduce an autonomous I/O object
+(`Store`/`Client`/`Publisher`/`Consumer`), make the module its method, put `—` in `Dependencies:`.
 
-Запрещённые значения в `Dependencies:` (signal of unwrapped I/O):
+Forbidden values in `Dependencies:` (signal of unwrapped I/O):
 
-| Запрещено              | Тип интеграции   | Что должно быть вместо  |
+| Forbidden              | Integration type   | What should be instead  |
 |------------------------|------------------|--------------------------|
-| `*sql.DB`, `*sql.Tx`   | База данных      | `—` (метод объекта `Store`) |
-| `*http.Client`, базовый URL | Внешний HTTP API | `—` (метод объекта `Client`) |
-| Соединение брокера, продюсер/консьюмер брокера | Брокер сообщений | `—` (метод объекта `Publisher`/`Consumer`) |
-| `*os.File`, `io.Writer` файла | Файловая система | `—` (метод объекта `FileStore`) |
+| `*sql.DB`, `*sql.Tx`   | Database         | `—` (method of a `Store` object) |
+| `*http.Client`, base URL | External HTTP API | `—` (method of a `Client` object) |
+| Broker connection, broker producer/consumer | Message broker | `—` (method of a `Publisher`/`Consumer` object) |
+| `*os.File`, file `io.Writer` | File system  | `—` (method of a `FileStore` object) |
 
-Разрешённые значения в `Dependencies:` (это конфиг или ortogonal-инструменты,
-не интеграции):
+Allowed values in `Dependencies:` (these are config or orthogonal tools, not integrations):
 
-- `RPConfig`, `JWTConfig`, любые value-конфиги — это not I/O.
-- `clock.Clock` — детерминированное время, не интеграция.
-- `*slog.Logger` — observability, не интеграция.
-- `io.Reader` для энтропии (`crypto/rand.Reader`) — пограничный случай;
-  допустим в логических модулях ради тестируемости, но **не** для I/O.
-  В голове `Deps` — обычно не нужен (см. правило про `Rand` в разделе
-  «Головной модуль — оркестратор-труба»).
+- `RPConfig`, `JWTConfig`, any value-config — not I/O.
+- `clock.Clock` — deterministic time, not an integration.
+- `*slog.Logger` — observability, not an integration.
+- `io.Reader` for entropy (`crypto/rand.Reader`) — a borderline case; allowed in logic modules
+  for testability, but **not** for I/O. In the head's `Deps` — usually not needed (see the
+  `Rand` rule in "The head module — an orchestrator pipe").
 
-**Алгоритм проверки.** После заполнения каждого контракта (Шаг 5) — пройти
-по строке `Dependencies:` каждого модуля и сверить со столбцом «Запрещено».
-Хоть одно совпадение — стоп: возврат к Шагу 3, ввести I/O-объект, сделать
-этот модуль его методом. Это механический чек, а не творческое решение —
-он либо проходит, либо нет.
+**Check algorithm.** After filling each contract (Step 5) — walk each module's `Dependencies:`
+line and reconcile it against the "Forbidden" column. Any one match — stop: return to Step 3,
+introduce an I/O object, make this module its method. This is a mechanical check, not a creative
+decision — it either passes or not.
 
-Цена пропуска проверки — на следующих слайсах оператор находит сырой
-`*sql.DB` в дизайне и просит переделать. Чек-лист добавлен именно
-ради того, чтобы это не повторялось.
+The cost of skipping the check — on later slices the operator finds a raw `*sql.DB` in the
+design and asks for a rework. The checklist was added precisely so this doesn't recur.
 
-Уточнения:
+Clarifications:
 
-- **I/O-модули без полезного выхода** (опубликовать событие, удалить
-  запись): сигнатура — `Result<(), Error>` (или `error` в Go).
-  Полезной нагрузки в успехе нет, но успех/провал по контракту
-  различается явно.
-- **Если консеквент не удаётся обосновать** — модуль спроектирован
-  неправильно, проектируй дальше.
-- **Если Input не помещается в одну доменную структуру** — это
-  сигнал, что либо нужна новая доменная сущность (вернуться к Шагу 3
-  и добавить узел-конструктор), либо модуль делает слишком много
-  и его пора резать.
-
+- **I/O modules without a useful output** (publish an event, delete a record): signature —
+  `Result<(), Error>` (or `error` in Go). No success payload, but success/failure is explicitly
+  distinguished by the contract.
+- **If the consequent can't be justified** — the module is designed wrong, keep designing.
+- **If the Input doesn't fit one domain struct** — a signal that either a new domain entity is
+  needed (return to Step 3 and add a constructor node), or the module does too much and should
+  be cut.

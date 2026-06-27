@@ -1,111 +1,114 @@
 ---
 name: program-design
-description: Проектирование программы по дисциплине рациональной разработки. Применять, когда есть FRD/задача и зафиксированный контракт API (OpenAPI/AsyncAPI), и нужен пакет проектной документации для последующей реализации (вертикальные срезы, контракты модулей, антецеденты/консеквенты, юнит-тесты по формуле, компонентные сценарии). Не применять, если контракт API или карта режимов отказа в README отсутствуют — сначала спроектировать их отдельной задачей. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые шаги, таблицы-роутеры, чеклисты, STOP-правила.
+description: Designing a program by the discipline of rational development. Use when an FRD/task and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the API contract or the README failure-mode map is missing — design them first as a separate task. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum.
 version: "1.0"
 ---
 
-# program-design.skill — Проектирование программы по дисциплине рациональной разработки
+# program-design.skill — design a program by the discipline of rational development
 
-## Назначение
+## Purpose
 
-Скилл для проектировщика. На вход — функциональное требование (FRD, описание задачи).
-На выход — пакет проектной документации, по которому исполнитель реализует программу.
+The planner's skill. **In:** a functional requirement (FRD, task description).
+**Out:** a design package the implementer uses to build the program.
 
-> Роли — это режимы работы, не обязательно разные модели. Одна модель
-> (например, Qwen3.5-397B-A17B, ~17B активных) может исполнять обе роли
-> последовательно; важна смена режима и артефакт-хендофф (пакет дизайна),
-> а не смена модели.
+> Roles are work modes, not necessarily different models. One model can play both
+> roles in sequence; what matters is the mode switch and the artifact handoff (the
+> design package), not a model switch.
 
-Метод: vertical slice architecture + структурное программирование +
-контракты модулей + формула юнит-тестов.
+Method: vertical slice architecture + structured programming + module contracts +
+unit-test formula.
 
-## Зона ответственности
+## Scope
 
 DO:
-- Проектировать схему модулей и контракты.
-- Итеративно обсуждать развилки с оператором.
-- Готовить бэклог тикетов для исполнителя.
+- Design the module schema and contracts.
+- Iteratively discuss decision points with the operator.
+- Prepare the ticket backlog for the implementer.
 
 DON'T:
-- Писать код реализации (это работа исполнителя).
-- Принимать архитектурные решения без аппрува оператора.
-- Добавлять зависимости и технологии без явной аргументации.
+- Write implementation code (that's the implementer's job).
+- Make architecture decisions without operator approval.
+- Add dependencies or technologies without explicit justification.
 
-## Шаги
+## Steps
 
-**Step-индекс (карта процедуры).** По этой таблице удерживай весь процесс;
-если потерялся — вернись сюда, найди текущий шаг и открой его файл детали
-(`reference/step-NN-*.md`, карта ниже). У каждого шага в файле — свои «Вход/Выход».
+**Step-index (procedure map).** Hold the whole process by this table; if you get lost,
+return here, find the current step and open its detail file (`reference/step-NN-*.md`,
+map below). Each step's file has its own "In/Out".
 
-| Шаг | Что делает | Главный выход |
+| Step | Does | Main out |
 |-----|------------|---------------|
-| 0 | Проверить обязательные артефакты на входе (контракт, таблица отказов, Gherkin) | решение «проектируем / стоп» |
-| 1 | Сформулировать задачу одной фразой | `docs/intent/<slug>.md` |
-| 2 | Перечислить внешние входы slice'ов | таблица срезов |
-| 3 | Спроектировать дерево модулей каждого slice'а | дерево + псевдокод пайпа головы |
-| 4 | Описать каталог сообщений | `messages.md` (типы, `Result<T, Error>`) |
-| 5 | Описать контракты модулей по шаблону | контракты (Input/Deps/антецедент/консеквент) |
-| 6 | Изолировать I/O в автономные объекты | I/O-объекты (`Store`/`Client`/`Publisher`) |
-| 7 | Описать инфраструктурный модуль приложения | `infrastructure.md` |
-| 8 | Посчитать юнит-тесты по формуле + сверить дизайн с Gherkin | таблица юнит-тестов + Gherkin-mapping |
-| 9 | Сверить согласованность контрактов через граф вызовов | `contracts-graph.md` |
-| 10 | Собрать пакет проектной документации | папка `.agent/planner/design/<slug>/` |
-| 11 | Сформировать бэклог тикетов (один на slice) | `backlog.md` (тикеты) |
-| 12 | Заполнить хендофф-чеклист | хендофф-чеклист в `backlog.md` |
+| 0 | Check mandatory input artifacts (contract, failure table, Gherkin) | decision "design / stop" |
+| 1 | State the task in one phrase | `docs/intent/<slug>.md` |
+| 2 | List the external inputs of the slices | slice table |
+| 3 | Design each slice's module tree | tree + head-pipe pseudocode |
+| 4 | Describe the message catalog | `messages.md` (types, `Result<T, Error>`) |
+| 5 | Describe module contracts by template | contracts (Input/Deps/antecedent/consequent) |
+| 6 | Isolate I/O into autonomous objects | I/O objects (`Store`/`Client`/`Publisher`) |
+| 7 | Describe the app infrastructure module | `infrastructure.md` |
+| 8 | Count unit tests by formula + reconcile design with Gherkin | unit-test table + Gherkin-mapping |
+| 9 | Reconcile contract consistency via the call graph | `contracts-graph.md` |
+| 10 | Assemble the design package | folder `.agent/planner/design/<slug>/` |
+| 11 | Build the ticket backlog (one per slice) | `backlog.md` (tickets) |
+| 12 | Fill in the handoff checklist | handoff checklist in `backlog.md` |
 
-## Навигация по шагам (progressive disclosure)
+## Step navigation (progressive disclosure)
 
-Деталь каждого шага вынесена в отдельный файл — держи в контексте **только текущий
-шаг**, не весь скилл. По Step-индексу выше найди номер шага и открой его файл:
+Each step's detail lives in its own file — keep only the **current step** in context, not
+the whole skill. By the Step-index above, find the step number and open its file:
 
-| Шаг | Файл детали |
+| Step | Detail file |
 |-----|-------------|
-| 0 | `reference/step-00-input.md` — проверка обязательных артефактов на входе |
-| 1 | `reference/step-01-intent.md` — задача одной фразой |
-| 2 | `reference/step-02-inputs.md` — перечислить входы slice'ов |
-| 3 | `reference/step-03-module-tree.md` — дерево модулей, жёсткие правила, C4, псевдокод пайпа |
-| 4 | `reference/step-04-messages.md` — каталог сообщений + модель ошибок |
-| 5 | `reference/step-05-contracts.md` — контракты модулей, чек-лист `Dependencies:` |
-| 6 | `reference/step-06-isolate-io.md` — изоляция I/O в автономные объекты |
-| 7 | `reference/step-07-infrastructure.md` — инфраструктурный модуль приложения |
-| 8 | `reference/step-08-tests-gherkin.md` — юнит-тесты по формуле + сверка с Gherkin |
-| 9 | `reference/step-09-contracts-graph.md` — граф вызовов + сверка согласованности |
-| 10 | `reference/step-10-package.md` — собрать пакет проектной документации |
-| 11 | `reference/step-11-backlog.md` — бэклог тикетов (+ `reference/ticket-template.md`) |
-| 12 | `reference/step-12-handoff.md` — conformance-gate + хендофф-чеклист + семантика аппрува |
+| 0 | `reference/step-00-input.md` — check mandatory input artifacts |
+| 1 | `reference/step-01-intent.md` — task in one phrase |
+| 2 | `reference/step-02-inputs.md` — list slice inputs |
+| 3 | `reference/step-03-module-tree.md` — module tree, hard rules, C4, head-pipe pseudocode |
+| 4 | `reference/step-04-messages.md` — message catalog + error model |
+| 5 | `reference/step-05-contracts.md` — module contracts, `Dependencies:` checklist |
+| 6 | `reference/step-06-isolate-io.md` — isolate I/O into autonomous objects |
+| 7 | `reference/step-07-infrastructure.md` — app infrastructure module |
+| 8 | `reference/step-08-tests-gherkin.md` — unit tests by formula + Gherkin reconciliation |
+| 9 | `reference/step-09-contracts-graph.md` — call graph + consistency reconciliation |
+| 10 | `reference/step-10-package.md` — assemble the design package |
+| 11 | `reference/step-11-backlog.md` — ticket backlog (+ `reference/ticket-template.md`) |
+| 12 | `reference/step-12-handoff.md` — conformance-gate + handoff checklist + approval semantics |
 
-## Жёсткие правила и STOP (сводка — это conformance-gate скилла)
+## Hard rules and STOP (consolidated — this is the skill's conformance-gate)
 
-`plan-reviewer` сверяет дизайн против этого списка как эталона (асимметрия: не доверять
-самозаполнению Шага 12). **Любое нарушение = STOP**, возврат к указанному шагу, хендофф
-запрещён. Anti-gaming: нельзя ставить `[x]` без существующего артефакта. Полный текст
-каждого правила — в файле его шага.
+`plan-reviewer` checks the design against this list as the reference standard (asymmetry:
+do not trust Step 12's self-fill). **Any violation = STOP**, return to the named step,
+handoff forbidden. Anti-gaming: you **MUST NOT** tick `[x]` without an existing artifact.
+The full text of each rule is in its step's file.
 
-- **Входной гейт (Шаг 0).** Нет контракта (`OpenAPI`/`AsyncAPI`), нет «Карты режимов отказа»
-  в README или нет Gherkin-сценариев на эндпоинты срезов → проектирование **не начинается**.
-- **Единый `Request` (Шаг 3, урок D1).** 1 срез = 1 внешний вход = ровно один `Request`;
-  флаг/опция = поле `Request`; нет side-инъекций мимо `Request`; нет test-only метода I/O;
-  развилка по полю = логика (юнит), не компонентный сценарий.
-- **Один data-аргумент (Шаг 3).** Каждый узел дерева — ровно одна data-сущность; 2+ → завести
-  доменную сущность и узел-конструктор `NewT(...)`.
-- **Инвариант — подтип, не guard (Шаг 3).** Проверка инварианта над доменной структурой =
-  конструктор подтипа, не guard-функция `-> ()`.
-- **Изоляция I/O (Шаг 5/6).** Сырых `*sql.DB`/`*http.Client`/broker-conn в `Dependencies:`
-  и в `Deps` головы нет — только автономные `Store`/`Client`/`Publisher`/`Consumer`/`FileStore`.
-- **Голова/I/O/адаптер юнитами не покрываются (Шаг 8.1).** Юнит только у конструкторов и чистых
-  функций логики, по формуле `1 happy + Σ ветки антецедента`.
-- **Трассировка UC↔сценарии (Шаг 8.6).** `#Extensions == #сценариев_отказа == #кодов_ошибок` среза.
-- **Граф контрактов согласован (Шаг 9).** Консеквент A ⊆ антецеденту B; типы на стрелках существуют.
-- **C4 по уровням (Шаг 3).** C2+C3 в компоненте (C3 = дерево модулей), C1 — на лэндинге.
-- **Doc-gate (Шаг 12).** Доки пакета — по скиллу `documentation` (процедуры A/B/C), не прозой мимо.
-- **Сквозная инфраструктура (Шаг 12, conformance-gate).** Общий egress / общие флаги /
-  `infrastructure.md` имеют свою design-карту и контракт и прошли все сверки — не «падают
-  между слайсами» (прямой корень D1).
+- **Input gate (Step 0).** No contract (`OpenAPI`/`AsyncAPI`), no "failure-mode map" in
+  the README, or no Gherkin scenarios for the slice endpoints → design **does not start**.
+- **Single `Request` (Step 3, lesson D1).** 1 slice = 1 external input = exactly one
+  `Request`; flag/option = a `Request` field; no side-injections past `Request`; no
+  test-only I/O method; a branch on a field = logic (unit), not a component scenario.
+- **One data argument (Step 3).** Each tree node takes exactly one data entity; 2+ → introduce
+  a domain entity and a constructor node `NewT(...)`.
+- **Invariant — subtype, not guard (Step 3).** Checking an invariant over a domain struct =
+  a subtype constructor, not a guard function `-> ()`.
+- **I/O isolation (Step 5/6).** No raw `*sql.DB`/`*http.Client`/broker-conn in
+  `Dependencies:` or in the head's `Deps` — only autonomous
+  `Store`/`Client`/`Publisher`/`Consumer`/`FileStore`.
+- **Head/I/O/adapter are not unit-covered (Step 8.1).** Unit tests only for constructors and
+  pure logic functions, by the formula `1 happy + Σ antecedent branches`.
+- **UC↔scenario traceability (Step 8.6).** `#Extensions == #failure_scenarios == #error_codes`
+  of the slice.
+- **Contracts graph consistent (Step 9).** Consequent A ⊆ antecedent B; the types on the
+  arrows exist.
+- **C4 by levels (Step 3).** C2+C3 in the component (C3 = the module tree), C1 — on the landing.
+- **Doc-gate (Step 12).** Package docs — by the `documentation` skill (procedures A/B/C), not
+  prose past it.
+- **Cross-cutting infrastructure (Step 12, conformance-gate).** Shared egress / shared flags /
+  `infrastructure.md` have their own design card and contract and passed every reconciliation —
+  they don't "fall between the slices" (the direct root of D1).
 
-## Definition of Done скилла
+## Definition of Done of the skill
 
-- Все 12 шагов пройдены.
-- Папка `.agent/planner/design/<slug>/` создана и заполнена.
-- `backlog.md` содержит тикеты по одному на slice.
-- **Хендофф-чеклист в `backlog.md` полностью заполнен `[x]` (включая последнюю строку с handle и датой создания PR).**
-- Дизайн-PR открыт; ожидается ревью оператора. Мерж PR = аппрув = разрешение исполнителю приступать.
+- All 12 steps passed.
+- Folder `.agent/planner/design/<slug>/` created and filled.
+- `backlog.md` contains one ticket per slice.
+- **The handoff checklist in `backlog.md` is fully `[x]` (including the last line with the handle and the PR creation date).**
+- The design PR is open; operator review awaited. Merging the PR = approval = the implementer may start.

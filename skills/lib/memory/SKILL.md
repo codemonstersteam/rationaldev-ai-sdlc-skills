@@ -1,88 +1,88 @@
 ---
 name: memory
-description: Рабочая память цикла Ralph Loop в `.agent/memory.md`. Применять на IMPLEMENTATION (Implementer/Hughes) и CODE REVIEW/фикс (Fixer/Linger): читать в начале итерации, переписывать в конце. Живой снимок состояния «себе будущему», НЕ аудит-лог (аудит — decisions.log). Рассчитан на слабую модель: что читать/писать, STOP-правила, чек-лист.
+description: Working memory of the Ralph Loop cycle in `.agent/memory.md`. Use during IMPLEMENTATION (Implementer/Hughes) and CODE REVIEW/fix (Fixer/Linger) — read at the start of an iteration, rewrite at the end. A live snapshot of state for "future self", NOT an audit log (the audit lives in decisions.log). Do NOT use for compliance traceability or long-lived artifacts. Built for the small/medium tier: what to read/write, STOP rules, checklist.
 version: "1.0"
 ---
 
-# Memory — рабочая память цикла
+# Memory — working memory of the cycle
 
-Контекст агента ограничен и между итерациями теряется (смена модели, компакция,
-новый прогон). `.agent/memory.md` — рабочая передача состояния «себе будущему»
-или следующему агенту. Отвечает на «где мы и что дальше». На «кто/что/почему»
-для комплаенса отвечает `decisions.log` — память его НЕ заменяет.
+Agent context is bounded and lost between iterations (model swap, compaction, fresh
+run). `.agent/memory.md` is the working handoff of state to "future self" or the next
+agent. It answers "where are we and what's next". The "who/what/why" for compliance is
+answered by `decisions.log` — memory does NOT replace it.
 
-## Когда читать и писать
+## When to read and write
 
-- **Начало итерации (ПЕРВЫЙ шаг):** прочитай `.agent/memory.md`. Не начинай с нуля —
-  продолжай с зафиксированного состояния, учитывая уже отвергнутые подходы.
-- **Конец итерации (ПОСЛЕДНИЙ шаг):** перепиши `.agent/memory.md` под новое состояние.
+- **Start of iteration (FIRST step):** read `.agent/memory.md`. Do not start from
+  scratch — continue from the recorded state, accounting for already-rejected approaches.
+- **End of iteration (LAST step):** rewrite `.agent/memory.md` to the new state.
 
-## Живой снимок, не сырой лог
+## Live snapshot, not a raw log
 
-Память **переписывается**, а не дописывается. Держи актуальное состояние + сжатый
-хвост отвергнутых подходов. Если файл растёт линейно с числом итераций — он сам
-начнёт съедать контекст, ради которого заведён.
+Memory is **rewritten**, not appended. Keep the current state plus a compressed tail of
+rejected approaches. If the file grows linearly with iteration count, it starts eating
+the very context it exists to protect.
 
-- Отвергнутые подходы сжимай до одной строки: «пробовали X → не сработало, потому что Y».
-- Устаревшие гипотезы и закрытые блокеры убирай.
+- **MUST** compress rejected approaches to one line: "tried X → did not work because Y".
+- **MUST** drop stale hypotheses and closed blockers.
 
-## Что фиксировать
+## What to record
 
-- **Состояние:** что сделано, что осталось, где сейчас в плане.
-- **Что пробовали:** подходы/фиксы и результат — особенно что **не** сработало и почему.
-- **Текущая гипотеза:** предполагаемая причина падения CI и следующий шаг.
-- **Блокеры и открытые вопросы.**
-- **Ссылки:** PR, номер итерации, затронутые модули/файлы.
+- **State:** what's done, what's left, where you are in the plan.
+- **What was tried:** approaches/fixes and the outcome — especially what did **not** work and why.
+- **Current hypothesis:** suspected cause of CI failure and the next step.
+- **Blockers and open questions.**
+- **Links:** PR, iteration number, affected modules/files.
 
-## Шаблон `.agent/memory.md`
+## `.agent/memory.md` template
 
 ```markdown
-# Memory — <тикет>: <короткое имя>
+# Memory — <ticket>: <short name>
 
-## Состояние
-- Итерация: 3/5
-- Сделано: <...>
-- Осталось: <...>
-- Где в плане: <слайс/ФТ>
+## State
+- Iteration: 3/5
+- Done: <...>
+- Left: <...>
+- Where in plan: <slice/feature toggle>
 
-## Что пробовали
-- <подход> → отвергнуто: <почему>
-- <фикс> → CI красный: <какой тест и почему>
+## What was tried
+- <approach> → rejected: <why>
+- <fix> → CI red: <which test and why>
 
-## Текущая гипотеза / next step
-- <гипотеза причины>. Следующий шаг: <действие>.
+## Current hypothesis / next step
+- <suspected cause>. Next step: <action>.
 
-## Блокеры / открытые вопросы
-- <ОВ-… ждёт человека / не блокирует>
+## Blockers / open questions
+- <OQ-… waiting on human / non-blocking>
 
-## Ссылки
-- PR #…, ветка …, модуль …
+## Links
+- PR #…, branch …, module …
 ```
 
-## Запрещено
+## MUST NOT
 
-- PII/секреты/платёжные данные в памяти (правила скилла `security`).
-- Подменять памятью трассировку: решения всё равно идут в `decisions.log`.
-- Вести append-only лог вместо живого снимка.
+- **MUST NOT** put PII/secrets/payment data in memory (see the `security` skill rules).
+- **MUST NOT** substitute memory for traceability: decisions still go to `decisions.log`.
+- **MUST NOT** keep an append-only log instead of a live snapshot.
 
-## Жизненный цикл
+## Lifecycle
 
-- Живёт в ветке задачи; при мерже удаляется/архивируется — не долговременный артефакт.
-- При **репланировании** сжатый раздел «Что пробовали» переносится Planner'у (Wirth) —
-  почему дошли до репланирования.
-- Аналог для CD — `release-health.md` (непрерывность канареечного контура).
+- Lives in the task branch; on merge it is deleted/archived — not a long-lived artifact.
+- On **replanning**, the compressed "What was tried" section is carried to the Planner
+  (Wirth) — why we reached replanning.
+- The CD analog is `release-health.md` (continuity of the canary loop).
 
-## STOP-правила
+## STOP rules
 
-- Память не прочитана в начале итерации → STOP, прочитай до изменений.
-- Память растёт сырым логом → STOP, перепиши в живой снимок.
-- В памяти обнаружены секреты/PII → STOP, вычисти, см. `security`.
+- Memory not read at the start of the iteration → You MUST stop and read it before changes.
+- Memory growing as a raw log → You MUST stop and rewrite it as a live snapshot.
+- Secrets/PII found in memory → You MUST stop, scrub them, see `security`.
 
-## Чек-лист самопроверки
+## Self-check checklist
 
-- [ ] Память прочитана в начале итерации, до изменений
-- [ ] Память переписана (живой снимок), а не дописана сырым логом
-- [ ] Зафиксировано, что **не** сработало — чтобы не повторять
-- [ ] Текущая гипотеза и следующий шаг явны
-- [ ] Нет PII/секретов/платёжных данных
-- [ ] Решения продублированы в `decisions.log` (память его не заменяет)
+- [ ] Memory read at the start of the iteration, before changes
+- [ ] Memory rewritten (live snapshot), not appended as a raw log
+- [ ] Recorded what did **not** work — so it isn't repeated
+- [ ] Current hypothesis and next step are explicit
+- [ ] No PII/secrets/payment data
+- [ ] Decisions duplicated to `decisions.log` (memory does not replace it)
