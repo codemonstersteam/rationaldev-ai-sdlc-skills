@@ -55,7 +55,7 @@
       "path": "skills/lib/git-conventions/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Детерминированная процедура работы с Git по стандарту Trunk-Based Development. Применять для всех операций с ветками, коммитами и PR. Рассчитан на слабую модель: пошаговые команды, валидация сообщений, STOP-правила."
+      "description": "Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker models: step-by-step commands, message validation, STOP rules."
     },
     {
       "name": "http-io",
