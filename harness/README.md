@@ -9,21 +9,28 @@
 
 | Путь | Назначение | Править вручную? |
 |---|---|---|
-| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`version/tier/mode/temperature/steps/permission/description`) + тело-промпт | **да** — это источник |
+| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`version/tier/mode/temperature/steps/skills/permission/description`) + тело-промпт | **да** — это источник |
 | `agents/{claude,opencode,codex}/<role>.md` | сгенерированные проекции с per-runner frontmatter | **нет** — перегенерируются |
 | `../skills/roles/<role>/<role>.md` | сгенерированный человекочитаемый контракт роли (для README/docs) | **нет** — перегенерируется |
+| `../skills/INDEX.json` | сгенерированный реестр скиллов (name/path/version/status/description) + карта роль→скиллы | **нет** — перегенерируется |
+| `frontmatter.mjs` | общий парсер frontmatter (используют оба генератора) | да |
 | `gen-agents.mjs` | генератор: читает frontmatter `_shared` → 3 раннера + контракт роли | да (только рендереры) |
+| `gen-skill-index.mjs` | реестр `INDEX.json` + CI-инвариант: каждый скилл из `skills:` роли существует и `stable` | да |
 
 ## Перегенерация
 
 ```sh
-node harness/gen-agents.mjs    # → agents/{claude,opencode,codex}/*.md
+node harness/gen-agents.mjs         # → agents/{claude,opencode,codex}/*.md + skills/roles/*
+node harness/gen-skill-index.mjs    # → skills/INDEX.json (реестр + проверка ссылок)
+node harness/gen-skill-index.mjs --check   # CI: реестр актуален и ссылки роль→скилл целы
 ```
 
-Правишь роль (тело **или** идентичность: tier/mode/perm/описание) — меняй frontmatter и
-тело в `agents/_shared/<role>.md` и перегенерируй. Никогда не правь файлы в
-`agents/<runner>/` напрямую: они перезапишутся. Тир/права/температуру больше **не**
-хардкодят в генераторе — они в frontmatter роли.
+Правишь роль (тело **или** идентичность: tier/mode/perm/skills/описание) — меняй frontmatter
+и тело в `agents/_shared/<role>.md` и перегенерируй. Никогда не правь файлы в
+`agents/<runner>/`, `skills/roles/` или `skills/INDEX.json` напрямую: они перезапишутся.
+Тир/права/температуру больше **не** хардкодят в генераторе — они в frontmatter роли.
+Добавил/переименовал скилл — перегенерируй `INDEX.json`; ссылку из роли на несуществующий
+скилл `--check` завалит (smoke прогоняет это автоматически).
 
 ## Различия проекций
 

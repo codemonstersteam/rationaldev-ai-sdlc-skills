@@ -7,6 +7,7 @@ mode: subagent
 temperature: 0.1
 steps: 20
 description: "Ревьюер плана (критик): проверяет полноту и связность плана перед Gate #1. НЕ тот, кто писал план. Вызывать после planner. Keywords: ревью плана, проверка дизайна, вердикт, полнота."
+skills: [architecture, doc-quality-review, observability, program-design, security]
 permission:
   read: allow
   grep: allow

@@ -7,6 +7,7 @@ mode: subagent
 temperature: 0.1
 steps: 40
 description: "Фиксер/ревьюер кода (Linger): классифицирует ошибки CI (дефект плана vs реализации), чинит по сигналам или выдаёт code-review вердикт перед Gate #2. Keywords: ревью кода, фикс, CI, классификация ошибки, баг."
+skills: [code-style, communication, component-tests, git-conventions, memory, program-implementation, security]
 permission:
   read: allow
   grep: allow

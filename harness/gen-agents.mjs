@@ -10,6 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { parseFrontmatter } from "./frontmatter.mjs"
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
@@ -20,57 +21,14 @@ const CLAUDE_MODEL = { big: "opus", small: "sonnet" }
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
 const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
 
-// --- Минимальный парсер frontmatter (подмножество YAML под нашу схему) ---
-// Поддержка: скаляры, flow-массивы [a, b], вложенные карты по отступам (2 пробела).
-function unquote(s) {
-  s = s.trim()
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1)
-  return s
-}
-
-function parseScalar(v) {
-  v = v.trim()
-  if (v.startsWith('"') || v.startsWith("'")) return unquote(v)
-  if (v.startsWith("[") && v.endsWith("]")) {
-    const inner = v.slice(1, -1).trim()
-    return inner === "" ? [] : inner.split(",").map((s) => parseScalar(s))
-  }
-  return v
-}
-
-function parseYaml(src) {
-  const root = {}
-  const stack = [{ indent: -1, obj: root }]
-  for (const raw of src.split("\n")) {
-    if (raw.trim() === "" || raw.trim().startsWith("#")) continue
-    const indent = raw.length - raw.replace(/^\s+/, "").length
-    const ci = raw.indexOf(":")
-    if (ci === -1) continue
-    const key = unquote(raw.slice(0, ci))
-    const val = raw.slice(ci + 1).trim()
-    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop()
-    const parent = stack[stack.length - 1].obj
-    if (val === "") {
-      const child = {}
-      parent[key] = child
-      stack.push({ indent, obj: child })
-    } else {
-      parent[key] = parseScalar(val)
-    }
-  }
-  return root
-}
-
 function loadRole(role) {
   const text = readFileSync(join(SHARED, `${role}.md`), "utf8")
-  const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-  if (!m) throw new Error(`${role}.md: нет frontmatter (источник правды роли)`)
-  const data = parseYaml(m[1])
-  const body = m[2].trim() + "\n"
-  for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description"]) {
+  const { data, body: raw } = parseFrontmatter(text)
+  if (!data) throw new Error(`${role}.md: нет frontmatter (источник правды роли)`)
+  for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description", "skills"]) {
     if (data[f] === undefined) throw new Error(`${role}.md: в frontmatter нет поля '${f}'`)
   }
-  return { data, body }
+  return { data, body: raw.trim() + "\n" }
 }
 
 const q = (s) => (/[^a-zA-Z0-9_.\/-]/.test(s) ? `"${s}"` : s)

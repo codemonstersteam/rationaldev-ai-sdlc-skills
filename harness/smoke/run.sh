@@ -17,6 +17,9 @@ fail() { echo "FAIL: $1"; exit 1; }
 # проекции в актуальном состоянии
 node "$REPO/harness/gen-agents.mjs" >/dev/null
 
+# реестр скиллов актуален + ссылки ролей (skills:) ведут на существующие stable-скиллы
+node "$REPO/harness/gen-skill-index.mjs" --check >/dev/null || fail "skill-index: устарел или битая ссылка роль→скилл"; ok
+
 # --- Claude ---
 P="$TMP/claude"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" >/dev/null

@@ -21,12 +21,16 @@
   `skills/lib/<name>/SKILL.md` + frontmatter (`name`, `description` когда/когда-НЕ,
   `version`). Побочно починен баг: `install.sh` линкует только `<dir>/SKILL.md`, т.е.
   плоские скиллы вообще не устанавливались. Все 17 скиллов теперь единого формата.
-- [ ] **D · P0 — реестр скиллов + CI-инвариант.** Генерировать `skills/INDEX.json`
-  (`name/path/version/status: stable|backlog/description`) из frontmatter. Добавить в
-  `rra-audit-repo`: (1) каждый скилл из `skills:` роли существует и `status: stable`,
-  иначе → запись в `SKILLS-BACKLOG.md` и предупреждение сборки (не молчком); (2)
-  `outputs` роли N ⊇ `inputs` роли N+1 (целостность пайплайна «роль = модуль»).
-  _DoD:_ битая ссылка на скилл и незаведённый `ПРОБЕЛ` валят/предупреждают CI.
+- [x] **D · P0 — реестр скиллов + CI-инвариант.** `harness/gen-skill-index.mjs` генерирует
+  `skills/INDEX.json` (`name/path/version/status/description` + карта роль→скиллы) из
+  frontmatter и валидирует: каждый скилл из `skills:` роли существует и `stable`; `name`
+  скилла == имя каталога. Битая ссылка → `exit 1`. Проверка `--check` встроена в smoke
+  (PASS 21). Парсер frontmatter вынесен в общий `harness/frontmatter.mjs` (DRY).
+  _Осталось:_ (2) `outputs[N] ⊇ inputs[N+1]` — требует структурных `inputs/outputs` в
+  ролях, вынесено в отдельный пункт ниже.
+- [ ] **D2 · P1 — целостность пайплайна.** Добавить `inputs/outputs` в frontmatter ролей
+  и проверку `outputs` роли N ⊇ `inputs` роли N+1 («роль = модуль» машинно). Сейчас
+  вход/выход описаны прозой в теле роли.
 - [ ] **C · P1 — progressive disclosure для `program-design`.** Разрезать `SKILL.md`
   (1053 стр.): оставить Step-индекс + STOP + жёсткие правила, тело шагов вынести в
   `reference/step-NN-*.md`, грузимые по требованию. _DoD:_ `SKILL.md` < ~300 строк.

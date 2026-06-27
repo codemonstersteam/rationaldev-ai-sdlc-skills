@@ -7,6 +7,7 @@ mode: subagent
 temperature: 0.2
 steps: 50
 description: "Имплементатор (Hughes): пишет код строго по утверждённому плану, один срез = один PR. После Gate #1 или сразу на тривиальной задаче. Keywords: реализация, код, TDD, slice, имплементация, PR."
+skills: [code-style, communication, component-tests, documentation, git-conventions, http-io, llm-client, md-formatting, memory, program-implementation]
 permission:
   read: allow
   grep: allow
