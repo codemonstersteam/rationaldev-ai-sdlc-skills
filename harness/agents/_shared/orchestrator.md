@@ -2,7 +2,7 @@
 role: orchestrator
 izi: Witt
 version: "1.0"
-tier: big
+tier: large
 mode: primary
 temperature: 0.2
 steps: 40

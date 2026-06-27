@@ -1,4 +1,4 @@
-<!-- role: plan-reviewer (тир: big, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: plan-reviewer (тир: large, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Plan Reviewer — ревьюер плана (критик)
 

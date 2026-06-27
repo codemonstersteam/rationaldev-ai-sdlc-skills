@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Mills
 - **Версия:** 1.0
-- **Тир / модель:** big → opus
+- **Тир / модель:** large → opus
 - **Режим:** subagent
 - **Запись (edit):** `.agent/plan-reviewer/**`: allow, `.agent/decisions.log`: allow, `*`: deny
 

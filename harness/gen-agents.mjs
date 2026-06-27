@@ -15,8 +15,10 @@ import { parseFrontmatter } from "./frontmatter.mjs"
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
 
-// tier → модель Claude (алиасы); OpenCode наследует модель пользователя (model опущен).
-const CLAUDE_MODEL = { big: "opus", small: "sonnet" }
+// tier (S/M/L) → алиас модели Claude. Тир — абстракция размера; opus/sonnet/haiku —
+// её claude-рендер (OpenCode/Codex/прочие раннеры маппят те же тиры на свои модели,
+// поэтому `model` у них опущен — наследуется от пользователя).
+const CLAUDE_MODEL = { large: "opus", medium: "sonnet", small: "haiku" }
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
 const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
@@ -27,6 +29,9 @@ function loadRole(role) {
   if (!data) throw new Error(`${role}.md: нет frontmatter (источник правды роли)`)
   for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description", "skills", "inputs", "outputs"]) {
     if (data[f] === undefined) throw new Error(`${role}.md: в frontmatter нет поля '${f}'`)
+  }
+  if (CLAUDE_MODEL[data.tier] === undefined) {
+    throw new Error(`${role}.md: неизвестный tier '${data.tier}' (ожидается ${Object.keys(CLAUDE_MODEL).join("/")})`)
   }
   return { data, body: raw.trim() + "\n" }
 }
