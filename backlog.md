@@ -6,47 +6,10 @@
 
 ## Todo
 
-### Унификация скиллов и манифестов ролей (DRY, single source of truth)
-Снять тройной дрейф идентичности роли и два формата скиллов. Эпик-первопричина —
-одна сущность размазана по 2–3 файлам в 2–3 синтаксисах. Порядок по ROI: A → B → D → C → E.
-
-- [x] **A · P0 — единый источник правды роли.** Идентичность роли свёрнута в frontmatter
-  `harness/agents/_shared/<role>.md` (`role/izi/tier/mode/temperature/steps/step/gates/
-  inputs/outputs/skills/permission/description`), перенеся туда хардкод `META` из
-  `gen-agents.mjs` и поля из `skills/roles/`. Генератор читает frontmatter, а не `META`.
-  Решить судьбу `skills/roles/`: удалить или **генерировать** из того же источника.
-  _DoD:_ `META` в `gen-agents.mjs` пуст; правка роли — в одном файле; проекции
-  claude/opencode/codex перегенерируются; `skills/roles/` не правится руками.
-- [x] **B · P0 — единый формат скиллов.** 4 плоских доменных скилла переведены в
-  `skills/lib/<name>/SKILL.md` + frontmatter (`name`, `description` когда/когда-НЕ,
-  `version`). Побочно починен баг: `install.sh` линкует только `<dir>/SKILL.md`, т.е.
-  плоские скиллы вообще не устанавливались. Все 17 скиллов теперь единого формата.
-- [x] **D · P0 — реестр скиллов + CI-инвариант.** `harness/gen-skill-index.mjs` генерирует
-  `skills/INDEX.json` (`name/path/version/status/description` + карта роль→скиллы) из
-  frontmatter и валидирует: каждый скилл из `skills:` роли существует и `stable`; `name`
-  скилла == имя каталога. Битая ссылка → `exit 1`. Проверка `--check` встроена в smoke
-  (PASS 21). Парсер frontmatter вынесен в общий `harness/frontmatter.mjs` (DRY).
-  _Осталось:_ (2) `outputs[N] ⊇ inputs[N+1]` — требует структурных `inputs/outputs` в
-  ролях, вынесено в отдельный пункт ниже.
-- [x] **D2 · P1 — целостность пайплайна.** В frontmatter ролей добавлены `inputs/outputs`
-  (токены-артефакты `.agent/...` + внешние). `gen-skill-index.mjs` проверяет: каждый `input`
-  роли либо внешний (gate/CI/build/требования/общие логи), либо производится как `output`
-  апстрим-шага — обобщение `outputs[N] ⊇ inputs[N+1]` на реальный DAG (implementer читает
-  `plan.md` planner'а, не предыдущего plan-reviewer). Висячий артефакт → `exit 1` (негативный
-  тест подтверждён). inputs/outputs попали в `INDEX.json`. smoke PASS 21.
-- [x] **C · P1 — progressive disclosure для `program-design`.** `SKILL.md` 1053 → 111 строк:
-  голова + Step-индекс + навигация + сводка жёстких правил/STOP (conformance-gate) + DoD.
-  Тело каждого из 12 шагов вынесено в `reference/step-NN-*.md` (механический split, контент
-  байт-в-байт, 992 строки сверены). `install.sh` симлинкует каталог скилла целиком — reference
-  доезжает до раннера. smoke PASS 21.
-- [x] **E · P2 — единая адресация скиллов по имени.** Манифесты ролей уже без путей (с A2,
-  генерятся из `_shared`). Доведено: скилл→скилл ссылки `skills/<name>/SKILL.md` нормализованы
-  в имена (`program-design`, `component-tests`, `program-implementation`) в program-implementation
-  и reference-файлах program-design; проза plan.md обновлена. Один механизм: скилл резолвится
-  по имени, путей в ссылках нет.
+> Унификация скиллов/ролей (DRY: A, A2, B, C, D, D2, E) — **завершена**, см. Done.
 
 ### Инфраструктура репозитория
-- [ ] Сверить сквозные номера версий доков/скиллов (часть осталась `v1.0`, observability — `v2.0`)
+- [ ] Сверить сквозные номера версий доков/скиллов (часть `v1.0`, observability `v2.0`, contract-tests `0.1/draft`) — версии скиллов/ролей теперь машиночитаемы в `skills/INDEX.json`
 - [ ] `docs/02_MEASUREMENT.md §2.4` — переименовать «Платформа данных / Аналитика-отчётность» → «Отчётность» (analytics как роль убран)
 
 ### Скиллы из `SKILLS-BACKLOG.md` (детерминированные процедуры)
@@ -54,7 +17,7 @@
 - [ ] **P0** `canary-release` — выкат канарейкой за тогглом на вариативную среду (роль Michtom)
 - [ ] **P0** `release-health-analysis` — 4 золотых сигнала + вердикт GREEN/YELLOW/RED (роль Michtom)
 - [ ] **P0** `security-ci` — security-scan в CI, «секрет в коде = блок мержа» (роль Linger)
-- [ ] **P0** `contract-tests` — довести черновик `skills/lib/contract-tests/` до полной процедуры (проверка через `pinout`)
+- [ ] **P0** `contract-tests` — довести черновик `skills/lib/contract-tests/` до полной процедуры (проверка через `pinout`); сейчас помечен `version 0.1 / status: draft` в реестре, ни одна роль на него не ссылается
 - [ ] **P0** `error-classification` — план vs реализация vs конфиг (роли Linger, Witt)
 - [ ] **P1** правила безопасной разработки — вшить в `program-design` / `program-implementation`
 - [ ] **P2** `agent-ready-gate`, `epic-decomposition` (роль Witt)
@@ -62,9 +25,19 @@
 
 ### Согласованность методологии
 - [ ] Прогнать `doc-quality-review` по обновлённым ролям и `skills/lib/observability/SKILL.md`
-- [ ] Проверить, что все манифесты ролей ссылаются только на существующие скиллы (после удаления tech-radar/qa/analytics)
+- [x] ~~Проверить, что манифесты ролей ссылаются только на существующие скиллы~~ — автоматизировано: `gen-skill-index.mjs --check` (в smoke) валит сборку на битой ссылке роль→скилл
 
 ## Done
+
+### Унификация скиллов и манифестов ролей (DRY) — ветка `feat/role-single-source`
+- [x] **A — единый источник правды роли:** идентичность (`version/tier/mode/temperature/steps/skills/inputs/outputs/permission/description`) в frontmatter `harness/agents/_shared/<role>.md`; хардкод `META` из `gen-agents.mjs` удалён, генератор читает frontmatter и валидирует обязательные поля
+- [x] **A2 — `skills/roles/<role>/<role>.md` генерируется** из `_shared` (4-я проекция, помечена «не редактировать»); рукописный дубль роли устранён
+- [x] **B — единый формат скиллов:** 4 плоских доменных (`architecture/code-style/observability/security`) → `skills/lib/<name>/SKILL.md` + frontmatter; починен баг `install.sh` (линковал только `<dir>/SKILL.md` — плоские не ставились). Все 17 скиллов единого формата
+- [x] **D — реестр `skills/INDEX.json` + CI-инвариант ссылок:** `gen-skill-index.mjs` строит реестр и валит сборку на скилле-призраке; общий парсер `harness/frontmatter.mjs`; проверка `--check` в smoke
+- [x] **D2 — целостность пайплайна:** `inputs/outputs` в ролях + проверка «каждый вход внешний или производится апстрим-шагом» (DAG-обобщение `outputs[N] ⊇ inputs[N+1]`)
+- [x] **C — progressive disclosure `program-design`:** `SKILL.md` 1053 → 111 строк, тело 12 шагов в `reference/step-NN-*.md` (split байт-в-байт)
+- [x] **E — адресация скиллов по имени:** скилл→скилл ссылки `skills/<name>/SKILL.md` нормализованы в имена; один механизм
+- [x] Регрессий нет: проекции claude/opencode/codex байт-в-байт на каждом шаге; harness smoke PASS 21
 
 - [x] Переработка из `rational-skills-ai` под дерзкий рациональный SDLC (человек + машина)
 - [x] **6 ролей-агентов izi** с кодовыми именами: Wirth, Mills, Hughes, Linger, Michtom, Witt
