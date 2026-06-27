@@ -1,332 +1,188 @@
 ---
 name: component-tests
-description: Генерация, ревью и расширение компонентных тестов программы — сетевого сервиса (OpenAPI/AsyncAPI) или CLI-инструмента — как чёрного ящика. Применять, когда нужно создать новые .feature, дополнить существующие, добавить тестовые данные/фикстуры или оценить набор на полноту покрытия контракта и режимов отказа. Не применять для юнит-тестов или контрактных тестов между сервисами. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): формула покрытия, таблицы-решения, чеклисты, STOP-правила.
+description: Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula, decision tables, checklists, STOP rules.
 version: "1.0"
 ---
 
-# Компонентные тесты — спецификация чёрного ящика
+# component-tests — black-box specification
 
-Skill для генерации компонентных тестов программы — сетевого сервиса или
-CLI-инструмента. Тест — это исполняемая спецификация: что программа обещает
-делать на штатном пути и при отказе каждой внешней связи. Не охота за багами
-и не покрытие кода.
-
-## Объект — спецификация программы, не привязка к инструментам
-
-Тестируем **программу как чёрный ящик в изоляции** — сетевой сервис или
-CLI-инструмент, безразлично. Это общий инженерный подход, не зависящий от языка
-и фреймворка: задача одна — проверить **спецификацию интерфейса** программы
-(контракт), а не её внутренности. Для сервиса контракт — OpenAPI/AsyncAPI и
-внешние входы это эндпоинты/события; для CLI-тула контракт —
-`api-specification/openapi.yaml` (или аналогичная спека CLI), а внешние входы —
-подкоманды.
+Generate component tests for a program — a network service or a CLI tool. A test is an
+**executable specification**: what the program promises on the happy path and on the
+failure of each external integration. **Not** bug-hunting, **not** code coverage.
 
-Изоляция реализуется единообразно: вся среда поднимается в **Docker Compose**.
-Для сервиса — сам сервис плюс его зависимости. Для CLI-тула — бинарь в контейнере
-(запускается как одноразовый сервис compose против фикстур) плюс его внешние
-зависимости как сервисы compose, включая **заглушку внешнего API** (например,
-LLM-эндпоинта), к которой тул обращается по имени сервиса. Заглушка — полноценный
-сервис, отвечающий по реальному протоколу, а не in-code мок.
+## Object — the program's spec, black box, in isolation
 
-Выбор среды не пересматриваем: компонентные тесты — всегда в Docker Compose.
+Test the **program as a black box** (service or CLI — same approach, language/framework
+independent): verify the **interface contract**, not the internals. For a service the
+contract is OpenAPI/AsyncAPI and the external inputs are endpoints/events; for a CLI tool
+the contract is `api-specification/openapi.yaml` (or an equivalent CLI spec) and the
+inputs are subcommands.
 
-## Принцип: контракт первичен
+Isolation is uniform: the whole environment runs in **Docker Compose**. Service — the
+service plus its dependencies. CLI — the binary in a container (run as a one-shot compose
+service against fixtures) plus its dependencies as compose services, **including a stub of
+each external API** (e.g. an LLM endpoint) reached by service name. The stub is a real
+service speaking the real protocol — **never an in-code mock**. This choice is fixed:
+component tests always run in Docker Compose.
+
+## Principle — contract first
+
+Component tests are written before the service code (TDD). Therefore integration failure
+modes **MUST** be fixed in the contracts, **MUST NOT** be inferred from adapter code. Code
+follows the contract, not the reverse. Failure-mode sources, in priority order:
+
+1. **OpenAPI** (`api-specification/openapi.yaml`) — sync endpoints; all 5xx split by `error.code`.
+2. **README `## Карта режимов отказа`** — async integrations and anything not expressed via HTTP codes.
+3. **Fallback: adapter code** — only if the contract isn't detailed yet; add a TODO in `backlog.md` to fix the failure modes in the contract.
+
+> `## Карта режимов отказа` is the literal README heading another skill writes — keep it
+> in Russian until that chain is translated.
+
+## Boundary with the unit layer
+
+Component tests verify **outward interface promises**: return codes, schema-typed
+response/report fields, the reaction to each distinguishable integration failure mode.
+They **MUST NOT** re-prove business logic — that's what units in `internal/` do.
+
+Before adding a fixture or scenario, answer: **which new contract branch does it trigger**
+— a new `error.code`, `exit` value, status field value, response field, output format, or
+CLI flag? If none, it's unit-level — **do not add it**. "Cover logic deeper" or "more bad
+data" does not count: the contract distinguishes "blocker / no blocker", not "one failure
+vs ten". One **minimal** fixture per contract branch is enough.
+
+**Extra scenarios MUST be deleted**, not kept "just in case". The scenario count **MUST**
+match the formula exactly: `N = N_endpoints/subcommands + Σ failure_modes`. Anything above
+the formula signals a fuzzy unit/component boundary.
 
-Компонентные тесты пишутся до кода сервиса (TDD-цикл). Значит, режимы
-отказа интеграций должны быть зафиксированы в контрактах, не выведены
-из кода адаптеров. Код — следствие контракта, не источник.
+**`Request`-field branches are units, not components (lesson D1).** A choice by option/flag
+(`--out` where to write, `--format` which format) is a pure logic function
+(`resolveDestination`, `renderReport` — see `program-design` Step 3, single-request rule)
+covered by **units**. The `stdout|file × json|md` matrix adds **no** component scenarios —
+only the **write-failure** mode enters a component test.
 
-Источники режимов отказа в порядке приоритета:
+## Fixtures — isolated per slice
 
-1. OpenAPI (`api-specification/openapi.yaml`) — для синхронных эндпоинтов.
-   Все 5xx-ответы с разбиением по `error.code`.
-
-2. README раздел «Карта режимов отказа» — для асинхронных интеграций
-   и любых интеграций, не описанных через коды HTTP.
-
-3. Fallback: код адаптера — если контракт ещё не детализирован.
-   Создать TODO в `backlog.md`: «зафиксировать режимы отказа в контракте».
-
-## Граница со слоем юнитов
-
-Компонент-тесты проверяют **обещания интерфейса наружу**: коды возврата,
-поля ответа/отчёта по схеме, реакцию на каждый различимый режим отказа интеграции.
-Они **не** воспроизводят бизнес-логику — её доказывают юниты в `internal/`.
-
-Перед тем как добавить фикстуру или сценарий, ответь:
-
-> Какую **новую** ветку контракта он триггерит — новый `error.code`, новое
-> значение `exit`, новое значение поля статуса, новое поле ответа,
-> новый формат вывода, новый флаг CLI?
-
-Если ни одну — это юнит-уровень, не добавляй. «Покрыть логику глубже»
-или «больше плохих данных» не считается: контракт не различает «один сбой»
-и «десять», он различает «есть blocker / нет blocker». Для каждой
-ветки контракта достаточно **минимальной** фикстуры, которая её триггерит.
-
-**Лишние сценарии — удалять.** Если ревью показывает, что сценарий не
-триггерит новую ветку контракта (дубль, юнит-уровень, «на всякий случай»)
-— его нужно удалить, а не оставить «про запас». Число сценариев должно
-точно соответствовать формуле: N = N_эндпоинтов/подкоманд + Σ режимы_отказа.
-Сценарии сверх формулы — признак неточного понимания границы со слоем юнитов.
-
-**Развилки по полю `Request` — это юниты, не компоненты (урок D1).** Выбор
-по опции/флагу (куда писать — `--out`, в каком формате — `--format`)
-оформляется как чистая функция логики (`resolveDestination`, `renderReport`
-— см. `program-design` Шаг 3, правило единого запроса) и покрывается
-**юнитами**. Матрица `stdout|файл × json|md` **не** добавляет компонентных
-сценариев — в компонент входит только режим **отказа** записи. Иначе `N`
-раздувается матрицей, которая к контракту наружу не относится.
-
-## Модель фикстур: изолированные на слайс
-
-Каждый слайс (подкоманда/ресурс) имеет **собственный набор фикстур** —
-`good-<slice>` и `bad-<slice>` (или аналогичное соглашение для
-нон-CLI сервисов). Фикстуры между слайсами не разделяются.
-
-**Почему не shared-фикстуры.** Разделяемая «хорошая» фикстура накапливает
-инвариант всех зарегистрированных check-типов одновременно: добавился новый
-слайс → старая фикстура может перестать быть «хорошей» для нового check-а.
-Это нарушает независимость слайсов и создаёт скрытую связность: изменение в
-фикстуре одного слайса ломает тесты другого. Изолированные фикстуры этого
-лишены.
-
-**Исключение — интеграционный слайс.** Подкоманда/ресурс, запускающий все
-слои сразу (например, `assess`), по определению покрывает все check-типы.
-Но это отдельная фикстура, спроектированная специально для него, а не
-переиспользование фикстур других слайсов.
-
-**Минимальность фикстуры.** Фикстура каждого слайса содержит ровно то,
-что нужно для триггера одной ветки контракта, — не больше. Лишний контент
-в `bad-<slice>` делает failure-сценарий нечитаемым: непонятно, какой
-именно check сработал.
-
-### Проектирование фикстуры нового слайса
-
-Перед написанием `.feature` — спроектируй фикстуру:
-
-1. **`good-<slice>`:** минимальная среда, в которой новый check не производит
-   нарушений. Только тот контент, который нужен для happy-path.
-   Никакого «реалистичного» наполнения сверх необходимого.
-2. **`bad-<slice>`:** добавь к minimal-базе ровно один элемент,
-   триггерящий нужную ветку отказа. Один элемент — одна ветка.
-3. Для каждой дополнительной ветки отказа — отдельный вариант `bad`
-   или отдельный параметр (если степы это поддерживают).
-
-Этот шаг выполняется **до написания сценариев и до кода** — он часть
-дизайна, не отладки реализации.
-
-## Формула
-
-    N_тестов = N_эндпоинтов_API + Σ (число различимых режимов отказа интеграции i)
-
-* `N_эндпоинтов_API` — количество эндпоинтов в OpenAPI плюс количество
-  событий (publish и subscribe) в AsyncAPI; для CLI-тула — количество подкоманд.
-
-* Различимый режим отказа — каждый отдельный тип ошибки, который сервис
-  обещает наружу для данной интеграции.
-
-**Источник режимов отказа — Extensions системного use case (Cockburn).**
-При наличии use case среза (его выдаёт `program-design`, см. его Шаг 8.6)
-режимы отказа берутся 1:1 из его **Extensions**, а не выдумываются:
-
-- `Main Success Scenario` → happy-path сценарий;
-- каждый `Extension NNa` → ровно один сценарий отказа (тот же `error.code`
-  и exit/исход);
-- то есть `N = 1 + #extensions` для среза.
-
-**Двусторонняя сверка (gate):** `#сценариев_отказа == #Extensions ==
-#кодов_ошибок` среза. Extension без сценария или сценарий без Extension →
-расхождение, чинить (не «про запас»). Цепочка: use case → срез → Gherkin →
-узлы графа контрактов.
-
-## Что считать интеграцией
-
-Интеграция — это выход за процесс сервиса:
-
-* сеть (HTTP, gRPC, очереди, БД через драйвер);
-* файловая система;
-* IPC (Inter-Process Communication, межпроцессное взаимодействие).
-
-Локальные библиотеки в памяти процесса — модули, не интеграции.
-
-## Алгоритм генерации тестов
-
-**Шаг 0. Спроектировать режимы отказа и подготовить раннер
-(если ещё не сделано).**
-
-Перед тем как писать `.feature`, должны существовать:
-
-1. 5xx-ответы с `error.code` в OpenAPI на каждый различимый режим отказа.
-2. Таблица «Карта режимов отказа» в README с тем же набором.
-3. Раннер компонентных тестов (godog/cucumber/...) с docker-compose,
-   набором базовых степов (HTTP, доменная авторизация, фикстуры
-   режимов отказа интеграций) и хотя бы одним smoke-сценарием.
-
-Без любого из трёх Шаг 1 проваливается: либо нечего проверять,
-либо нечем проверять.
-
-Промпт для агента (лаконичный, самодостаточный):
-
-> Прочитай README раздел «Стек» и определи интеграции сервиса
-> (правило: интеграция = выход за процесс — сеть, ФС, IPC).
-> Для каждой интеграции перечисли теоретически возможные режимы
-> отказа. Объедини в один `error.code` те режимы, на которые
-> клиент **и** ops реагируют одинаково; разнеси по разным
-> кодам те, у которых поведение различается (HTTP-код,
-> `Retry-After`, эскалация оператору). Зафиксируй результат:
-> в OpenAPI — 5xx-ответы с примерами `error.code` для каждого
-> различимого режима (разные HTTP-коды — разные responses);
-> в README — таблица «Карта режимов отказа» с теми же строками
-> и колонкой «поведение клиента». Решение «почему именно столько
-> режимов» — в `docs/adr/`.
-
-**Правило различения:** режим — отдельный, если хотя бы одно из четырёх
-различается между ним и другими режимами интеграции:
-
-* HTTP-статус (503 vs 507 vs 500);
-* заголовки ответа (`Retry-After` есть/нет);
-* действие клиента (ретраить / не ретраить / ретраить с backoff);
-* действие оператора (ничего / alert / эскалация).
-
-Если все четыре одинаковы — режимы сворачиваются в один `error.code`.
-
-Минимум, что должно остаться после Шага 0:
-
-* секция `components/responses` в OpenAPI содержит общий ответ
-  на отказ интеграции (например, `ServiceUnavailable`) с примером
-  `error.code` для каждого различимого режима;
-* каждый эндпоинт в `responses` ссылается на этот общий ответ;
-* в README таблица «Карта режимов отказа» содержит ровно те же
-  строки, что и `error.code`-примеры в OpenAPI.
-
-**Шаг 1.** Прочитать `api-specification/openapi.yaml`. Перечислить эндпоинты.
-Если есть `asyncapi.yaml` — перечислить события.
-
-**Шаг 2.** На каждый эндпоинт и каждое событие — один happy-path сценарий.
-Не склеивать фазы двухфазного протокола (например, регистрация:
-challenge + attestation) в один сценарий — это два отдельных контракта.
-
-**Шаг 3.** Определить режимы отказа из контрактов:
-
-* синхронные: все 5xx из OpenAPI с разбивкой по `error.code`;
-* асинхронные: строки таблицы «Карта режимов отказа» из README;
-* fallback: код адаптера + TODO в `backlog.md`.
-
-**Шаг 4.** На каждый режим отказа — один сценарий.
-
-**Шаг 5.** Сверить: `N = N_эндпоинтов + N_событий + Σ режимы отказа`.
-
-## Ревью и расширение существующих тестов
-
-Когда задача — не «написать с нуля», а «доработать тестовые данные / тесты»
-или «оценить покрытие», направление обхода **инвертируется**: ходи от
-контракта вниз к данным, не от данных вверх к гипотезам «чего бы ещё добавить».
-
-Алгоритм ревью:
-
-1. Выпиши пункты контракта — подкоманды/эндпоинты, поля ответа по схеме,
-   значения `exit`, флаги CLI, строки «Карты режимов отказа».
-2. Для каждого пункта найди сценарий, который его триггерит. Если нет —
-   это пробел, кандидат на новый сценарий или фикстуру.
-3. Для каждого существующего сценария примени диагностический вопрос из
-   «Границы со слоем юнитов». Если он не покрывает новую ветку контракта —
-   он либо дубль, либо юнит-уровень, либо ложно-полезная «отладочная»
-   ассерция (например, проверка конкретного `violation.code` вместо
-   `severity=blocker`).
-
-Типовой источник дрейфа на ревью — мышление «больше данных = лучше». Больше
-данных полезно только если они открывают новую ветку контракта. Узкие
-фикстуры «под один слой» имеют смысл, только если контракт обещает что-то,
-что широкая фикстура триггернуть не может (например, команда с флагом
-`--up-to` со `status="skipped"` требует фикстуру, ломающую ранний слой и
-не ломающую поздний — это контрактная необходимость, не желание глубины).
-
-## Структура файлов
-
-* Один `.feature` файл на ресурс API.
-* Имя файла = имя ресурса в нижнем регистре.
-* Расположение: `component-tests/<resource>.feature`.
-
-## Что НЕ делать
-
-* Не выводить режимы отказа из кода как основной путь.
-* Не генерировать сценарии валидации полей запроса (юнит-уровень).
-* Не повторять бизнес-логику (доказана юнитами) — см. «Граница со слоем юнитов».
-* Не писать smoke-test на запуск (контролирует компилятор).
-* Не добавлять сценарии «на всякий случай».
-* Не склеивать фазы протокола в один сценарий.
-
-## Запуск
-
-Все компонентные тесты запускаются в Docker Compose с реальными зависимостями —
-и для сервиса, и для CLI-тула (бинарь в контейнере как сервис compose). Тест
-дёргает настоящий интерфейс программы: HTTP-эндпоинт сервиса или подкоманду тула.
-Внешний API замещается заглушкой-сервисом в том же compose, отвечающей по
-реальному протоколу. Никаких in-code моков.
-
-## STOP-правила
-
-Останавливайся и спрашивай оператора, не угадывай:
-
-- Контракт (`api-specification/`) отсутствует, а сценарий требует сверки с ним
-  (поле ответа, `error.code`, `exit`) → STOP: без контракта нечего проверять.
-- Не удаётся отнести сценарий к ветке контракта (формула
-  `N = N_эндпоинтов/подкоманд + Σ режимы_отказа`) → STOP, спроси, какую ветку он
-  триггерит.
-- Просят сценарий «на всякий случай» / «покрыть логику глубже» / «больше плохих
-  данных» без новой ветки контракта → не добавляй, верни на юнит-уровень.
-- Режим отказа не воспроизводим в тесте (синтетический, теоретический) → STOP:
-  в спеку идут только реально воспроизводимые режимы.
-- Режим отказа выводится только из кода адаптера, в контракте его нет → STOP:
-  зафиксируй в OpenAPI/README (TODO в `backlog.md`), потом сценарий.
-
-## Чек-лист перед коммитом
-
-- [ ] Шаг 0 пройден: интеграции и режимы отказа зафиксированы в OpenAPI и README.
-- [ ] Карта режимов отказа в README заполнена и актуальна.
-- [ ] Число `.feature` файлов = число ресурсов в API.
-- [ ] Число happy-path сценариев = число эндпоинтов + число событий.
-- [ ] Число сценариев отказа = сумма режимов отказа из OpenAPI и README.
-- [ ] Все сценарии запускаются в Docker Compose с реальными зависимостями.
-- [ ] Нет валидации полей, бизнес-логики, smoke-тестов.
-- [ ] **Фикстуры изолированы на слайс** — `good-<slice>` и `bad-<slice>`.
-   Фикстуры других слайсов не используются. Интеграционный слайс — отдельная фикстура.
-- [ ] **Число сценариев = формула** — лишние удалены; каждый сценарий триггерит
-   ровно одну ветку контракта, которой без него не было.
-
-## Чек-лист шаблона (Шаг 0) перед хендоффом другому агенту
-
-Дополнительно к чек-листу выше — если на этом шаге готовится **шаблон
-тестов** (раннер, базовые степы, compose), который потом получит другой
-агент или разработчик для написания `.feature`-файлов:
-
-- [ ] Каждый степ из `steps/*.go` вызван хотя бы раз из `features/smoke.feature`.
-   Не из Go-кода (макрошага), а именно из Gherkin — там другая семантика
-   аргументов и парсинга. Степы, написанные «в голове через Go-вызов»,
-   часто проваливаются при первой же попытке вызвать их из `.feature`
-   (например, динамический id, который в Gherkin-строке статически не
-   зафиксировать).
-- [ ] Smoke зелёный — full pipeline (`docker compose build → up → run`).
-- [ ] README шаблона перечисляет все степы с их регулярками. Если степ
-   нельзя выразить одной фразой — это сигнал переименовать или разнести.
-- [ ] Включены степы для типовых случаев API: точное равенство JSON-поля,
-   присутствие поля, непустое поле (для динамических значений вроде
-   токенов и timestamp). Без них первый же endpoint с JWT упрётся в стену.
-
-## Пример: сервис с БД-интеграцией
-
-* 6 эндпоинтов в OpenAPI.
-* 1 интеграция — БД (например, встроенная SQLite).
-* 2 различимых режима отказа БД:
-  * `db_locked` (503 + `Retry-After`) — lock contention (`SQLITE_BUSY` и аналоги);
-  * `db_disk_full` (507) — диск переполнен на запись.
-* AsyncAPI нет.
-
-`N_тестов = 6 + 2 = 8`. Восемь компонентных сценариев — полная
-спецификация сервиса как чёрного ящика.
-
-Замечание: `db_unavailable` намеренно не выделен — для встроенной
-SQLite это синтетический режим. Если бы интеграция была сетевой
-(Postgres, MySQL) — добавили бы. Принцип: в спеку идут только
-**реально воспроизводимые в тестах** режимы, не теоретические.
+Each slice (subcommand/resource) has its **own** fixtures — `good-<slice>` and
+`bad-<slice>`. Fixtures **MUST NOT** be shared across slices: a shared "good" fixture
+accumulates the invariants of every registered check at once, so a new slice can silently
+make an old fixture no longer "good" for it — hidden coupling that breaks slice
+independence. **Exception:** an integration slice that runs all layers at once (e.g.
+`assess`) gets its own purpose-built fixture — not a reuse of others'.
+
+A fixture **MUST** be minimal: exactly what triggers one contract branch. Extra content in
+`bad-<slice>` makes the failure scenario unreadable — you can't tell which check fired.
+
+**Design the fixture before the `.feature`** (part of design, not debugging):
+1. `good-<slice>` — minimal environment where the new check raises nothing; only happy-path content.
+2. `bad-<slice>` — add to the minimal base exactly one element that triggers the target failure branch. One element → one branch.
+3. Each extra failure branch → a separate `bad` variant or step parameter.
+
+## Formula
+
+```
+N = N_API_endpoints + Σ (distinguishable failure modes of integration i)
+```
+
+`N_API_endpoints` = OpenAPI endpoints + AsyncAPI events (publish & subscribe); for a CLI,
+the number of subcommands. A distinguishable failure mode = each error type the service
+promises outward for that integration.
+
+**Failure modes come from the system use-case Extensions (Cockburn).** When the slice's
+use case exists (`program-design` Step 8.6), take failure modes 1:1 from its **Extensions**:
+`Main Success Scenario` → happy-path scenario; each `Extension NNa` → exactly one failure
+scenario (same `error.code` and exit/outcome). So `N = 1 + #extensions` per slice.
+
+**Two-way gate:** `#failure_scenarios == #Extensions == #error_codes` per slice. An
+Extension without a scenario, or a scenario without an Extension → a mismatch you **MUST**
+fix. Chain: use case → slice → Gherkin → contract-graph nodes.
+
+## What counts as an integration
+
+Leaving the service process: network (HTTP, gRPC, queues, DB via driver), filesystem, IPC.
+In-memory libraries are modules, not integrations.
+
+## Generation algorithm
+
+**Step 0 — design failure modes + prepare the runner (if not done).** Before any
+`.feature`, these **MUST** exist:
+1. 5xx responses with `error.code` in OpenAPI for each distinguishable failure mode;
+2. the `## Карта режимов отказа` table in README with the same set;
+3. a component-test runner (godog/cucumber/…) with docker-compose, base steps (HTTP, domain auth, integration-failure fixtures), and at least one smoke scenario.
+
+Missing any of the three → Step 1 fails (nothing to check, or nothing to check with).
+
+**Distinguishing rule:** a failure mode is separate if **any** of these four differs from
+the integration's other modes — HTTP status (503 vs 507 vs 500); response headers
+(`Retry-After` present?); client action (retry / don't / retry with backoff); operator
+action (none / alert / escalate). If all four match, the modes collapse into one
+`error.code`. (Decide "why this many modes" in `docs/adr/`.)
+
+**Step 1.** Read `api-specification/openapi.yaml`; list endpoints (+ AsyncAPI events).
+**Step 2.** One happy-path scenario per endpoint/event. Don't merge two-phase protocols
+(e.g. registration: challenge + attestation) into one scenario — they are two contracts.
+**Step 3.** Derive failure modes: sync → all 5xx by `error.code`; async → README
+`## Карта режимов отказа` rows; fallback → adapter code + TODO.
+**Step 4.** One scenario per failure mode.
+**Step 5.** Verify `N = N_endpoints + N_events + Σ failure_modes`.
+
+## Review and extend existing tests
+
+When the task is "improve test data / coverage" rather than "write from scratch", **invert
+the traversal**: go from contract **down** to data, not from data up to "what else to add".
+1. List contract items — subcommands/endpoints, schema response fields, `exit` values, CLI flags, `## Карта режимов отказа` rows.
+2. For each, find the scenario that triggers it. None → a gap (new scenario/fixture candidate).
+3. For each existing scenario, apply the boundary diagnostic. If it triggers no new contract branch → it's a duplicate, unit-level, or a false-useful "debug" assertion (e.g. checking a specific `violation.code` instead of `severity=blocker`).
+
+"More data = better" is the typical review drift. More data helps **only** if it opens a
+new contract branch. Narrow per-layer fixtures are justified only when the contract
+promises something a broad fixture can't trigger (e.g. `--up-to` with `status="skipped"`
+needs a fixture that breaks an early layer but not a late one — a contractual need, not a
+desire for depth).
+
+## File structure
+
+One `.feature` per API resource; filename = resource name lowercased; located at
+`component-tests/<resource>.feature`.
+
+## What NOT to do (MUST NOT)
+
+Derive failure modes from code as the primary path · generate request-field validation
+scenarios (unit-level) · re-prove business logic · write a launch smoke test (the compiler
+covers that) · add "just in case" scenarios · merge protocol phases into one scenario.
+
+## STOP rules
+
+You **MUST** stop and ask the operator, don't guess, when:
+- the contract (`api-specification/`) is missing but a scenario needs to check against it (response field, `error.code`, `exit`) — nothing to verify;
+- you can't map a scenario to a contract branch (the `N` formula) — ask which branch it triggers;
+- asked for a "just in case" / "cover logic deeper" / "more bad data" scenario with no new contract branch — don't add it, return to unit level;
+- a failure mode isn't reproducible in a test (synthetic, theoretical) — only reproducible modes go in the spec;
+- a failure mode exists only in adapter code, not in the contract — fix it in OpenAPI/README (TODO in `backlog.md`) first, then the scenario.
+
+## Pre-commit checklist
+
+- [ ] Step 0 done: integrations and failure modes fixed in OpenAPI and README.
+- [ ] `## Карта режимов отказа` in README filled and current.
+- [ ] `.feature` files = API resources.
+- [ ] happy-path scenarios = endpoints + events.
+- [ ] failure scenarios = Σ failure modes from OpenAPI and README.
+- [ ] all scenarios run in Docker Compose with real dependencies.
+- [ ] no field validation, no business logic, no smoke tests.
+- [ ] **fixtures isolated per slice** (`good-<slice>` / `bad-<slice>`); no cross-slice reuse; integration slice has its own.
+- [ ] **scenario count = formula**; extras deleted; each scenario triggers exactly one contract branch that didn't exist without it.
+
+**Template handoff (Step 0), if preparing a test template for another agent:**
+- [ ] every step in `steps/*.go` is invoked at least once from `features/smoke.feature` — from Gherkin, not a Go macro-call (different arg/parse semantics; "mentally written" steps often fail on first real `.feature` call, e.g. a dynamic id that can't be static in a Gherkin string);
+- [ ] smoke is green — full pipeline (`docker compose build → up → run`);
+- [ ] the template README lists every step with its regex (a step that can't be one phrase → rename or split);
+- [ ] steps for common API cases included: exact JSON-field equality, field presence, non-empty field (for dynamic values like tokens/timestamps) — without them the first JWT endpoint hits a wall.
+
+## Example — service with a DB integration
+
+6 OpenAPI endpoints · 1 integration (embedded SQLite) · 2 distinguishable DB failure modes:
+`db_locked` (503 + `Retry-After`, lock contention) and `db_disk_full` (507, disk full). No
+AsyncAPI. → `N = 6 + 2 = 8`: eight scenarios fully specify the service as a black box.
+
+`db_unavailable` is deliberately omitted — synthetic for embedded SQLite (would be added
+for a networked Postgres/MySQL). Principle: only **reproducible** modes enter the spec, not
+theoretical ones.

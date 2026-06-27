@@ -27,7 +27,7 @@
       "path": "skills/lib/component-tests/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Генерация, ревью и расширение компонентных тестов программы — сетевого сервиса (OpenAPI/AsyncAPI) или CLI-инструмента — как чёрного ящика. Применять, когда нужно создать новые .feature, дополнить существующие, добавить тестовые данные/фикстуры или оценить набор на полноту покрытия контракта и режимов отказа. Не применять для юнит-тестов или контрактных тестов между сервисами. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): формула покрытия, таблицы-решения, чеклисты, STOP-правила."
+      "description": "Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula, decision tables, checklists, STOP rules."
     },
     {
       "name": "contract-tests",
