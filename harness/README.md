@@ -7,9 +7,9 @@
 
 | Путь | Назначение | Править вручную? |
 |---|---|---|
-| `agents/_shared/<role>.md` | каноничное тело агента (система-промпт роли) | **да** — это источник |
+| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`tier/mode/temperature/steps/permission/description`) + тело-промпт | **да** — это источник |
 | `agents/{claude,opencode,codex}/<role>.md` | сгенерированные проекции с per-runner frontmatter | **нет** — перегенерируются |
-| `gen-agents.mjs` | генератор: `_shared` + META → 3 раннера | да (META, рендереры) |
+| `gen-agents.mjs` | генератор: читает frontmatter `_shared` → 3 раннера | да (только рендереры) |
 
 ## Перегенерация
 
@@ -17,8 +17,10 @@
 node harness/gen-agents.mjs    # → agents/{claude,opencode,codex}/*.md
 ```
 
-Правишь тело роли — меняй `agents/_shared/<role>.md` и перегенерируй. Никогда не
-правь файлы в `agents/<runner>/` напрямую: они перезапишутся.
+Правишь роль (тело **или** идентичность: tier/mode/perm/описание) — меняй frontmatter и
+тело в `agents/_shared/<role>.md` и перегенерируй. Никогда не правь файлы в
+`agents/<runner>/` напрямую: они перезапишутся. Тир/права/температуру больше **не**
+хардкодят в генераторе — они в frontmatter роли.
 
 ## Различия проекций
 

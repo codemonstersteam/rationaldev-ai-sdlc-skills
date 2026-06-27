@@ -6,6 +6,34 @@
 
 ## Todo
 
+### Унификация скиллов и манифестов ролей (DRY, single source of truth)
+Снять тройной дрейф идентичности роли и два формата скиллов. Эпик-первопричина —
+одна сущность размазана по 2–3 файлам в 2–3 синтаксисах. Порядок по ROI: A → B → D → C → E.
+
+- [ ] **A · P0 — единый источник правды роли.** Свернуть идентичность роли в frontmatter
+  `harness/agents/_shared/<role>.md` (`role/izi/tier/mode/temperature/steps/step/gates/
+  inputs/outputs/skills/permission/description`), перенеся туда хардкод `META` из
+  `gen-agents.mjs` и поля из `skills/roles/`. Генератор читает frontmatter, а не `META`.
+  Решить судьбу `skills/roles/`: удалить или **генерировать** из того же источника.
+  _DoD:_ `META` в `gen-agents.mjs` пуст; правка роли — в одном файле; проекции
+  claude/opencode/codex перегенерируются; `skills/roles/` не правится руками.
+- [ ] **B · P0 — единый формат скиллов.** Перевести 4 плоских доменных скилла
+  (`architecture.md`, `code-style.md`, `observability.md`, `security.md`) в каталог
+  `dir/SKILL.md` + frontmatter (`name`, `description` в форме когда/когда-НЕ, `version`).
+  _DoD:_ все скиллы — `skills/lib/<name>/SKILL.md` с frontmatter; плоских `.md` нет.
+- [ ] **D · P0 — реестр скиллов + CI-инвариант.** Генерировать `skills/INDEX.json`
+  (`name/path/version/status: stable|backlog/description`) из frontmatter. Добавить в
+  `rra-audit-repo`: (1) каждый скилл из `skills:` роли существует и `status: stable`,
+  иначе → запись в `SKILLS-BACKLOG.md` и предупреждение сборки (не молчком); (2)
+  `outputs` роли N ⊇ `inputs` роли N+1 (целостность пайплайна «роль = модуль»).
+  _DoD:_ битая ссылка на скилл и незаведённый `ПРОБЕЛ` валят/предупреждают CI.
+- [ ] **C · P1 — progressive disclosure для `program-design`.** Разрезать `SKILL.md`
+  (1053 стр.): оставить Step-индекс + STOP + жёсткие правила, тело шагов вынести в
+  `reference/step-NN-*.md`, грузимые по требованию. _DoD:_ `SKILL.md` < ~300 строк.
+- [ ] **E · P2 — единая адресация скиллов по имени.** Убрать относительные пути
+  `../../lib/*.md` из манифестов ролей; харнес резолвит скилл по имени. _DoD:_ путей в
+  ссылках на скиллы нет, один механизм адресации.
+
 ### Инфраструктура репозитория
 - [ ] Сверить сквозные номера версий доков/скиллов (часть осталась `v1.0`, observability — `v2.0`)
 - [ ] `docs/02_MEASUREMENT.md §2.4` — переименовать «Платформа данных / Аналитика-отчётность» → «Отчётность» (analytics как роль убран)
