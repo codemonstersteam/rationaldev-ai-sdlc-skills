@@ -104,7 +104,7 @@
       "path": "skills/lib/program-design/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Designing a program by the discipline of rational development. Use when an FRD/task and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the API contract or the README failure-mode map is missing — design them first as a separate task. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum."
+      "description": "Designing a program by the discipline of rational development. Use when an FRD (from the `requirements-intake` skill) and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the FRD, the API contract, or the README failure-mode map is missing — run `requirements-intake` first. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum."
     },
     {
       "name": "program-implementation",
@@ -112,6 +112,13 @@
       "version": "1.0",
       "status": "stable",
       "description": "Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong, e.g. GLM / Qwen through Opus): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum."
+    },
+    {
+      "name": "requirements-intake",
+      "path": "skills/lib/requirements-intake/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Turn a (possibly incomplete) business requirement into a functional-requirements document the planner can design from — actors, interfaces, Cockburn system use cases, a domain glossary, and the API contract + failure-mode map. Use as the FIRST step on a new task or an empty project, before program-design. Do NOT use to design module trees or write code (that is program-design / program-implementation). Tier-agnostic: active elicitation, router tables, checklists, STOP rules."
     },
     {
       "name": "security",
@@ -140,6 +147,7 @@
     {
       "role": "planner",
       "skills": [
+        "requirements-intake",
         "architecture",
         "documentation",
         "http-io",
