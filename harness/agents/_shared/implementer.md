@@ -1,6 +1,7 @@
 ---
 role: implementer
 izi: Hughes
+version: "1.0"
 tier: small
 mode: subagent
 temperature: 0.2

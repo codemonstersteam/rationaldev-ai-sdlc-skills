@@ -1,6 +1,7 @@
 ---
 role: plan-reviewer
 izi: Mills
+version: "1.0"
 tier: big
 mode: subagent
 temperature: 0.1

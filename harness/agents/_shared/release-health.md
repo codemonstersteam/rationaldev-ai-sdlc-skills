@@ -1,6 +1,7 @@
 ---
 role: release-health
 izi: Michtom
+version: "2.0"
 tier: small
 mode: subagent
 temperature: 0.1

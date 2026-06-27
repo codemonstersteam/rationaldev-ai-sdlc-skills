@@ -1,6 +1,7 @@
 ---
 role: orchestrator
 izi: Witt
+version: "1.0"
 tier: big
 mode: primary
 temperature: 0.2

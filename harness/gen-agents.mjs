@@ -67,7 +67,7 @@ function loadRole(role) {
   if (!m) throw new Error(`${role}.md: нет frontmatter (источник правды роли)`)
   const data = parseYaml(m[1])
   const body = m[2].trim() + "\n"
-  for (const f of ["tier", "mode", "temperature", "steps", "permission", "description"]) {
+  for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description"]) {
     if (data[f] === undefined) throw new Error(`${role}.md: в frontmatter нет поля '${f}'`)
   }
   return { data, body }
@@ -86,15 +86,15 @@ function permYaml(perm) {
 }
 
 function claudeFile(role, m, body) {
-  return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nmodel: ${CLAUDE_MODEL[m.tier]}\n---\n\n${body}`
+  return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmodel: ${CLAUDE_MODEL[m.tier]}\n---\n\n${body}`
 }
 
 function opencodeFile(role, m, body) {
-  return `---\ndescription: ${JSON.stringify(m.description)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${permYaml(m.permission)}\n---\n\n${body}`
+  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${permYaml(m.permission)}\n---\n\n${body}`
 }
 
 function codexFile(role, m, body) {
-  return `<!-- role: ${role} (тир: ${m.tier}). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->\n\n${body}`
+  return `<!-- role: ${role} (тир: ${m.tier}, v${m.version}). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->\n\n${body}`
 }
 
 const roles = ORDER.map((role) => ({ role, ...loadRole(role) }))

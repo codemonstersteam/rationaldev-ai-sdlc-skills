@@ -1,4 +1,4 @@
-<!-- role: implementer (тир: small). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: implementer (тир: small, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Implementer — имплементатор (izi: Hughes)
 

@@ -1,4 +1,4 @@
-<!-- role: planner (тир: big). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: planner (тир: big, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Planner — планировщик (izi: Wirth)
 

@@ -1,4 +1,4 @@
-<!-- role: orchestrator (тир: big). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: orchestrator (тир: big, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Orchestrator — дирижёр-роутер (izi: Witt)
 
