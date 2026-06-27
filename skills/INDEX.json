@@ -20,7 +20,7 @@
       "path": "skills/lib/communication/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Прагматичный стиль вывода (token-saving) для исполнительных ролей (implementer, fixer). Применять к разговорному выводу и код-ответам: только по делу, минимальные патчи, без воды/повторов/пересказа задачи. НЕ применять к обязательным артефактам скиллов (чеклисты, дизайн-пакет, C4, use case, conformance-gate) и к STOP-диалогам — их полнота важнее экономии. Сокращать проверки ради краткости запрещено (anti-gaming)."
+      "description": "Pragmatic, token-saving output style for executor roles (implementer, fixer). Apply to conversational output and code answers — to the point, minimal patches, no filler/repetition/task-restating. Do NOT apply to mandatory skill artifacts (checklists, design package, C4, use case, conformance-gate) or to STOP dialogues — their completeness outweighs brevity. Cutting checks for the sake of brevity is forbidden (anti-gaming). Tier-agnostic."
     },
     {
       "name": "component-tests",

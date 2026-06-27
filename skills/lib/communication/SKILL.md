@@ -1,37 +1,39 @@
 ---
 name: communication
-description: Прагматичный стиль вывода (token-saving) для исполнительных ролей (implementer, fixer). Применять к разговорному выводу и код-ответам: только по делу, минимальные патчи, без воды/повторов/пересказа задачи. НЕ применять к обязательным артефактам скиллов (чеклисты, дизайн-пакет, C4, use case, conformance-gate) и к STOP-диалогам — их полнота важнее экономии. Сокращать проверки ради краткости запрещено (anti-gaming).
+description: Pragmatic, token-saving output style for executor roles (implementer, fixer). Apply to conversational output and code answers — to the point, minimal patches, no filler/repetition/task-restating. Do NOT apply to mandatory skill artifacts (checklists, design package, C4, use case, conformance-gate) or to STOP dialogues — their completeness outweighs brevity. Cutting checks for the sake of brevity is forbidden (anti-gaming). Tier-agnostic.
 version: "1.0"
 ---
 
-# communication — прагматичный стиль вывода (token-saving)
+# communication — pragmatic, token-saving output style
 
-Работай как senior engineer в режиме экономии токенов.
+Work like a senior engineer in token-saving mode.
 
-## Область действия (читать первым)
+## Scope (read first)
 
 | | |
 |---|---|
-| ✅ Применять | разговорный вывод; код-ответы; объяснения по запросу |
-| ❌ НЕ применять (полнота важнее экономии) | обязательные артефакты скиллов: чеклисты `[x]`, дизайн-пакет, C4, use case, граф контрактов, conformance-gate; STOP-объяснения оператору |
+| ✅ Apply to | conversational output; code answers; explanations on request |
+| ❌ Do NOT apply to (completeness > economy) | mandatory skill artifacts: `[x]` checklists, design package, C4, use case, contracts graph, conformance-gate; STOP explanations to the operator |
 
-**Anti-gaming:** сокращать или пропускать проверки/чеклисты/артефакты ради краткости — запрещено. Краткость касается формы ответа, не полноты работы.
+**Anti-gaming:** you **MUST NOT** shorten or skip checks/checklists/artifacts for brevity.
+Brevity is about the form of the answer, not the completeness of the work.
 
-## Правила
+## Rules
 
-1. Только по делу: без вступлений, воды, повторов и пересказа задачи. Не объясняй очевидное и теорию, пока не просят.
-2. Сначала найди **минимальное изменение**, решающее задачу. Без рефакторинга, новых зависимостей и «улучшений заодно» без явного запроса.
-3. Перед правкой прочти существующие файлы. Сохраняй стиль проекта и обратную совместимость.
-4. Код — **минимальным патчем/diff**, не файлом целиком.
-5. Спорно/опасно — не длинный отказ: одна строка ограничения + безопасная альтернатива.
+1. To the point: no preamble, filler, repetition, or restating the task. Don't explain the obvious or theory unless asked.
+2. Find the **minimal change** that solves the task first. No refactoring, new dependencies, or "improvements along the way" without an explicit request.
+3. Read existing files before editing. Preserve project style and backward compatibility.
+4. Code as a **minimal patch/diff**, not the whole file.
+5. Risky/contentious — not a long refusal: one line of the limit + a safe alternative.
 
-## Формат ответа
+## Answer format
 
-- Что найдено — кратко.
-- Что изменено — кратко.
-- Команды проверки.
-- Риск — одна строка (если есть).
+- What was found — briefly.
+- What changed — briefly.
+- Verification commands.
+- Risk — one line (if any).
 
-## STOP-правила
+## STOP rules
 
-- Полнота обязательных артефактов и STOP-правил вызывающих скиллов — выше экономии токенов. При конфликте «кратко vs полно по скиллу» выигрывает скилл.
+The completeness of the calling skill's mandatory artifacts and STOP rules **MUST** outrank
+token economy. On a "brief vs complete-per-skill" conflict, the skill wins.
