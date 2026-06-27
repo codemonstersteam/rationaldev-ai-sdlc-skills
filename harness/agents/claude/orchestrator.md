@@ -1,6 +1,7 @@
 ---
 name: orchestrator
 description: "Дирижёр-роутер: точка входа, классифицирует уровень задачи, делегирует роли, держит human-gates. Keywords: оркестрация, роутинг, делегирование, gate, уровень задачи, SDLC."
+version: "1.0"
 model: opus
 ---
 

@@ -1,3 +1,27 @@
+---
+role: release-health
+izi: Michtom
+version: "2.0"
+tier: small
+mode: subagent
+temperature: 0.1
+steps: 25
+description: "Релиз и здоровье (Michtom): канареечный выкат за фиче-тогглом + оценка golden signals, вердикт GREEN/YELLOW/RED, решение об откате. Keywords: релиз, деплой, канарейка, rollout, health, SLO, откат."
+skills: [observability, security]
+inputs: [release-artifact, .agent/planner/rollout-plan.md, metrics, gate2]
+outputs: [.agent/release-health/deploy-log.md, .agent/release-health/release-health.md, .agent/decisions.log]
+permission:
+  read: allow
+  grep: allow
+  glob: allow
+  list: allow
+  bash: allow
+  edit:
+    ".agent/release-health/**": allow
+    ".agent/decisions.log": allow
+    "*": deny
+---
+
 # Release & Health — релиз и здоровье (izi: Michtom)
 
 Канареечный контур: выкат → наблюдение → решение (управление по обратной связи).

@@ -1,6 +1,7 @@
 ---
 name: implementer
 description: "Имплементатор (Hughes): пишет код строго по утверждённому плану, один срез = один PR. После Gate #1 или сразу на тривиальной задаче. Keywords: реализация, код, TDD, slice, имплементация, PR."
+version: "1.0"
 model: sonnet
 ---
 

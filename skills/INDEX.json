@@ -1,0 +1,250 @@
+{
+  "_note": "СГЕНЕРИРОВАНО harness/gen-skill-index.mjs — не редактировать вручную. Перегенерация: node harness/gen-skill-index.mjs",
+  "skills": [
+    {
+      "name": "architecture",
+      "path": "skills/lib/architecture/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Проектирование изменения в границах модулей + карта сетевой связанности. Применять на PLANNING (planner) и PLAN REVIEW (plan-reviewer): определить затронутые компоненты и смежные системы, зафиксировать новые сетевые проходы для security, удержать изменение agent-ready (1–2 модуля). НЕ применять для внутреннего устройства одного модуля (это program-design) и для написания кода (code-style)."
+    },
+    {
+      "name": "code-style",
+      "path": "skills/lib/code-style/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Конвенции кодирования организации + обязательные практики реализации — фича-тогглы (новый код OFF по умолчанию), идемпотентность, наблюдаемость (логи/метрики/трейсинг без PII), обработка ошибок, секреты из vault. Применять на IMPLEMENTATION (implementer) и CODE REVIEW (fixer). Шаблон — подставить реальные конвенции организации в места `<...>`. НЕ применять для проектной декомпозиции (program-design / architecture)."
+    },
+    {
+      "name": "communication",
+      "path": "skills/lib/communication/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Прагматичный стиль вывода (token-saving) для исполнительных ролей (implementer, fixer). Применять к разговорному выводу и код-ответам: только по делу, минимальные патчи, без воды/повторов/пересказа задачи. НЕ применять к обязательным артефактам скиллов (чеклисты, дизайн-пакет, C4, use case, conformance-gate) и к STOP-диалогам — их полнота важнее экономии. Сокращать проверки ради краткости запрещено (anti-gaming)."
+    },
+    {
+      "name": "component-tests",
+      "path": "skills/lib/component-tests/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Генерация, ревью и расширение компонентных тестов программы — сетевого сервиса (OpenAPI/AsyncAPI) или CLI-инструмента — как чёрного ящика. Применять, когда нужно создать новые .feature, дополнить существующие, добавить тестовые данные/фикстуры или оценить набор на полноту покрытия контракта и режимов отказа. Не применять для юнит-тестов или контрактных тестов между сервисами. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): формула покрытия, таблицы-решения, чеклисты, STOP-правила."
+    },
+    {
+      "name": "contract-tests",
+      "path": "skills/lib/contract-tests/SKILL.md",
+      "version": "0.1",
+      "status": "draft",
+      "description": "Детерминированная процедура контрактных тестов между компонентами (consumer-driven). Контракт описывается машинной спекой (OpenAPI/AsyncAPI), связи компонентов — netlist; проверяет внешний валидатор pinout и его компоненты. Применять, когда сервис вызывает другой сервис/брокер или предоставляет API потребителям. Не применять для внутренней логики одного модуля — это program-design + component-tests."
+    },
+    {
+      "name": "doc-quality-review",
+      "path": "skills/lib/doc-quality-review/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Детерминированная рубрика ревью качества уже написанной документации репозитория по 6 ядровым характеристикам IBM-фреймворка «Developing Quality Technical Information» (Hargis, Carey et al.) — task orientation, accuracy, completeness, clarity, organization, retrievability — адаптированным под markdown-доки. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): ✓/✗-проверки, правило «если ✗ → действие», сводный вердикт и план правок. Применять, когда нужно ОТРЕВЬЮИТЬ существующие README / docs/architecture.md / прочие доки на качество. Не применять для написания доки с нуля — это скилл documentation; характеристики style / concreteness / visual намеренно вне ядра."
+    },
+    {
+      "name": "documentation",
+      "path": "skills/lib/documentation/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Детерминированная процедура создания и сопровождения документации сервисного репозитория как продукта (для ревью качества готовой доки — отдельный скилл doc-quality-review) для четырёх JTBD-потребителей (инженер-создатель, инженер-потребитель, потребитель concept-уровня, ИИ-агент). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые проходы, таблицы-роутеры вместо суждений, жёсткие числовые лимиты, STOP-правила, fill-in-шаблоны и финальный чеклист. Применять, когда нужно собрать или отревьюить README или docs/architecture.md, решить в какой файл положить класс контента, или обновить доки по триггеру изменения. Не применять для лендинга платформы concept — это отдельный скилл platform-landing."
+    },
+    {
+      "name": "git-conventions",
+      "path": "skills/lib/git-conventions/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Детерминированная процедура работы с Git по стандарту Trunk-Based Development. Применять для всех операций с ветками, коммитами и PR. Рассчитан на слабую модель: пошаговые команды, валидация сообщений, STOP-правила."
+    },
+    {
+      "name": "http-io",
+      "path": "skills/lib/http-io/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Проектирование I/O-объекта поверх HTTP к внешнему дозируемому (rate-limited / metered) сервису — LLM, linter-as-service, embeddings, любой внешний API. Применять, когда слайсу нужен исходящий HTTP-вызов и важно НЕ перегрузить поставщика и НЕ отправить лишний контекст. Спина скилла — два бюджета (нагрузки и payload), считаются в дизайне слайса ДО кода. Поток: curl-проба → машинная спека провайдера (OpenAPI/AsyncAPI; если у поставщика её нет — пишем свою) → из неё выводятся клиент, стаб и фикстуры юнит/компонентных тестов; бюджеты протягиваются в тесты как ассершены. Для LLM-специфики (OpenAI-совместимый протокол, response_format, фан-аут по ролям-потребителям) — см. скилл llm-client как специализацию. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): два бюджета-формулы, таблицы-решения, чеклисты, STOP-правила."
+    },
+    {
+      "name": "llm-client",
+      "path": "skills/lib/llm-client/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "LLM-специфика I/O-объекта взаимодействия с моделью (Anthropic / OpenAI-совместимые) — выбор протокола (OpenAI chat completions), structured output через response_format, фан-аут по ролям-потребителям, маркер role в стабе, фиксация реальных ответов. Применять вместе с http-io (общая дисциплина исходящего HTTP — бюджеты нагрузки/payload, спека провайдера, режимы отказа, стаб). Не применять для выбора модели под задачу — это отдельное решение. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): таблицы-решения, фикс-шаблоны, чеклисты, STOP-правила."
+    },
+    {
+      "name": "md-formatting",
+      "path": "skills/lib/md-formatting/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Детерминированная процедура самопроверки и форматирования Markdown-документов. Применять после написания или редактирования .md файлов для проверки корректности форматирования перед коммитом. Рассчитан на слабую модель: пошаговые проверки, grep-команды, чеклисты, STOP-правила."
+    },
+    {
+      "name": "memory",
+      "path": "skills/lib/memory/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Рабочая память цикла Ralph Loop в `.agent/memory.md`. Применять на IMPLEMENTATION (Implementer/Hughes) и CODE REVIEW/фикс (Fixer/Linger): читать в начале итерации, переписывать в конце. Живой снимок состояния «себе будущему», НЕ аудит-лог (аудит — decisions.log). Рассчитан на слабую модель: что читать/писать, STOP-правила, чек-лист."
+    },
+    {
+      "name": "observability",
+      "path": "skills/lib/observability/SKILL.md",
+      "version": "2.0",
+      "status": "stable",
+      "description": "SLI/SLO/guardrail на PLANNING и канареечный release-health на RELEASE — 4 золотых сигнала (latency/traffic/errors/saturation), вердикт GREEN/YELLOW/RED, откат за фиче-тогглом. Применять planner (закладка SLI/SLO/плана отката в plan.md) и release-health/michtom (выкат в прод + анализ здоровья). Без тестовых сред — канарейка прямо в прод. НЕ применять для контрактов (contract-tests) или поведения чёрного ящика (component-tests)."
+    },
+    {
+      "name": "platform-landing",
+      "path": "skills/lib/platform-landing/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Детерминированная процедура для concept-репозитория платформы (он же coordination/solution-root для полирепозиторной платформы). Две части. PART I — сборка и 5-pass рефактор лендинга-витрины concept README + парного docs/get-started.md под потребителя concept-уровня (за 60 секунд решить «годится ли платформа», затем первый шаг). PART II — полный жизненный цикл кросс-сервисной фичи (на >1 сервис): spec → plan → декомпозиция на per-service задачи со ссылками на backlog каждого сервиса → синхронизация статусов → закрытие; по практике spec-driven development и polyrepo-координации (PR в порядке зависимости, «Depends on #X», единые имена веток). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): проходы, жёсткие лимиты, таблицы-роутеры, STOP-правила, чеклисты. Применять В CONCEPT-репозитории. Не применять для документации одного сервиса — это скилл documentation; для ревью качества — doc-quality-review."
+    },
+    {
+      "name": "program-design",
+      "path": "skills/lib/program-design/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Проектирование программы по дисциплине рациональной разработки. Применять, когда есть FRD/задача и зафиксированный контракт API (OpenAPI/AsyncAPI), и нужен пакет проектной документации для последующей реализации (вертикальные срезы, контракты модулей, антецеденты/консеквенты, юнит-тесты по формуле, компонентные сценарии). Не применять, если контракт API или карта режимов отказа в README отсутствуют — сначала спроектировать их отдельной задачей. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые шаги, таблицы-роутеры, чеклисты, STOP-правила."
+    },
+    {
+      "name": "program-implementation",
+      "path": "skills/lib/program-implementation/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Реализация программы по тикетам через Trunk Based Development. Применять, когда есть пакет проектной документации `.agent/planner/design/<slug>/` с зааппрувленным оператором хендофф-чеклистом, и нужно реализовать срезы по одному (один тикет = один slice = одна ветка = один PR). Не применять, если пакет неполный, чеклист не зааппрувлен оператором, или обнаружено противоречие в спецификации — остановиться и сообщить. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые шаги, чеклисты-гейты, STOP-правила."
+    },
+    {
+      "name": "security",
+      "path": "skills/lib/security/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Безопасность как требование плана, не постфактум — классификация данных, минимизация и маскирование PII, шифрование/TLS, аутентификация и авторизация новых точек входа, секреты из vault, новые сетевые проходы тикетом, валидация ввода, security-scan в CI (зависимости/секреты = блок мержа). Применять на PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). НЕ заменяет проектирование модулей (program-design)."
+    }
+  ],
+  "roles": [
+    {
+      "role": "orchestrator",
+      "skills": [
+        "memory",
+        "platform-landing"
+      ],
+      "inputs": [
+        "requirements",
+        ".agent/memory.md",
+        ".agent/decisions.log"
+      ],
+      "outputs": [
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "planner",
+      "skills": [
+        "architecture",
+        "documentation",
+        "http-io",
+        "llm-client",
+        "memory",
+        "observability",
+        "platform-landing",
+        "program-design",
+        "security"
+      ],
+      "inputs": [
+        "requirements"
+      ],
+      "outputs": [
+        ".agent/planner/plan.md",
+        ".agent/planner/contracts",
+        ".agent/planner/network-topology.md",
+        ".agent/planner/rollout-plan.md",
+        ".agent/planner/design",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "plan-reviewer",
+      "skills": [
+        "architecture",
+        "doc-quality-review",
+        "observability",
+        "program-design",
+        "security"
+      ],
+      "inputs": [
+        ".agent/planner/plan.md",
+        ".agent/planner/design",
+        ".agent/planner/contracts",
+        ".agent/planner/network-topology.md",
+        ".agent/planner/rollout-plan.md"
+      ],
+      "outputs": [
+        ".agent/plan-reviewer/plan-review.md",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "implementer",
+      "skills": [
+        "code-style",
+        "communication",
+        "component-tests",
+        "documentation",
+        "git-conventions",
+        "http-io",
+        "llm-client",
+        "md-formatting",
+        "memory",
+        "program-implementation"
+      ],
+      "inputs": [
+        ".agent/planner/plan.md",
+        ".agent/planner/design",
+        "gate1"
+      ],
+      "outputs": [
+        "pr",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "fixer",
+      "skills": [
+        "code-style",
+        "communication",
+        "component-tests",
+        "git-conventions",
+        "memory",
+        "program-implementation",
+        "security"
+      ],
+      "inputs": [
+        "pr",
+        "ci-signals",
+        ".agent/planner/plan.md"
+      ],
+      "outputs": [
+        "review-verdict",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "release-health",
+      "skills": [
+        "observability",
+        "security"
+      ],
+      "inputs": [
+        "release-artifact",
+        ".agent/planner/rollout-plan.md",
+        "metrics",
+        "gate2"
+      ],
+      "outputs": [
+        ".agent/release-health/deploy-log.md",
+        ".agent/release-health/release-health.md",
+        ".agent/decisions.log"
+      ]
+    }
+  ]
+}
