@@ -1,47 +1,43 @@
 ---
 name: security
-description: Безопасность как требование плана, не постфактум — классификация данных, минимизация и маскирование PII, шифрование/TLS, аутентификация и авторизация новых точек входа, секреты из vault, новые сетевые проходы тикетом, валидация ввода, security-scan в CI (зависимости/секреты = блок мержа). Применять на PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). НЕ заменяет проектирование модулей (program-design).
+description: Security as a plan requirement, not an afterthought — data classification, PII minimization and masking, encryption/TLS, authentication and authorization for new entry points, secrets from vault, new network paths via ticket, input validation, security-scan in CI (dependencies/secrets = merge block). Apply during PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). Does NOT replace module design (program-design).
 version: "1.0"
 ---
 
-# security — безопасность на этапе плана и реализации
+# security — security at the plan and implementation stage
 
-Безопасность проектируется в план, а не приклеивается в конце; статика в CI ловит остальное.
+Security is designed into the plan, not glued on at the end; static analysis in CI catches the rest. Any change touching data, network paths, or external dependencies MUST pass these checks.
 
-## Принцип
+## Mandatory checks
 
-Безопасность проектируется в план, а не приклеивается в конце. Каждое изменение, затрагивающее данные, сетевые проходы или внешние зависимости, должно пройти через эти проверки.
+### Data
+- **Data classification.** Determine what data the feature handles: PII, sensitive (tokens, keys, special regime), credentials, other. Record it in the plan.
+- **Minimization.** MUST NOT log, store, or transmit data beyond what is needed. Sensitive data and secrets MUST NEVER go into logs.
+- **Encryption.** Data at rest and in transit MUST be encrypted. Service-to-service transport — TLS only.
+- **Masking** of sensitive fields in logs and error messages.
 
-## Обязательные проверки
+### Access and authentication
+- Every new endpoint/consumer — define its authentication and authorization model (who is allowed to call it).
+- Least privilege for service accounts.
+- No hardcoded secrets. Secrets MUST come only from vault / the platform secret manager.
 
-### Данные
-- **Классификация данных.** Определи, какие данные обрабатывает фича: PII, чувствительные (токены, ключи, особый режим), учётные, прочие. Зафиксируй в плане.
-- **Минимизация.** Не логировать, не хранить и не передавать данные сверх необходимого. Чувствительные данные и секреты — никогда в логи.
-- **Шифрование.** Данные в покое и в передаче — шифрование. Передача между сервисами — только TLS.
-- **Маскирование** чувствительных полей в логах и сообщениях об ошибках.
+### Network paths
+- Any new network path (see `architecture` skill) = a security ticket to open it on the firewall.
+- Document source, destination, port, protocol, and rationale in `network-topology.md`.
+- Default-deny; only what is justified gets opened.
 
-### Доступ и аутентификация
-- Каждый новый эндпоинт/потребитель — определи модель аутентификации и авторизации (кто имеет право вызвать).
-- Принцип наименьших привилегий для сервисных учёток.
-- Нет хардкода секретов. Секреты — только из vault / секрет-менеджера платформы.
+### Input and injection
+- Validate and sanitize all external input.
+- Parameterized DB queries (injection defense).
+- Dependency vulnerability defense: security-scan in CI checks dependencies for known vulnerabilities (forbidden/vulnerable libraries = merge block).
 
-### Сетевые проходы
-- Любой новый сетевой проход (см. skill architecture) = security-тикет на открытие на фаерволе.
-- Документируй источник, назначение, порт, протокол, обоснование в `network-topology.md`.
-- Доступ по умолчанию закрыт; открывается только то, что обосновано.
+### Audit
+- Significant operations are logged for audit (who, what, when) — without sensitive content.
+- Compliance with applicable data requirements — note in the plan if applicable.
 
-### Входные данные и инъекции
-- Валидация и санитизация всего внешнего ввода.
-- Параметризованные запросы к БД (защита от инъекций).
-- Защита от уязвимостей зависимостей: security-scan в CI проверяет зависимости на известные уязвимости (запрещённые/уязвимые библиотеки = блок мержа).
+## Output artifact
 
-### Аудит
-- Значимые операции логируются для аудита (кто, что, когда) — без чувствительного содержимого.
-- Соответствие применимым требованиям к данным — отметь в плане, если применимо.
-
-## Артефакт на выходе
-
-В `plan.md` секция `## Безопасность`:
+In `plan.md`, the `## Безопасность` section:
 
 ```markdown
 ## Безопасность
@@ -61,14 +57,14 @@ version: "1.0"
 - Внутреннее правило обработки PII
 ```
 
-## Чек-лист самопроверки
+## Self-check checklist
 
-- [ ] Данные классифицированы
-- [ ] Нет PII/секретов/чувствительных данных в логах
-- [ ] Шифрование в передаче и покое обеспечено
-- [ ] Аутентификация/авторизация определена для новых точек входа
-- [ ] Секреты из vault / секрет-менеджера платформы, нет хардкода
-- [ ] Новые сетевые проходы оформлены тикетом для security
-- [ ] Внешний ввод валидируется
-- [ ] Аудит-лог для значимых операций есть
-- [ ] security-scan в CI зелёный (SAST/зависимости/секреты)
+- [ ] Data is classified
+- [ ] No PII/secrets/sensitive data in logs
+- [ ] Encryption in transit and at rest is ensured
+- [ ] Authentication/authorization defined for new entry points
+- [ ] Secrets from vault / platform secret manager, no hardcoding
+- [ ] New network paths filed as a security ticket
+- [ ] External input is validated
+- [ ] Audit log present for significant operations
+- [ ] security-scan in CI is green (SAST/dependencies/secrets)

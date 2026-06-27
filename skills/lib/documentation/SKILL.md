@@ -1,280 +1,280 @@
 ---
 name: documentation
-description: Детерминированная процедура создания и сопровождения документации сервисного репозитория как продукта (для ревью качества готовой доки — отдельный скилл doc-quality-review) для четырёх JTBD-потребителей (инженер-создатель, инженер-потребитель, потребитель concept-уровня, ИИ-агент). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые проходы, таблицы-роутеры вместо суждений, жёсткие числовые лимиты, STOP-правила, fill-in-шаблоны и финальный чеклист. Применять, когда нужно собрать или отревьюить README или docs/architecture.md, решить в какой файл положить класс контента, или обновить доки по триггеру изменения. Не применять для лендинга платформы concept — это отдельный скилл platform-landing.
+description: Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker models — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing).
 version: "1.0"
 ---
 
-# Документация — детерминированная процедура
+# Documentation — deterministic procedure
 
-Документация репозитория — продукт для четырёх аудиторий, а не свалка прозы.
-Этот скилл — **процедура, а не справочник**. Делай по шагам, не импровизируй.
+A repository's documentation is a product for four audiences, not a dump of prose.
+This skill is a **procedure, not a reference**. Follow the steps; do not improvise.
 
-> **Concept-уровень (лендинг платформы)** проектируется отдельным скиллом
-> [`platform-landing`](../platform-landing/SKILL.md). Здесь только указатель из
-> сервисного репо на concept (см. ниже) и роутинг «что НЕ кладём в concept».
+> **Concept level (platform landing)** is designed by a separate skill,
+> [`platform-landing`](../platform-landing/SKILL.md). Here we only point from the
+> service repo to concept (below) and route "what does NOT go into concept".
 
 ---
 
-## 0. Как пользоваться этим скиллом
+## 0. How to use this skill
 
-1. Делай ровно по шагам выбранной процедуры (A, B или C). Не пропускай проходы.
-2. Один проход = одна узкая задача. Закончил проход — проверь его условие, потом следующий.
-3. Числовые лимиты соблюдай буквально (слова считай).
-4. Сработало STOP-правило (раздел 2) → остановись и спроси оператора. Не угадывай.
-5. В конце прогони финальный чеклист (раздел 7). Все пункты должны быть «да».
+1. Follow the chosen procedure (A, B or C) exactly, step by step. Do not skip passes.
+2. One pass = one narrow task. Finish a pass, check its condition, then the next.
+3. Obey numeric limits literally (count the words).
+4. A STOP rule (section 2) fired → stop and ask the operator. Do not guess.
+5. At the end, run the final checklist (section 7). Every item must be "yes".
 
-Выбор процедуры:
+Procedure selection:
 
-| Задача | Процедура |
+| Task | Procedure |
 | --- | --- |
-| Собрать или пересобрать `README.md` | **A** (раздел 3) |
-| Собрать или пересобрать `docs/architecture.md` | **B** (раздел 4) |
-| Обновить доки после изменения в коде/контракте | **C** (раздел 5) |
-| Не знаю, в какой файл положить текст | **Роутер** (раздел 1) |
-| Оценить качество УЖЕ написанной доки | скилл [`doc-quality-review`](../doc-quality-review/SKILL.md) |
+| Assemble or rebuild `README.md` | **A** (section 3) |
+| Assemble or rebuild `docs/architecture.md` | **B** (section 4) |
+| Update docs after a code/contract change | **C** (section 5) |
+| Don't know which file a text goes in | **Router** (section 1) |
+| Assess quality of ALREADY-written docs | skill [`doc-quality-review`](../doc-quality-review/SKILL.md) |
 
 ---
 
-## 1. Роутер: какой контент в какой файл
+## 1. Router: which content goes in which file
 
-Возьми кусок контента. Найди строку. Положи ровно туда. Никаких других мест.
+Take a piece of content. Find its row. Put it exactly there. Nowhere else.
 
-| Класс контента | Файл-назначение |
+| Content class | Destination file |
 | --- | --- |
-| Что сервис делает, зачем, границы (что умеет / не умеет) | `README.md` |
-| Таблица API (метод, ресурс, действие) | `README.md` |
-| Pipe-описание API (поток данных по шагам) | `README.md` |
-| Таблица сбоев (код ошибки → exit / HTTP-статус) | `README.md` |
-| Стек (компонент → технология) | `README.md` |
-| Команды запуска и проверки | `README.md` |
-| Машинный контракт API (схемы, эндпоинты) | `api-specification/` (OpenAPI/AsyncAPI) |
-| Дерево модулей (кто кого вызывает) | `docs/architecture.md` |
-| Блок-схема главного entry point | `docs/architecture.md` |
-| Диаграммы C4 на Mermaid (C1 контекст / C2 контейнер / C3 компонент) | `docs/architecture.md` (C1 — на лэндинге платформы, concept-репо) |
-| Системный use case по Коберну («как работает программа», C4-уровень) | `docs/architecture.md` |
-| Почему выбрана технология/паттерн/структура | `docs/adr/` (+ строка в `CLAUDE.md`) |
-| Правила контрибьюции | `CONTRIBUTING.md` |
-| Очередь задач, статусы | `backlog.md` |
-| Состояние модулей, решения, следующий шаг сессии | `CLAUDE.md` |
-| Журнал шага (промпты, результат) | `devlog/NN-topic.md` |
-| Описание ПЛАТФОРМЫ целиком (не одного сервиса) | НЕ сюда → concept-репо платформы |
+| What the service does, why, boundaries (can / can't do) | `README.md` |
+| API table (method, resource, action) | `README.md` |
+| Pipe description of an API (data flow by steps) | `README.md` |
+| Failure table (error code → exit / HTTP status) | `README.md` |
+| Stack (component → technology) | `README.md` |
+| Run and check commands | `README.md` |
+| Machine API contract (schemas, endpoints) | `api-specification/` (OpenAPI/AsyncAPI) |
+| Module tree (who calls whom) | `docs/architecture.md` |
+| Flowchart of the main entry point | `docs/architecture.md` |
+| C4 diagrams in Mermaid (C1 context / C2 container / C3 component) | `docs/architecture.md` (C1 — on the platform landing, concept repo) |
+| Cockburn system use case ("how the program works", C4 level) | `docs/architecture.md` |
+| Why a technology/pattern/structure was chosen | `docs/adr/` (+ a line in `CLAUDE.md`) |
+| Contribution rules | `CONTRIBUTING.md` |
+| Task queue, statuses | `backlog.md` |
+| Module state, decisions, next session step | `CLAUDE.md` |
+| Step log (prompts, result) | `devlog/NN-topic.md` |
+| Description of the WHOLE PLATFORM (not one service) | NOT here → platform concept repo |
 
-**Ссылка на платформу (опционально):** Если сервис является частью платформы, в первых строках README сервиса допускается строка:
+**Platform link (optional):** If the service is part of a platform, the first lines of the service README may carry:
 ```
-> Часть платформы [<Название платформы>](<ссылка на concept-репо>). Архитектура и концепция — там.
+> Part of platform [<Platform name>](<link to concept repo>). Architecture and concept live there.
 ```
-Если платформы нет или ссылка не нужна — не добавляй.
+If there is no platform or no link is needed — do not add it.
 
-**НЕ клади в concept README** (если попало — верни по строке выше):
-API-эндпоинты, pipe-описания, архитектуру сервиса, модель данных, команды запуска,
-структуру проекта, детали реализации, длинный quickstart, troubleshooting.
+**Do NOT put in the concept README** (if it leaked in, return it via the row above):
+API endpoints, pipe descriptions, service architecture, data model, run commands,
+project structure, implementation details, long quickstart, troubleshooting.
 
 ---
 
-## 2. STOP-правила
+## 2. STOP rules
 
-Остановись и спроси оператора, НЕ продолжай, если:
+You MUST stop and ask the operator — do NOT continue — if:
 
-- Не понял, к какому сегменту (раздел 6) относится документ.
-- В роутере (раздел 1) нет подходящей строки для куска контента.
-- Нужно удалить или переписать существующий раздел, написанный человеком, не агентом.
-- Контракт API (`api-specification/`) отсутствует, а README требует таблицу API.
-- Просят положить в README сервиса описание всей платформы (это в concept).
-- Лимит требует выкинуть содержательный факт — спроси, куда его деть, не выкидывай молча.
-- **Документация создаётся вне процедур A/B/C** («не по скиллу»): свободная проза в обход роутера и проходов — STOP. Любой контент сначала маршрутизируется (раздел 1) и пишется проходом соответствующей процедуры. Это **gate**: выходной артефакт `program-design` проходит этот скилл, а не пишется отдельно.
+- You can't tell which segment (section 6) the document serves.
+- The router (section 1) has no matching row for a piece of content.
+- You must delete or rewrite an existing section written by a human, not an agent.
+- The API contract (`api-specification/`) is missing but the README needs an API table.
+- You are asked to put a whole-platform description into a service README (that belongs in concept).
+- A limit forces dropping a substantive fact — ask where to move it, do not drop it silently.
+- **Documentation is being created outside procedures A/B/C** ("off-skill"): free prose that bypasses the router and passes — STOP. All content is first routed (section 1) and written by a pass of the matching procedure. This is a **gate**: the `program-design` output artifact passes through this skill, it is not written separately.
 
 ---
 
-## 3. Процедура A — README.md
+## 3. Procedure A — README.md
 
-README обслуживает ДВА сегмента сразу: создателя и потребителя (раздел 6).
-Делай проходы по порядку. После каждого — проверь условие в скобках.
+The README serves TWO segments at once: author and consumer (section 6).
+Run the passes in order. After each, check the condition in parentheses.
 
-**Pass A1 — Заголовок и одно предложение.**
-Напиши: название + что это, **одно предложение ≤ 20 слов**. Затем строка-указатель на concept (раздел 1).
-(Проверка: ровно одно предложение, не абзац.)
+**Pass A1 — Title and one sentence.**
+Write: name + what it is, **one sentence ≤ 20 words**. Then the pointer line to concept (section 1).
+(Check: exactly one sentence, not a paragraph.)
 
-**Pass A2 — Границы.**
-Блок «Что умеет / что НЕ умеет» — два списка. Каждый пункт ≤ 12 слов.
-(Проверка: есть оба списка, и «умеет», и «не умеет».)
+**Pass A2 — Boundaries.**
+A "Can / Cannot" block — two lists. Each item ≤ 12 words.
+(Check: both lists present, "can" and "cannot".)
 
-**Pass A3 — Стек.**
-Таблица `компонент → технология`. Только то, что реально используется.
-(Проверка: таблица, не проза.)
+**Pass A3 — Stack.**
+Table `component → technology`. Only what is actually used.
+(Check: table, not prose.)
 
-**Pass A4 — Таблица API.**
-Таблица `метод | ресурс | действие`. Источник истины — `api-specification/`.
-Нет контракта → STOP (раздел 2).
-(Проверка: каждая строка соответствует эндпоинту из спеки.)
+**Pass A4 — API table.**
+Table `method | resource | action`. Source of truth — `api-specification/`.
+No contract → STOP (section 2).
+(Check: each row matches an endpoint from the spec.)
 
-**Pass A5 — Pipe-описание каждого API.**
-Для каждого эндпоинта — поток данных по шагам через `|`. Шаблон:
+**Pass A5 — Pipe description of each API.**
+For each endpoint — data flow by steps via `|`. Template:
 ```
 POST /v1/registrations
-| Принимаем handle от клиента
-| Генерируем challenge (32 байта, TTL 5 мин)
-| Сохраняем challenge в БД
-| Возвращаем challenge + WebAuthn options → 201
+| Accept handle from client
+| Generate challenge (32 bytes, TTL 5 min)
+| Store challenge in DB
+| Return challenge + WebAuthn options → 201
 ```
-Pipe = «как работает и где может сломаться». Таблица из A4 = «что есть». Нужны оба.
-(Проверка: число pipe-блоков = числу строк таблицы API.)
+Pipe = "how it works and where it can break". The A4 table = "what exists". Both are needed.
+(Check: number of pipe blocks = number of rows in the API table.)
 
-**Pass A5b — Таблица сбоев и модель ошибок.**
-Таблица `код возврата → значение → коды ошибок`. Для CLI — `exit` (0 успех / N…); для HTTP — статусы. Источник — словарь ошибок из контракта/дизайна (`error.code`), не из кода.
+**Pass A5b — Failure table and error model.**
+Table `return code → meaning → error codes`. For CLI — `exit` (0 success / N…); for HTTP — statuses. Source — the error dictionary from the contract/design (`error.code`), not from the code.
 ```
-| Exit | Значение | Коды ошибок |
-|------|----------|-------------|
-| 0    | успех    | —           |
-| 2    | ошибка конфигурации | CONFIG_NOT_FOUND, CONFIG_INVALID |
+| Exit | Meaning | Error codes |
+|------|---------|-------------|
+| 0    | success | —           |
+| 2    | config error | CONFIG_NOT_FOUND, CONFIG_INVALID |
 ```
-Под таблицей — одна строка про форму ошибки (`code`/`message`/`location`/`context`) и правило: непроверенное / деградация **видна** в выводе, не маскируется под успех.
-(Проверка: каждый `error.code` из контракта присутствует в таблице; happy и все режимы отказа имеют строку.)
+Below the table — one line on the error shape (`code`/`message`/`location`/`context`) and the rule: anything unchecked / degraded is **visible** in the output, never masked as success.
+(Check: every `error.code` from the contract is in the table; the happy path and every failure mode have a row.)
 
-**Pass A6 — Запуск.**
-Минимальные шаги: команды запуска + ссылка на `component-tests/`.
-(Проверка: команды можно скопировать и выполнить.)
+**Pass A6 — Run.**
+Minimal steps: run commands + a link to `component-tests/`.
+(Check: commands can be copied and executed.)
 
-**Pass A7 — Ссылки вглубь (лестница).**
-Не копируй внутрь README — поставь ссылки в нужном порядке наращивания контекста:
+**Pass A7 — Links inward (ladder).**
+Do not copy into the README — place links in the order context is built up:
 ```
-README.md (что это, как запустить)
-  → component-tests/ (как это работает снаружи)
-    → docs/architecture.md (как устроена программа внутри)
-      → docs/adr/ (почему сделано именно так)
-        → CONTRIBUTING.md (как правильно менять)
+README.md (what it is, how to run)
+  → component-tests/ (how it works from outside)
+    → docs/architecture.md (how the program is built inside)
+      → docs/adr/ (why it was done this way)
+        → CONTRIBUTING.md (how to change it correctly)
 ```
-(Проверка: архитектура и ADR — ссылками, не телом в README.)
+(Check: architecture and ADR are links, not body text in the README.)
 
 ---
 
-## 4. Процедура B — docs/architecture.md
+## 4. Procedure B — docs/architecture.md
 
-Обслуживает создателя, потребителя-на-доработке и ИИ-агента (раздел 6).
-Ровно два обязательных раздела. Делай оба.
+Serves the author, the consumer-extending-it, and the AI agent (section 6).
+Exactly two mandatory sections. Do both.
 
-**Pass B1 — Схема иерархий модулей.**
-Дерево от верхнего модуля к нижнему. Шаблон:
+**Pass B1 — Module hierarchy diagram.**
+Tree from the top module down. Template:
 ```
 main
-├── server (HTTP-сервер, роутинг)
-│   ├── handlers/registration (обработка регистрации)
-│   │   ├── challenge (генерация challenge)
-│   │   └── attestation (проверка attestation)
-│   └── middleware/auth (проверка JWT)
-├── store (работа с БД)
+├── server (HTTP server, routing)
+│   ├── handlers/registration (registration handling)
+│   │   ├── challenge (challenge generation)
+│   │   └── attestation (attestation verification)
+│   └── middleware/auth (JWT verification)
+├── store (DB access)
 │   ├── users
 │   └── challenges
-└── tokens (генерация и валидация JWT)
+└── tokens (JWT generation and validation)
 ```
-Правила (проверь каждый узел):
-- Один узел = один модуль = одна ответственность.
-- Стрелки только сверху вниз — нижний модуль НЕ знает о верхнем.
-- I/O-модули (store, HTTP) отделены от бизнес-логики.
-- I/O-объект автономен: головной модуль знает только его методы, не зависимости.
-  Имя по типу интеграции: `Store` (БД), `Client` (HTTP), `Publisher`/`Consumer` (брокер).
-  `Deps` слайса держит объект, а не сырьё (`*sql.DB`, `*http.Client`).
+Rules (check every node):
+- One node = one module = one responsibility.
+- Arrows go top-down only — a lower module does NOT know about an upper one.
+- I/O modules (store, HTTP) are separated from business logic.
+- An I/O object is self-contained: the head module knows only its methods, not its dependencies.
+  Name by integration type: `Store` (DB), `Client` (HTTP), `Publisher`/`Consumer` (broker).
+  A slice's `Deps` holds the object, not raw material (`*sql.DB`, `*http.Client`).
 
-**Pass B2 — Блок-схема головного модуля.**
-Управляющий поток entry point. Шаблон:
+**Pass B2 — Head module flowchart.**
+The entry point's control flow. Template:
 ```
 main()
   │
-  ├─ Загрузить конфигурацию из ENV
-  │  └─ Нет обязательных переменных? → panic с явным сообщением
+  ├─ Load configuration from ENV
+  │  └─ Missing required variable? → panic with explicit message
   │
-  ├─ Открыть БД, запустить миграции
-  │  └─ Ошибка? → panic
+  ├─ Open DB, run migrations
+  │  └─ Error? → panic
   │
-  ├─ Собрать роутер
+  ├─ Build router
   │  ├─ /v1/registrations → registration handlers
   │  └─ /v1/sessions → session handlers
   │
-  └─ Запустить HTTP-сервер
-     └─ Graceful shutdown по SIGTERM
+  └─ Start HTTP server
+     └─ Graceful shutdown on SIGTERM
 ```
-Правила (проверь):
-- Только управляющий поток, без деталей реализации.
-- Каждая ветка ошибки показана явно (что происходит при сбое).
+Rules (check):
+- Control flow only, no implementation details.
+- Every error branch is shown explicitly (what happens on failure).
 
-**Pass B3 — C4 на Mermaid по уровням (обязательно).**
-Рисуй C4 в блоках ` ```mermaid ` (`C4Context`/`C4Container`/`C4Component`) — рендерится в GitHub без плагинов. Уровень → где живёт:
+**Pass B3 — C4 in Mermaid, by level (mandatory).**
+Draw C4 in ` ```mermaid ` blocks (`C4Context`/`C4Container`/`C4Component`) — renders on GitHub without plugins. Level → where it lives:
 
-| Уровень | Что показывает | Где |
+| Level | What it shows | Where |
 | --- | --- | --- |
-| **C1** System Context | система ↔ акторы ↔ внешние системы | лэндинг платформы (concept-репо, скилл `platform-landing`) |
-| **C2** Container | развёртываемые юниты + используемые библиотеки | этот файл (`architecture.md`) |
-| **C3** Component | дерево модулей среза (= схема из Pass B1) | этот файл (`architecture.md`) |
+| **C1** System Context | system ↔ actors ↔ external systems | platform landing (concept repo, skill `platform-landing`) |
+| **C2** Container | deployable units + libraries used | this file (`architecture.md`) |
+| **C3** Component | the slice's module tree (= the Pass B1 diagram) | this file (`architecture.md`) |
 
-(Проверка: C2 и C3 присутствуют в репозитории компонента; C3 совпадает с деревом модулей Pass B1; ссылка на C1 лэндинга стоит.)
+(Check: C2 and C3 present in the component repo; C3 matches the Pass B1 module tree; a link to the landing's C1 is present.)
 
-**Pass B4 — Системный use case по Коберну (C4-уровень «как работает программа»).**
-Опиши **системный use case (fully dressed, Cockburn)** — это C4-уровень модели. Шаблон (заполни по полям, не прозой):
+**Pass B4 — Cockburn system use case (C4 level "how the program works").**
+Describe a **system use case (fully dressed, Cockburn)** — this is the C4 level of the model. Template (fill by fields, not prose):
 ```
-UC-N · <цель одной фразой>
+UC-N · <goal in one phrase>
 Scope / Level / Primary Actor / Trigger
 Stakeholders & Interests · Preconditions
 Minimal Guarantee · Success Guarantee
-Main Success Scenario: 1…k (пронумерованные шаги)
-Extensions: каждый NNa = один режим отказа (код ошибки + exit/исход)
+Main Success Scenario: 1…k (numbered steps)
+Extensions: each NNa = one failure mode (error code + exit/outcome)
 ```
-Связь жёсткая: **1 срез = 1 внешний вход = 1 use case**, и **каждый Extension `NNa` соответствует одному компонентному Gherkin-сценарию** (см. `program-design` Шаг 8 и `component-tests` «Формула»).
-(Проверка: каждый режим отказа из таблицы сбоев (Pass A5b) присутствует как Extension; число Extensions = числу сценариев отказа в `.feature`.)
+The link is hard: **1 slice = 1 external input = 1 use case**, and **each Extension `NNa` corresponds to one component Gherkin scenario** (see `program-design` Step 8 and `component-tests` "Formula").
+(Check: every failure mode from the failure table (Pass A5b) appears as an Extension; number of Extensions = number of failure scenarios in the `.feature`.)
 
 ---
 
-## 5. Процедура C — обновить доки по триггеру
+## 5. Procedure C — update docs on a trigger
 
-Произошло событие → найди строку → обнови ровно перечисленные файлы.
+An event happened → find the row → update exactly the listed files.
 
-| Событие | Что обновить |
+| Event | What to update |
 | --- | --- |
-| Новый эндпоинт / изменение контракта | `api-specification/`, `README.md` (таблица API + pipe) |
-| Изменение entry point или новый домен | `docs/architecture.md` (блок-схема, проц. B) |
-| Новый / изменённый слайс или внешний вход | `docs/architecture.md` (C3 дерево, C4 use case + extensions, проц. B3/B4), `README.md` (таблица сбоев) |
-| Значимый архитектурный выбор | `docs/adr/` + строка в `CLAUDE.md` (Принятые решения) |
-| Merge шага | `CLAUDE.md` (Статус модулей, Следующий шаг), `backlog.md` (Done) |
-| Изменение структуры репо / способа запуска | `README.md` (Структура, Запуск) |
-| Завершение шага разработки | `devlog/NN-topic.md` |
+| New endpoint / contract change | `api-specification/`, `README.md` (API table + pipe) |
+| Entry point change or new domain | `docs/architecture.md` (flowchart, proc. B) |
+| New / changed slice or external input | `docs/architecture.md` (C3 tree, C4 use case + extensions, proc. B3/B4), `README.md` (failure table) |
+| Significant architectural choice | `docs/adr/` + a line in `CLAUDE.md` (Decisions) |
+| Step merge | `CLAUDE.md` (Module status, Next step), `backlog.md` (Done) |
+| Repo structure / run method change | `README.md` (Structure, Run) |
+| Development step completed | `devlog/NN-topic.md` |
 
-Форматы-шаблоны:
-- Devlog-запись: [`docs/templates/devlog.md`](../../docs/templates/devlog.md) — после мержа каждого шага.
-- ADR: [`docs/templates/adr.md`](../../docs/templates/adr.md) — при значимом выборе технологии/паттерна/структуры.
+Format templates:
+- Devlog entry: [`docs/templates/devlog.md`](../../docs/templates/devlog.md) — after each step's merge.
+- ADR: [`docs/templates/adr.md`](../../docs/templates/adr.md) — on a significant technology/pattern/structure choice.
 
 ---
 
-## 6. Справка: четыре сегмента (JTBD)
+## 6. Reference: four segments (JTBD)
 
-Используй, чтобы понять «для кого пишу» в проходах. Не редактируй документ, пока
-не определил сегмент (иначе STOP, раздел 2).
+Use this to figure out "who am I writing for" in the passes. Do not edit a document until
+you have identified the segment (otherwise STOP, section 2).
 
-| Сегмент | Job (зачем читает) | Главные документы |
+| Segment | Job (why they read) | Main documents |
 | --- | --- | --- |
-| 1. Инженер-создатель (мейнтейнер) | Снизить стоимость онбординга до нуля | `README.md` (верх) + `CONTRIBUTING.md` + `docs/adr/` + `docs/architecture.md` |
-| 2. Инженер-потребитель (другая команда) | За 5 минут понять, решает ли его проблему; кратчайший путь к результату | `README.md` |
-| 3. Потребитель concept-уровня | За 60 секунд решить «годится ли платформа», затем первый шаг | concept-репо (скилл `platform-landing`) |
-| 4. ИИ-агент | За минимум токенов загрузить контекст и быть готовым к задаче | `AGENTS.md`, `CLAUDE.md`, `docs/architecture.md` |
+| 1. Author-engineer (maintainer) | Drive onboarding cost to zero | `README.md` (top) + `CONTRIBUTING.md` + `docs/adr/` + `docs/architecture.md` |
+| 2. Consumer-engineer (other team) | Decide in 5 min whether it solves their problem; shortest path to result | `README.md` |
+| 3. Concept-level consumer | Decide in 60 sec "is this platform a fit", then the first step | concept repo (skill `platform-landing`) |
+| 4. AI agent | Load context in minimum tokens and be ready for the task | `AGENTS.md`, `CLAUDE.md`, `docs/architecture.md` |
 
-Принципы письма для сегмента 4 (ИИ-агент): максимум фактов на токен, ноль воды;
-один плоский файл (агент читает линейно, не кликает); структура таблицами и
-заголовками, не прозой; запреты явные — «НЕ делай X», а не «старайся избегать X».
+Writing principles for segment 4 (AI agent): maximum facts per token, zero filler;
+one flat file (the agent reads linearly, does not click); structure via tables and
+headings, not prose; explicit prohibitions — "do NOT do X", not "try to avoid X".
 
 ---
 
-## 7. Финальный чеклист
+## 7. Final checklist
 
-Перед завершением проверь. Каждый пункт — «да». Любое «нет» → вернись и исправь.
+Check before finishing. Every item must be "yes". Any "no" → go back and fix.
 
-- [ ] Каждый кусок контента лежит в файле из роутера (раздел 1), дублей нет.
-- [ ] В README первой строкой — указатель на concept.
-- [ ] README: одно предложение «что это» (≤ 20 слов), не абзац.
-- [ ] README: есть «умеет» И «не умеет».
-- [ ] README: число pipe-блоков = числу строк таблицы API.
-- [ ] README: есть таблица сбоев (Pass A5b); каждый `error.code` из контракта в ней присутствует.
-- [ ] README: архитектура и ADR — ссылками, не телом.
-- [ ] `architecture.md`: есть дерево модулей И блок-схема entry point.
-- [ ] `architecture.md`: стрелки только сверху вниз; I/O отделён от логики.
-- [ ] `architecture.md`: C4 нарисован (C2 + C3 на Mermaid, C3 = дерево модулей); ссылка на C1 лэндинга стоит.
-- [ ] `architecture.md`: системный use case по Коберну (Pass B4) есть; число Extensions = числу сценариев отказа в `.feature`.
-- [ ] Весь контент создан проходами A/B/C, не свободной прозой мимо скилла (gate, раздел 2). Нет `[x]` без реального артефакта.
-- [ ] По триггеру (раздел 5) обновлены ВСЕ перечисленные файлы, не часть.
-- [ ] Ни одно STOP-правило (раздел 2) не было нарушено молча.
+- [ ] Every piece of content lives in a file from the router (section 1); no duplicates.
+- [ ] The README's first line is the pointer to concept.
+- [ ] README: one-sentence "what it is" (≤ 20 words), not a paragraph.
+- [ ] README: has both "can" AND "cannot".
+- [ ] README: number of pipe blocks = number of rows in the API table.
+- [ ] README: has a failure table (Pass A5b); every `error.code` from the contract is in it.
+- [ ] README: architecture and ADR are links, not body text.
+- [ ] `architecture.md`: has both the module tree AND the entry-point flowchart.
+- [ ] `architecture.md`: arrows top-down only; I/O separated from logic.
+- [ ] `architecture.md`: C4 drawn (C2 + C3 in Mermaid, C3 = module tree); link to the landing's C1 present.
+- [ ] `architecture.md`: Cockburn system use case (Pass B4) present; number of Extensions = number of failure scenarios in the `.feature`.
+- [ ] All content created by passes A/B/C, not free prose bypassing the skill (gate, section 2). No `[x]` without a real artifact.
+- [ ] On a trigger (section 5), ALL listed files updated, not just some.
+- [ ] No STOP rule (section 2) was violated silently.

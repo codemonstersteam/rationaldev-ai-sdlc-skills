@@ -1,9 +1,8 @@
-<!-- program-design · деталь шага 01. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 01 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 1. Сформулировать задачу одной фразой
+### Step 1. State the task in one phrase
 
-**Вход:** проверенный FRD/задача с Шага 0. **Выход:** формулировка задачи одной фразой в `docs/intent/<slug>.md`.
+**In:** the verified FRD/task from Step 0. **Out:** the task stated in one phrase in `docs/intent/<slug>.md`.
 
-Если в одну фразу не получается — задача слишком крупная. Резать на под-задачи
-или переключиться на её часть. Зафиксировать формулировку в `docs/intent/<slug>.md`.
-
+If it won't fit in one phrase — the task is too big. Cut it into sub-tasks or switch to one of
+its parts. Record the statement in `docs/intent/<slug>.md`.

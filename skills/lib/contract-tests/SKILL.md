@@ -1,63 +1,63 @@
 ---
 name: contract-tests
-description: Детерминированная процедура контрактных тестов между компонентами (consumer-driven). Контракт описывается машинной спекой (OpenAPI/AsyncAPI), связи компонентов — netlist; проверяет внешний валидатор pinout и его компоненты. Применять, когда сервис вызывает другой сервис/брокер или предоставляет API потребителям. Не применять для внутренней логики одного модуля — это program-design + component-tests.
+description: Deterministic procedure for contract tests between components (consumer-driven). The contract is described by a machine spec (OpenAPI/AsyncAPI), component links by a netlist; checked by the external pinout validator and its components. Use when a service calls another service/broker or exposes an API to consumers. Do NOT use for the internal logic of a single module — that is program-design + component-tests.
 version: "0.1"
 status: draft
 ---
 
-# contract-tests — контракты между компонентами
+# contract-tests — contracts between components
 
-Контракт между компонентами — машинный артефакт, а не договорённость в чате.
-Потребитель описывает ожидания к поставщику; если контракт нарушен — CI падает до прода.
+A contract between components is a machine artifact, not a chat agreement.
+The consumer describes its expectations of the provider; if the contract is broken, CI fails before prod.
 
-> **Кто проверяет:** проект [`pinout`](https://github.com/codemonstersteam/pinout) и его
-> компоненты: `pinout-openapi` (REST), `pinout-asyncapi` (события/очереди),
-> `pinout-netlist` (карта связей между сервисами — «netlist» как в схемотехнике).
-> Контракты — источник истины о границах; pinout сверяет потребителя и поставщика.
+> **Who checks:** the [`pinout`](https://github.com/codemonstersteam/pinout) project and its
+> components: `pinout-openapi` (REST), `pinout-asyncapi` (events/queues),
+> `pinout-netlist` (the map of links between services — a "netlist" as in circuit design).
+> Contracts are the source of truth about boundaries; pinout reconciles consumer and provider.
 
-## 0. Когда применять (роутер)
+## 0. When to apply (router)
 
-| Ситуация | Действие |
+| Situation | Action |
 |---|---|
-| Сервис вызывает чужой REST API | контракт-потребитель в OpenAPI → проверка `pinout-openapi` |
-| Сервис публикует/слушает события | контракт в AsyncAPI 3.0 → проверка `pinout-asyncapi` |
-| Несколько сервисов в одной фиче | связи в netlist → проверка `pinout-netlist` |
-| Внутренний вызов в пределах модуля | НЕ сюда → `program-design` + `component-tests` |
+| Service calls another's REST API | consumer contract in OpenAPI → `pinout-openapi` check |
+| Service publishes/listens to events | contract in AsyncAPI 3.0 → `pinout-asyncapi` check |
+| Several services in one feature | links in netlist → `pinout-netlist` check |
+| Internal call within a module | NOT here → `program-design` + `component-tests` |
 
-## 1. Процедура
+## 1. Procedure
 
-**Pass C1 — Спека контракта (spec-first).** Контракт описывается ДО кода в
-`api-specification/` (OpenAPI 3.x для REST, AsyncAPI 3.0 для событий). Меняешь контракт —
-меняешь спеку, не наоборот.
-(Проверка: спека существует и валидна.)
+**Pass C1 — Contract spec (spec-first).** The contract is described BEFORE code in
+`api-specification/` (OpenAPI 3.x for REST, AsyncAPI 3.0 for events). Change the contract —
+change the spec, not the other way around.
+(Check: the spec exists and is valid.)
 
-**Pass C2 — Consumer-driven ожидания.** Потребитель фиксирует, что именно он использует
-(поля, коды ответов, формат события). Это и есть контракт-тест: минимальный срез, не вся спека.
-(Проверка: ожидания привязаны к конкретным полям/кодам.)
+**Pass C2 — Consumer-driven expectations.** The consumer fixes exactly what it uses
+(fields, response codes, event format). This is the contract test: a minimal slice, not the whole spec.
+(Check: expectations are tied to specific fields/codes.)
 
-**Pass C3 — Регистрация в netlist.** Связь «потребитель → поставщик» добавляется в
-netlist (`pinout-netlist`): кто кого вызывает, какой контракт. Один компонент = один узел.
-(Проверка: ребро есть в netlist, ссылается на спеку из C1.)
+**Pass C3 — Register in netlist.** The "consumer → provider" link is added to the
+netlist (`pinout-netlist`): who calls whom, which contract. One component = one node.
+(Check: the edge exists in the netlist and references the C1 spec.)
 
-**Pass C4 — Проверка в CI.** `pinout` сверяет: спека поставщика покрывает ожидания
-потребителя; netlist согласован (нет висячих/противоречивых связей). **Падение контракта =
-блок до прода** (как жёсткое нарушение).
-(Проверка: pinout-отчёт зелёный в CI перед мержем.)
+**Pass C4 — Check in CI.** `pinout` reconciles: the provider spec covers the consumer's
+expectations; the netlist is consistent (no dangling/contradictory links). **Contract failure =
+block before prod** (treated as a hard violation).
+(Check: pinout report is green in CI before merge.)
 
-## 2. STOP-правила
+## 2. STOP rules
 
-- Контракт меняется без изменения спеки → STOP (нарушение API-first).
-- Потребитель завязался на поле вне контракта → STOP, расширить контракт или убрать зависимость.
-- Netlist рассогласован (поставщик удалил поле, которое использует потребитель) → CI падает, не мержим.
-- Нет спеки, а декомпозиция требует межсервисного вызова → STOP, сначала спека.
+- The contract changes without changing the spec → You MUST stop (API-first violation).
+- The consumer depends on a field outside the contract → You MUST stop, extend the contract or remove the dependency.
+- The netlist is inconsistent (provider removed a field the consumer uses) → CI fails, do NOT merge.
+- No spec, but the decomposition requires a cross-service call → You MUST stop, spec first.
 
-## 3. Выход
+## 3. Output
 
-- Спеки в `api-specification/` (OpenAPI/AsyncAPI).
-- Запись в netlist (`pinout`).
-- Зелёный отчёт `pinout` в CI как условие мержа.
+- Specs in `api-specification/` (OpenAPI/AsyncAPI).
+- An entry in the netlist (`pinout`).
+- A green `pinout` report in CI as a merge condition.
 
-> Контрактные тесты дополняют **компонентные** (поведение сервиса как чёрного ящика) и
-> **математическую композицию** (корректность модулей внутри). Вместе они закрывают
-> качество без тестовых сред: внутренняя корректность — композицией, внешняя — контрактами,
-> поведение — компонентными тестами, здоровье в проде — 4 золотыми сигналами.
+> Contract tests complement **component** tests (service behavior as a black box) and
+> **mathematical composition** (correctness of modules inside). Together they cover
+> quality without test environments: internal correctness — by composition, external — by
+> contracts, behavior — by component tests, prod health — by the 4 golden signals.

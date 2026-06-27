@@ -1,33 +1,29 @@
-<!-- program-design · деталь шага 07. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 07 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 7. Описать инфраструктурный модуль приложения
+### Step 7. Describe the app infrastructure module
 
-**Вход:** slice'ы с их входами и I/O-объектами. **Выход:** `infrastructure.md` — сборка программы и подключение точек входа.
+**In:** the slices with their inputs and I/O objects. **Out:** `infrastructure.md` — program assembly and entry-point wiring.
 
-Инфраструктурный модуль — один на всю программу, технический корень.
-Состав зависит от того, какие типы входов есть в сервисе (см. Шаг 2):
+The infrastructure module is one per program, the technical root. Its composition depends on
+which input types the service has (see Step 2):
 
-- инициализирует общие зависимости (пул БД, клиент брокера, логгер,
-  конфигурацию);
-- если есть HTTP-slice'ы — поднимает HTTP-сервер и регистрирует роуты,
-  каждый ведёт к ингресс-адаптеру своего slice'а;
-- если есть Broker-slice'ы — поднимает потребителя брокера и подписывает
-  ингресс-адаптеры на свои топики/очереди;
-- если есть gRPC-slice'ы — поднимает gRPC-сервер и регистрирует
-  ингресс-адаптеры как handler'ы своих методов;
-- если есть CLI/cron-slice'ы — регистрирует точки входа в планировщике
-  или CLI-роутере;
-- передаёт slice'у инициализированные зависимости через DI / параметры.
+- initializes shared dependencies (DB pool, broker client, logger, configuration);
+- if there are HTTP slices — brings up the HTTP server and registers routes, each leading to its
+  slice's ingress adapter;
+- if there are Broker slices — brings up the broker consumer and subscribes the ingress adapters
+  to their topics/queues;
+- if there are gRPC slices — brings up the gRPC server and registers the ingress adapters as
+  handlers of their methods;
+- if there are CLI/cron slices — registers the entry points in the scheduler or CLI router;
+- passes the slice its initialized dependencies via DI / parameters.
 
-В этом модуле **нет бизнес-логики**, ни одной строки. Его задача — собрать
-программу из готовых slice'ов и поднять. Никакой оркестрации между
-slice'ами — она невозможна по построению, потому что slice'ы независимы.
+This module has **no business logic**, not a single line. Its job is to assemble the program
+from ready slices and bring it up. No orchestration between slices — impossible by construction,
+because the slices are independent.
 
-Тестируется этот модуль не юнитами (нечего тестировать в чистом виде),
-а компонентными тестами, которые проверяют каждый slice через его
-реальный вход — HTTP-запрос для HTTP-slice'а, публикацию сообщения
-в брокер для Broker-slice'а, gRPC-вызов для gRPC-slice'а.
+This module is tested not by units (nothing to test in pure form) but by component tests that
+check each slice through its real input — an HTTP request for an HTTP slice, a message publish to
+the broker for a Broker slice, a gRPC call for a gRPC slice.
 
-Не путать с **головным модулем slice'а** (см. Шаг 3): тот — модуль логики,
-оркестратор пайпа конкретного среза, и пишется на каждый slice свой.
-
+Don't confuse it with the **slice head module** (see Step 3): that's a logic module, the pipe
+orchestrator of a specific slice, written per slice.

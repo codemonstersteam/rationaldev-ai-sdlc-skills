@@ -1,147 +1,135 @@
-<!-- program-design · деталь шага 08. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 08 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 8. Спроектировать тесты и сверить дизайн с Gherkin-сценариями
+### Step 8. Design the tests and reconcile the design with the Gherkin scenarios
 
-**Вход:** контракты модулей + Gherkin-сценарии. **Выход:** таблица юнит-тестов по формуле + Gherkin-mapping каждого slice'а.
+**In:** the module contracts + Gherkin scenarios. **Out:** the unit-test table by formula + each slice's Gherkin-mapping.
 
-Шаг состоит из двух частей: посчитать юнит-тесты по формуле и
-**обратно сверить** дизайн slice'а с уже написанными Gherkin-
-сценариями (см. Шаг 0 — они обязательны на входе).
+The step has two parts: count the unit tests by formula and **reconcile back** the slice design
+against the already-written Gherkin scenarios (see Step 0 — they're mandatory on input).
 
-#### 8.1. Юнит-тесты модулей логики
+#### 8.1. Unit tests of logic modules
 
-Для каждого модуля **логики** (конструкторы доменных структур и чистые
-функции над ними):
+For each **logic** module (domain-struct constructors and pure functions over them):
 
 ```
-N_юнит_тестов = 1 (happy path) + Σ (ветки антецедента)
+N_unit_tests = 1 (happy path) + Σ (antecedent branches)
 ```
 
-**Развилки по полю `Request` — здесь.** Чистые функции выбора
-(`resolveDestination`, `renderReport` — Шаг 3, правило единого запроса)
-считаются по этой же формуле: матрица `stdout|файл × json|md` покрывается
-юнитами, **не** компонентными сценариями (иначе раздувается `N = 1 +
-#extensions`, Шаг 8.6).
+**Branches on a `Request` field — here.** Pure choice functions (`resolveDestination`,
+`renderReport` — Step 3, single-request rule) are counted by the same formula: the matrix
+`stdout|file × json|md` is covered by **units**, **not** component scenarios (otherwise
+`N = 1 + #extensions` (Step 8.6) bloats).
 
-**Жёсткое правило: головной модуль, I/O-модули и ингресс-адаптер
-юнитами не покрываются.**
+**Hard rule: the head module, the I/O modules and the ingress adapter are not unit-covered.**
 
-Головной модуль — **оркестратор-труба** из уже протестированных частей.
-Юнит-тест над ним был бы интеграционным тестом (пайп собирает реальные
-зависимости). Его корректность и все ветки ошибок I/O доказываются
-компонентными сценариями через реальный вход slice'а (см. Шаг 3,
-«Головной модуль — оркестратор-труба»).
+The head module is an **orchestrator pipe** of already-tested parts. A unit test over it would be
+an integration test (the pipe assembles real dependencies). Its correctness and all I/O error
+branches are proven by component scenarios through the slice's real input (see Step 3, "The head
+module — an orchestrator pipe").
 
-I/O-модули по сути **трубы** — переносят байты между процессом и внешней
-зависимостью (БД, брокер, внешний API). Бизнес-логики нет, тестировать
-нечего. «Юнит-тест» против `:memory:` БД — маленький интеграционный
-тест, а не юнит.
+I/O modules are essentially **pipes** — moving bytes between the process and an external
+dependency (DB, broker, external API). No business logic, nothing to test. A "unit test" against
+a `:memory:` DB is a small integration test, not a unit.
 
-Ингресс-адаптер: парсит вход, маппит ошибки в формат ответа — нет
-алгоритма, который надо проверять юнитом.
+Ingress adapter: parses input, maps errors into the response format — no algorithm to verify
+with a unit.
 
-Что проверяет **что**:
+What checks **what**:
 
-| Артефакт                          | Юнит-тест                                | Компонентный (Gherkin)                                                  |
+| Artifact                          | Unit test                                | Component (Gherkin)                                                  |
 |-----------------------------------|------------------------------------------|--------------------------------------------------------------------------|
-| Конструктор доменной структуры    | да, по формуле                            | косвенно, через happy path                                               |
-| Чистая функция логики             | да, по формуле                            | косвенно, через happy path                                               |
-| **Головной модуль слайса**        | **нет** (труба; юнит = интеграционный тест) | **да**, happy path + все ветки ошибок I/O через сценарии отказа        |
-| **I/O-модуль (Success-ветка)**    | **нет**                                   | **happy-path сценарий слайса** (если запись не дойдёт — Gherkin красный) |
-| **I/O-модуль (Failure-ветки)**    | **нет**                                   | **сценарий отказа** того слайса, к которому режим отказа привязан правилом различимости |
-| **Ингресс-адаптер (парсинг)**     | **нет**                                   | **happy + сценарии ошибок** (через реальный HTTP-вход)                  |
+| Domain-struct constructor         | yes, by formula                          | indirectly, through the happy path                                       |
+| Pure logic function               | yes, by formula                          | indirectly, through the happy path                                       |
+| **Slice head module**             | **no** (pipe; unit = integration test)   | **yes**, happy path + all I/O error branches via failure scenarios       |
+| **I/O module (Success branch)**   | **no**                                   | **slice happy-path scenario** (if the write doesn't land — Gherkin red)  |
+| **I/O module (Failure branches)** | **no**                                   | **failure scenario** of the slice the failure mode is tied to by the distinguishability rule |
+| **Ingress adapter (parsing)**     | **no**                                   | **happy + error scenarios** (through the real HTTP input)                |
 
-#### 8.2. Антипример — как не надо
+#### 8.2. Anti-example — how not to
 
 ```
-| Модуль                       | Happy | Ветки                | Итого |
-|------------------------------|-------|----------------------|-------|
-| persistRegistrationSession   | 1     | дубликат UUID (UNIQUE) | 2   |   ← НЕЛЬЗЯ
+| Module                       | Happy | Branches              | Total |
+|------------------------------|-------|-----------------------|-------|
+| persistRegistrationSession   | 1     | duplicate UUID (UNIQUE) | 2   |   ← NOT ALLOWED
 ```
 
-I/O в таблице юнит-тестов — стоп, удалить строку. Дубликат UUID —
-поведение SQLite, не антецедент конструктора, проверяется компонентным
-сценарием, либо принимается как невозможный по построению (UUID v4
-из `crypto/rand` не коллизионируется).
+I/O in the unit-test table — stop, delete the row. A duplicate UUID is SQLite behavior, not a
+constructor antecedent; it's checked by a component scenario, or accepted as impossible by
+construction (a UUID v4 from `crypto/rand` doesn't collide).
 
-#### 8.3. Компонентные сценарии — уже написаны
+#### 8.3. Component scenarios — already written
 
-Для slice'а в целом компонентный тест в Gherkin **уже существует**
-к моменту Шага 8 (Шаг 0 это гарантирует):
+For the slice as a whole, the Gherkin component test **already exists** by Step 8 (Step 0
+guarantees it):
 
-- 1 happy path сценарий;
-- по сценарию на каждый различимый режим отказа I/O-модулей slice'а
-  (правило различимости — см. `component-tests`).
+- 1 happy-path scenario;
+- a scenario per distinguishable failure mode of the slice's I/O modules (distinguishability rule
+  — see `component-tests`).
 
-Проектировщик их не пишет — он использует их как источник истины.
+The planner doesn't write them — uses them as the source of truth.
 
-#### 8.4. Таблица сверки Gherkin ↔ модули slice'а
+#### 8.4. Gherkin ↔ slice modules reconciliation table
 
-Это главный артефакт Шага 8. Цель — для **каждого** Then-шага
-**каждого** Gherkin-сценария slice'а явно указать узел графа вызовов
-(см. Шаг 9), который этот Then зеленит. Если Then-шаг не привязывается
-ни к одному узлу — дизайн slice'а неполон, возврат к Шагу 3.
+This is Step 8's main artifact. Goal — for **each** Then-step of **each** Gherkin scenario of the
+slice, explicitly name the call-graph node (see Step 9) that greens that Then. If a Then-step
+ties to no node — the slice design is incomplete, return to Step 3.
 
-Таблица кладётся в карточку slice'а (`.agent/planner/design/<slug>/slices/<n>-<name>.md`),
-раздел `## Gherkin-mapping`. Формат:
+The table goes in the slice card
+(`.agent/planner/design/<slug>/slices/<n>-<name>.md`), section `## Gherkin-mapping`. Format:
 
-| Сценарий                         | Then-шаг                                          | Кто обеспечивает (узел графа / маппинг адаптера) |
+| Scenario                         | Then-step                                          | Provided by (graph node / adapter mapping) |
 |----------------------------------|---------------------------------------------------|--------------------------------------------------|
-| happy: успешная регистрация      | ответ 201 + `challenge`                            | головной → `buildResponse`                       |
-| happy: успешная регистрация      | challenge сохранён в БД                            | I/O `persistChallenge` (Success-ветка)           |
-| happy: успешная регистрация      | событие `registration_started` опубликовано        | I/O `publishRegistrationStarted` (Success-ветка) |
-| db_locked: SQLITE_BUSY           | ответ 503 + `Retry-After` + `error.code=db_locked` | I/O `persistChallenge` (Failure: ErrDBLocked) → ингресс-адаптер: маппинг ErrDBLocked → 503 |
-| db_locked: SQLITE_BUSY           | challenge **не** сохранён                          | предусловие к I/O `persistChallenge` (атомарность транзакции) |
-| db_disk_full                     | ответ 507 + `error.code=db_disk_full`              | I/O `persistChallenge` (Failure: ErrDiskFull) → ингресс-адаптер: маппинг ErrDiskFull → 507 |
+| happy: successful registration   | response 201 + `challenge`                         | head → `buildResponse`                            |
+| happy: successful registration   | challenge saved to DB                              | I/O `persistChallenge` (Success branch)           |
+| happy: successful registration   | event `registration_started` published            | I/O `publishRegistrationStarted` (Success branch) |
+| db_locked: SQLITE_BUSY           | response 503 + `Retry-After` + `error.code=db_locked` | I/O `persistChallenge` (Failure: ErrDBLocked) → ingress adapter: map ErrDBLocked → 503 |
+| db_locked: SQLITE_BUSY           | challenge **not** saved                            | precondition to I/O `persistChallenge` (transaction atomicity) |
+| db_disk_full                     | response 507 + `error.code=db_disk_full`           | I/O `persistChallenge` (Failure: ErrDiskFull) → ingress adapter: map ErrDiskFull → 507 |
 
-Один Then-шаг — одна строка таблицы. Если один Then стоит в нескольких
-сценариях — повторить строку (не сворачивать), чтобы при правке одного
-сценария не задеть другой.
+One Then-step — one table row. If one Then appears in several scenarios — repeat the row (don't
+collapse), so editing one scenario doesn't touch another.
 
-#### 8.5. Чек-лист сверки
+#### 8.5. Reconciliation checklist
 
-Для каждой строки таблицы проверить:
+For each table row check:
 
-1. **Узел существует.** Указанный модуль/маппинг описан в Шаге 5 (контракты)
-   и появится в графе на Шаге 9.
-2. **Ветка соответствует.** Если Then ожидает ошибку — узел должен иметь
-   соответствующий Failure-путь с тем же классом ошибки. Если Then ожидает
-   эффект на интеграции — узел должен быть I/O-модулем с тем эффектом.
-3. **Формат ответа адаптера согласован.** Если Then проверяет HTTP-код,
-   заголовок (`Retry-After`), `error.code` в теле — в карточке slice'а
-   зафиксирован маппинг класса ошибки в этот формат, либо ингресс-адаптер
-   делегирует это общему хелперу из `infrastructure.md`.
-4. **Все Then покрыты.** Прошёлся по всем Gherkin-сценариям slice'а —
-   ни одна строка из `.feature` не осталась без записи в таблице.
+1. **The node exists.** The named module/mapping is described in Step 5 (contracts) and will
+   appear in the graph in Step 9.
+2. **The branch matches.** If the Then expects an error — the node must have a corresponding
+   Failure path with the same error class. If the Then expects an integration effect — the node
+   must be an I/O module with that effect.
+3. **The adapter response format is consistent.** If the Then checks an HTTP code, a header
+   (`Retry-After`), an `error.code` in the body — the slice card records the mapping of the
+   error class into that format, or the ingress adapter delegates it to a shared helper from
+   `infrastructure.md`.
+4. **All Thens covered.** Walked all the slice's Gherkin scenarios — no `.feature` line is left
+   without an entry in the table.
 
-Если на любом пункте расхождение — **возврат к Шагу 3** (дерево модулей)
-или **Шагу 5** (контракты), правка, повторный прогон 8.4–8.5.
+If any item mismatches — **return to Step 3** (module tree) or **Step 5** (contracts), fix,
+re-run 8.4–8.5.
 
-Шаг 8 считается выполненным, когда таблица заполнена, все четыре пункта
-чек-листа закрыты, и в карточке slice'а явно стоит `[x] Gherkin-mapping
-сверен`.
+Step 8 is done when the table is filled, all four checklist items are closed, and the slice card
+explicitly carries `[x] Gherkin-mapping reconciled`.
 
-#### 8.6. Трассировка use case → слайс → компонентный тест
+#### 8.6. Traceability use case → slice → component test
 
-Системный **use case по Коберну** (C4-уровень, Шаг 3 / скилл `documentation`
-Pass B4) сшивается со срезом и тестами детерминированно:
+The system **Cockburn use case** (C4 level, Step 3 / `documentation` skill Pass B4) is stitched
+to the slice and tests deterministically:
 
-- **1 вертикальный срез = 1 внешний вход = 1 use case.**
-- **Main Success Scenario → 1 happy-path Gherkin-сценарий.**
-- **Каждый Extension `NNa` → ровно 1 сценарий отказа**, несущий код ошибки
-  (из словаря, Шаг 4) и exit/исход.
-- Формула совпадает с `component-tests`: **`N_сценариев = 1 + #extensions`**
-  (= `1 happy + Σ режимы_отказа`).
-- Каждый `Then` → узел графа (таблица 8.4).
+- **1 vertical slice = 1 external input = 1 use case.**
+- **Main Success Scenario → 1 happy-path Gherkin scenario.**
+- **Each Extension `NNa` → exactly 1 failure scenario**, carrying an error code (from the
+  dictionary, Step 4) and the exit/outcome.
+- The formula matches `component-tests`: **`N_scenarios = 1 + #extensions`** (= `1 happy + Σ
+  failure_modes`).
+- Each `Then` → a graph node (table 8.4).
 
-**Gate-сверка (в обе стороны):**
+**Gate reconciliation (both ways):**
 
-1. Каждый Extension use case имеет компонентный сценарий.
-2. Каждый сценарий отказа `.feature` имеет соответствующий Extension.
-3. `#Extensions == #сценариев_отказа == #кодов_ошибок` среза.
+1. Each use-case Extension has a component scenario.
+2. Each `.feature` failure scenario has a corresponding Extension.
+3. `#Extensions == #failure_scenarios == #error_codes` of the slice.
 
-**Anti-gaming:** нельзя удалить сценарий, не удалив соответствующий
-Extension (и наоборот). Расхождение счётчиков → **STOP**, возврат к Шагу 3
-или к use case. Это прямой потребитель словаря ошибок (Шаг 4) и источник
-для `component-tests`.
-
+**Anti-gaming:** you can't delete a scenario without deleting the corresponding Extension (and
+vice versa). A counter mismatch → **STOP**, return to Step 3 or the use case. This is a direct
+consumer of the error dictionary (Step 4) and the source for `component-tests`.

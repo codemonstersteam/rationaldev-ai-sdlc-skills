@@ -1,64 +1,56 @@
-<!-- program-design · деталь шага 12. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 12 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 12. Заполнить хендофф-чеклист
+### Step 12. Fill in the handoff checklist
 
-**Вход:** готовый пакет дизайна и бэклог. **Выход:** заполненный `[x]` хендофф-чеклист в `backlog.md` + открытый дизайн-PR.
+**In:** the finished design package and backlog. **Out:** the `[x]`-filled handoff checklist in `backlog.md` + an open design PR.
 
-#### Conformance-gate (STOP перед хендоффом)
+#### Conformance-gate (STOP before handoff)
 
-Перед заполнением чеклиста — механически прогнать **все** жёсткие правила
-скилла; любое нарушение = **STOP**, возврат к нужному шагу, хендофф запрещён.
+Before filling the checklist — mechanically run **all** the skill's hard rules; any violation =
+**STOP**, return to the right step, handoff forbidden.
 
-1. **Сквозная инфраструктура имеет свою карту и контракт.** Кросс-срезовый
-   узел (общий egress, общие поля `Request`/флаги, `infrastructure.md`)
-   **обязан** иметь design-карту и контракт и пройти все сверки — он не
-   «падает между слайсами». Кросс-срезовый узел без карты/контракта → STOP
-   (прямой корень D1: у общего egress не было карты → conformance-проверки
-   на него не запускались).
-2. **Consolidated checklist жёстких правил** — прогнать по всем срезам:
-   единый `Request` (Шаг 3); один data-аргумент (Шаг 3); изоляция I/O,
-   нет сырых `*sql.DB`/`*http.Client` (Шаг 5/6); запрет test-only метода
-   I/O (Шаг 3); развилка = логика, не компонентный сценарий (Шаг 3/8.1);
-   C4 по уровням (Шаг 3); словарь ошибок (Шаг 4); трассировка UC↔сценарии,
-   `#extensions == #сценариев_отказа` (Шаг 8.6); Gherkin-mapping (Шаг 8.4);
-   граф контрактов (Шаг 9).
-3. **Асимметрия.** Соответствие проверяет `plan-reviewer` против этого
-   скилла как эталона — не только самозаполнение Шага 12.
+1. **Cross-cutting infrastructure has its own card and contract.** A cross-slice node (shared
+   egress, shared `Request` fields/flags, `infrastructure.md`) **must** have a design card and a
+   contract and pass every reconciliation — it doesn't "fall between the slices". A cross-slice
+   node without a card/contract → STOP (the direct root of D1: the shared egress had no card → no
+   conformance checks ran on it).
+2. **Consolidated checklist of hard rules** — run over all slices: single `Request` (Step 3);
+   one data argument (Step 3); I/O isolation, no raw `*sql.DB`/`*http.Client` (Step 5/6); no
+   test-only I/O method (Step 3); branch = logic, not a component scenario (Step 3/8.1); C4 by
+   levels (Step 3); error dictionary (Step 4); UC↔scenario traceability, `#extensions ==
+   #failure_scenarios` (Step 8.6); Gherkin-mapping (Step 8.4); contracts graph (Step 9).
+3. **Asymmetry.** Conformance is checked by `plan-reviewer` against this skill as the reference
+   standard — not just Step 12's self-fill.
 
-**Anti-gaming:** нельзя ставить `[x]` без существующего артефакта.
+**Anti-gaming:** you **MUST NOT** tick `[x]` without an existing artifact.
 
-Последний шаг перед открытием дизайн-PR. Чеклист кладётся в начало
-`.agent/planner/design/<slug>/backlog.md` (раздел `## Хендофф`). Проектировщик заполняет
-**все** галочки `[x]` сам — включая последнюю строку аппрува, —
-проверяя, что соответствующий артефакт реально существует и содержит
-то, что требуется.
+The last step before opening the design PR. The checklist goes at the top of
+`.agent/planner/design/<slug>/backlog.md` (section `## Хендофф`). The planner fills **all** the
+`[x]` ticks themselves — including the last approval line — verifying that the corresponding
+artifact actually exists and contains what's required.
 
-**Формат отметки об аппруве оператора.** Проектировщик заполняет последнюю
-строку с handle оператора и **датой создания дизайн-PR** в строгом
-формате:
+**Format of the operator approval mark.** The planner fills the last line with the operator's
+handle and the **design-PR creation date** in a strict format:
 
 ```
 - [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
 ```
 
-Например (дизайн-PR создан 2026-05-10): `- [x] Оператор аппрувит пакет — @maxmorev, 2026-05-10`.
+For example (design PR created 2026-05-10): `- [x] Оператор аппрувит пакет — @maxmorev, 2026-05-10`.
 
-**Семантика: мерж дизайн-PR в main = аппрув пакета оператором.** Оператор
-выражает согласие с дизайном актом мержа PR: если согласен — мержит,
-и предзаполненная строка `[x]` остаётся в main; если не согласен —
-оставляет PR открытым с замечаниями, проектировщик пересобирает пакет и при
-необходимости обновляет дату строки на дату следующего пуша. Отдельной
-церемонии «оператор флипает галочку после мержа» **нет**.
+**Semantics: merging the design PR into main = the operator approving the package.** The
+operator expresses agreement with the design by the act of merging the PR: if they agree — they
+merge, and the pre-filled `[x]` line stays in main; if they disagree — they leave the PR open
+with comments, the planner reassembles the package and, if needed, updates the line's date to
+the next push date. There is **no** separate "operator flips the tick after merge" ceremony.
 
-Эта строка — единственный детерминированный признак, по которому
-исполнитель распознаёт «пакет принят» в main (см. `program-implementation`
-Шаг 0). Если в main строка `[ ]` или её нет — исполнитель к работе
-не приступает.
+This line is the only deterministic sign by which the implementer recognizes "package accepted"
+in main (see `program-implementation` Step 0). If the line in main is `[ ]` or missing — the
+implementer doesn't start.
 
-Если оператор требует существенных изменений и ревью затягивается —
-проектировщик может временно вернуть строку в `[ ]` пока пакет переделывается,
-чтобы не вводить в заблуждение случайного читателя. На момент создания
-финального пуша перед мержем — снова `[x]`.
+If the operator demands substantial changes and review drags on — the planner may temporarily
+return the line to `[ ]` while the package is reworked, so a casual reader isn't misled. At the
+moment of the final push before merge — `[x]` again.
 
 ```
 ## Хендофф-чеклист (заполняет проектировщик полностью; merge PR = аппрув оператора)
@@ -94,9 +86,7 @@
 - [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
 ```
 
-Все строки в шаблоне выше показаны как `[x]` — это норма для готового
-к мержу дизайн-PR. Если какая-то позиция на момент пуша остаётся
-недозакрытой (явный сабоптимальный выбор, расхождение со скиллом и
-т.п.) — оставить `[ ]` и описать в карточке слайса в секции «Решения
-по дизайну», чтобы оператор увидел при ревью.
-
+All lines in the template above are shown as `[x]` — the norm for a merge-ready design PR. If
+some item stays unclosed at push time (an explicit sub-optimal choice, a divergence from the
+skill, etc.) — leave it `[ ]` and describe it in the slice card's `## Решения по дизайну`
+section, so the operator sees it during review.

@@ -6,14 +6,14 @@
       "path": "skills/lib/architecture/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Проектирование изменения в границах модулей + карта сетевой связанности. Применять на PLANNING (planner) и PLAN REVIEW (plan-reviewer): определить затронутые компоненты и смежные системы, зафиксировать новые сетевые проходы для security, удержать изменение agent-ready (1–2 модуля). НЕ применять для внутреннего устройства одного модуля (это program-design) и для написания кода (code-style)."
+      "description": "Design a change within module boundaries plus a network-connectivity map. Use during PLANNING (planner) and PLAN REVIEW (plan-reviewer) to identify affected components and adjacent systems, record new network paths for security, and keep the change agent-ready (1–2 modules). Do NOT use for the internals of a single module (that is program-design) or for writing code (code-style)."
     },
     {
       "name": "code-style",
       "path": "skills/lib/code-style/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Конвенции кодирования организации + обязательные практики реализации — фича-тогглы (новый код OFF по умолчанию), идемпотентность, наблюдаемость (логи/метрики/трейсинг без PII), обработка ошибок, секреты из vault. Применять на IMPLEMENTATION (implementer) и CODE REVIEW (fixer). Шаблон — подставить реальные конвенции организации в места `<...>`. НЕ применять для проектной декомпозиции (program-design / architecture)."
+      "description": "Organization coding conventions + mandatory implementation practices — feature toggles (new code OFF by default), idempotency, observability (logs/metrics/tracing without PII), error handling, secrets from vault. Apply during IMPLEMENTATION (implementer) and CODE REVIEW (fixer). This is a template — fill the `<...>` placeholders with your organization's real conventions. Do NOT apply for project decomposition (program-design / architecture)."
     },
     {
       "name": "communication",
@@ -34,28 +34,28 @@
       "path": "skills/lib/contract-tests/SKILL.md",
       "version": "0.1",
       "status": "draft",
-      "description": "Детерминированная процедура контрактных тестов между компонентами (consumer-driven). Контракт описывается машинной спекой (OpenAPI/AsyncAPI), связи компонентов — netlist; проверяет внешний валидатор pinout и его компоненты. Применять, когда сервис вызывает другой сервис/брокер или предоставляет API потребителям. Не применять для внутренней логики одного модуля — это program-design + component-tests."
+      "description": "Deterministic procedure for contract tests between components (consumer-driven). The contract is described by a machine spec (OpenAPI/AsyncAPI), component links by a netlist; checked by the external pinout validator and its components. Use when a service calls another service/broker or exposes an API to consumers. Do NOT use for the internal logic of a single module — that is program-design + component-tests."
     },
     {
       "name": "doc-quality-review",
       "path": "skills/lib/doc-quality-review/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Детерминированная рубрика ревью качества уже написанной документации репозитория по 6 ядровым характеристикам IBM-фреймворка «Developing Quality Technical Information» (Hargis, Carey et al.) — task orientation, accuracy, completeness, clarity, organization, retrievability — адаптированным под markdown-доки. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): ✓/✗-проверки, правило «если ✗ → действие», сводный вердикт и план правок. Применять, когда нужно ОТРЕВЬЮИТЬ существующие README / docs/architecture.md / прочие доки на качество. Не применять для написания доки с нуля — это скилл documentation; характеристики style / concreteness / visual намеренно вне ядра."
+      "description": "Deterministic rubric for reviewing the quality of already-written repository documentation against the 6 core characteristics of IBM's \"Developing Quality Technical Information\" framework (Hargis, Carey et al.) — task orientation, accuracy, completeness, clarity, organization, retrievability — adapted to markdown docs. Built for any tier: ✓/✗ checks, an \"if ✗ → action\" rule, a summary verdict, and an edit plan. Apply when you need to REVIEW existing README / docs/architecture.md / other docs for quality. Do NOT use to write a doc from scratch — that is the documentation skill; the style / concreteness / visual characteristics are deliberately out of the core."
     },
     {
       "name": "documentation",
       "path": "skills/lib/documentation/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Детерминированная процедура создания и сопровождения документации сервисного репозитория как продукта (для ревью качества готовой доки — отдельный скилл doc-quality-review) для четырёх JTBD-потребителей (инженер-создатель, инженер-потребитель, потребитель concept-уровня, ИИ-агент). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые проходы, таблицы-роутеры вместо суждений, жёсткие числовые лимиты, STOP-правила, fill-in-шаблоны и финальный чеклист. Применять, когда нужно собрать или отревьюить README или docs/architecture.md, решить в какой файл положить класс контента, или обновить доки по триггеру изменения. Не применять для лендинга платформы concept — это отдельный скилл platform-landing."
+      "description": "Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker models — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing)."
     },
     {
       "name": "git-conventions",
       "path": "skills/lib/git-conventions/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Детерминированная процедура работы с Git по стандарту Trunk-Based Development. Применять для всех операций с ветками, коммитами и PR. Рассчитан на слабую модель: пошаговые команды, валидация сообщений, STOP-правила."
+      "description": "Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker models: step-by-step commands, message validation, STOP rules."
     },
     {
       "name": "http-io",
@@ -69,7 +69,7 @@
       "path": "skills/lib/llm-client/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "LLM-специфика I/O-объекта взаимодействия с моделью (Anthropic / OpenAI-совместимые) — выбор протокола (OpenAI chat completions), structured output через response_format, фан-аут по ролям-потребителям, маркер role в стабе, фиксация реальных ответов. Применять вместе с http-io (общая дисциплина исходящего HTTP — бюджеты нагрузки/payload, спека провайдера, режимы отказа, стаб). Не применять для выбора модели под задачу — это отдельное решение. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): таблицы-решения, фикс-шаблоны, чеклисты, STOP-правила."
+      "description": "LLM specifics of the I/O object talking to a model (Anthropic / OpenAI-compatible) — protocol choice (OpenAI chat completions), structured output via response_format, fan-out over consumer roles, role marker in the stub, fixing real model responses. Use together with http-io (the shared outbound-HTTP discipline — load/payload budgets, provider spec, failure modes, stub). Do NOT use for picking a model for a task — that is a separate decision. Built for a small-tier model: decision tables, fixed templates, checklists, STOP rules."
     },
     {
       "name": "md-formatting",
@@ -83,28 +83,28 @@
       "path": "skills/lib/memory/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Рабочая память цикла Ralph Loop в `.agent/memory.md`. Применять на IMPLEMENTATION (Implementer/Hughes) и CODE REVIEW/фикс (Fixer/Linger): читать в начале итерации, переписывать в конце. Живой снимок состояния «себе будущему», НЕ аудит-лог (аудит — decisions.log). Рассчитан на слабую модель: что читать/писать, STOP-правила, чек-лист."
+      "description": "Working memory of the Ralph Loop cycle in `.agent/memory.md`. Use during IMPLEMENTATION (Implementer/Hughes) and CODE REVIEW/fix (Fixer/Linger) — read at the start of an iteration, rewrite at the end. A live snapshot of state for \"future self\", NOT an audit log (the audit lives in decisions.log). Do NOT use for compliance traceability or long-lived artifacts. Built for the small/medium tier: what to read/write, STOP rules, checklist."
     },
     {
       "name": "observability",
       "path": "skills/lib/observability/SKILL.md",
       "version": "2.0",
       "status": "stable",
-      "description": "SLI/SLO/guardrail на PLANNING и канареечный release-health на RELEASE — 4 золотых сигнала (latency/traffic/errors/saturation), вердикт GREEN/YELLOW/RED, откат за фиче-тогглом. Применять planner (закладка SLI/SLO/плана отката в plan.md) и release-health/michtom (выкат в прод + анализ здоровья). Без тестовых сред — канарейка прямо в прод. НЕ применять для контрактов (contract-tests) или поведения чёрного ящика (component-tests)."
+      "description": "SLI/SLO/guardrail at PLANNING and canary release-health at RELEASE — 4 golden signals (latency/traffic/errors/saturation), GREEN/YELLOW/RED verdict, rollback behind a feature toggle. Apply for planner (writes SLI/SLO/rollback plan into plan.md) and release-health/michtom (prod rollout + health analysis). No test environments — canary straight to prod. Do NOT apply for contracts (contract-tests) or black-box behavior (component-tests)."
     },
     {
       "name": "platform-landing",
       "path": "skills/lib/platform-landing/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Детерминированная процедура для concept-репозитория платформы (он же coordination/solution-root для полирепозиторной платформы). Две части. PART I — сборка и 5-pass рефактор лендинга-витрины concept README + парного docs/get-started.md под потребителя concept-уровня (за 60 секунд решить «годится ли платформа», затем первый шаг). PART II — полный жизненный цикл кросс-сервисной фичи (на >1 сервис): spec → plan → декомпозиция на per-service задачи со ссылками на backlog каждого сервиса → синхронизация статусов → закрытие; по практике spec-driven development и polyrepo-координации (PR в порядке зависимости, «Depends on #X», единые имена веток). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): проходы, жёсткие лимиты, таблицы-роутеры, STOP-правила, чеклисты. Применять В CONCEPT-репозитории. Не применять для документации одного сервиса — это скилл documentation; для ревью качества — doc-quality-review."
+      "description": "Deterministic procedure for a platform concept-repository (the coordination/solution-root of a polyrepo platform). Two parts. PART I — build and 5-pass refactor the concept README showcase landing plus its paired docs/get-started.md for the concept-level consumer (decide \"is this platform for me\" in 60 seconds, then take the first step). PART II — full lifecycle of a cross-service feature (touches >1 service): spec → plan → decomposition into per-service tasks linked to each service's backlog → status sync → close; via spec-driven development and polyrepo coordination (PRs in dependency order, \"Depends on #X\", shared branch names). Built for an orchestrator/planner tier: passes, hard limits, router tables, STOP rules, checklists. Apply IN the concept-repository. Do NOT apply for single-service documentation — that is the documentation skill; for quality review — doc-quality-review."
     },
     {
       "name": "program-design",
       "path": "skills/lib/program-design/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Проектирование программы по дисциплине рациональной разработки. Применять, когда есть FRD/задача и зафиксированный контракт API (OpenAPI/AsyncAPI), и нужен пакет проектной документации для последующей реализации (вертикальные срезы, контракты модулей, антецеденты/консеквенты, юнит-тесты по формуле, компонентные сценарии). Не применять, если контракт API или карта режимов отказа в README отсутствуют — сначала спроектировать их отдельной задачей. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые шаги, таблицы-роутеры, чеклисты, STOP-правила."
+      "description": "Designing a program by the discipline of rational development. Use when an FRD/task and a frozen API contract (OpenAPI/AsyncAPI) exist and a design package is needed for later implementation (vertical slices, module contracts, antecedents/consequents, unit tests by formula, component scenarios). Do NOT use if the API contract or the README failure-mode map is missing — design them first as a separate task. Tier-agnostic: stepwise steps, router tables, checklists and STOP rules carry the essence without bloat — the optimum, not the minimum."
     },
     {
       "name": "program-implementation",
@@ -118,7 +118,7 @@
       "path": "skills/lib/security/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Безопасность как требование плана, не постфактум — классификация данных, минимизация и маскирование PII, шифрование/TLS, аутентификация и авторизация новых точек входа, секреты из vault, новые сетевые проходы тикетом, валидация ввода, security-scan в CI (зависимости/секреты = блок мержа). Применять на PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). НЕ заменяет проектирование модулей (program-design)."
+      "description": "Security as a plan requirement, not an afterthought — data classification, PII minimization and masking, encryption/TLS, authentication and authorization for new entry points, secrets from vault, new network paths via ticket, input validation, security-scan in CI (dependencies/secrets = merge block). Apply during PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). Does NOT replace module design (program-design)."
     }
   ],
   "roles": [

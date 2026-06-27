@@ -1,105 +1,105 @@
-# Шаблоны тикетов бэклога (reference для program-design, Шаг 11)
+# Backlog ticket templates (reference for program-design, Step 11)
 
-Скопируй нужный шаблон в `backlog.md` и замени каждый плейсхолдер `<…>` конкретикой по таблице подстановок из Шага 11.
+Copy the needed template into `backlog.md` and replace each placeholder `<…>` with specifics per
+the substitution table from Step 11.
 
-## Шаблон тикета
+## Ticket template
 
 ```
-### TICKET S<n> — slice <name>: <идентификатор входа>
+### TICKET S<n> — slice <name>: <input identifier>
 
-**Спецификация:**
-- `.agent/planner/design/<slug>/slices/<n>-<name>.md` (главный документ)
-- `.agent/planner/design/<slug>/messages.md` — <перечислить типы, специфичные слайсу>
-- `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n> <name>»
-- `.agent/planner/design/<slug>/infrastructure.md` — <что именно: подключение, миграции, Deps>
+**Spec:**
+- `.agent/planner/design/<slug>/slices/<n>-<name>.md` (main document)
+- `.agent/planner/design/<slug>/messages.md` — <list the slice-specific types>
+- `.agent/planner/design/<slug>/contracts-graph.md` — section "S<n> <name>"
+- `.agent/planner/design/<slug>/infrastructure.md` — <what exactly: wiring, migrations, Deps>
 
-**Зависимости:** <S<m>, S<k> — что именно импортируется (типы, I/O-объекты)>.
-Новых внешних Go-зависимостей нет. (или: новые go.mod записи: <список>)
+**Dependencies:** <S<m>, S<k> — what exactly is imported (types, I/O objects)>.
+No new external Go dependencies. (or: new go.mod entries: <list>)
 
-**Ветка:** `feat/slice-<name>`
+**Branch:** `feat/slice-<name>`
 
 **Definition of Done:**
 
-- [ ] `<файл>/domain.go`: <конкретные типы и конструкторы из Шага 3>
-- [ ] `<файл>/logic.go`: <конкретные функции из Шага 3> — чистые функции, без I/O
-- [ ] `<файл>/adapter.go`: `ParseArgs(args,stderr) -> (Request, error)` — <что парсит>
-- [ ] `<файл>/head.go`: `Process<Slice>(req, Deps) -> (Result, error)` — линейная труба
-- [ ] `<файл>/register.go`: `Deps{<поля>}` + `NewDeps(<аргументы>) -> Deps`
-- [ ] `<точка входа>`: <имя функции> добавлен, `"<name>"` убран из заглушек
-- [ ] юнит-тесты по формуле написаны и зелёные — `go test ./...` проходит.
-  **<N> новых тестов**: <Модуль1>(<n1>) + <Модуль2>(<n2>) + … (из таблицы Шага 8.1).
-  <Голова, адаптер, I/O-объекты> юнитами не покрываются.
-- [ ] компонентные тесты зелёные — `<команда запуска>`.
-  `@wip` снят с `<name>.feature`; сценарии: «<название1>», «<название2>», … (из Шага 8.3).
-  Ранее зелёные сценарии S1–S<m> продолжают проходить.
-- [ ] `backlog.md` обновлён по каждому подтверждённому пункту
-- [ ] `.agent/planner/design/<slug>/devlog.md` дополнен блоком S<n>
-- [ ] PR создан, описание заполнено по шаблону Шага 8 скилла
-- [ ] PR смержен в main, CI на main зелёный
+- [ ] `<file>/domain.go`: <concrete types and constructors from Step 3>
+- [ ] `<file>/logic.go`: <concrete functions from Step 3> — pure functions, no I/O
+- [ ] `<file>/adapter.go`: `ParseArgs(args,stderr) -> (Request, error)` — <what it parses>
+- [ ] `<file>/head.go`: `Process<Slice>(req, Deps) -> (Result, error)` — linear pipe
+- [ ] `<file>/register.go`: `Deps{<fields>}` + `NewDeps(<arguments>) -> Deps`
+- [ ] `<entry point>`: <function name> added, `"<name>"` removed from the stubs
+- [ ] unit tests by formula written and green — `go test ./...` passes.
+  **<N> new tests**: <Module1>(<n1>) + <Module2>(<n2>) + … (from the Step 8.1 table).
+  <Head, adapter, I/O objects> are not unit-covered.
+- [ ] component tests green — `<run command>`.
+  `@wip` removed from `<name>.feature`; scenarios: "<name1>", "<name2>", … (from Step 8.3).
+  Previously green scenarios S1–S<m> still pass.
+- [ ] `backlog.md` updated per each confirmed item
+- [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block
+- [ ] PR created, description filled by the skill's Step 8 template
+- [ ] PR merged into main, CI on main green
 
-**Ссылки на источники:**
-- Скилл реализации: `program-implementation`
-- Граф вызовов: `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n>»
-- Gherkin-mapping: раздел `## Gherkin-mapping` в `slices/<n>-<name>.md`
-- <применённые принципы — «голова без ветвления», «подтип, не guard» и т.п.>
+**Source links:**
+- Implementation skill: `program-implementation`
+- Call graph: `.agent/planner/design/<slug>/contracts-graph.md` — section "S<n>"
+- Gherkin-mapping: section `## Gherkin-mapping` in `slices/<n>-<name>.md`
+- <applied principles — "head without branching", "subtype, not guard", etc.>
 ```
 
-## Пример готового тикета
+## Example of a finished ticket
 
-Образец — тикет для слайса `<name>` (CLI-подкоманда, детерминированная
-логика без I/O; та же раскладка справедлива для HTTP-эндпоинта):
+A sample — a ticket for slice `<name>` (a CLI subcommand, deterministic logic without I/O; the
+same layout holds for an HTTP endpoint):
 
 ```
 ### TICKET S<n> — slice <name>: CLI `<name> <arg>`
 
-**Спецификация:**
-- `.agent/planner/design/<slug>/slices/<n>-<name>.md` (главный документ)
+**Spec:**
+- `.agent/planner/design/<slug>/slices/<n>-<name>.md` (main document)
 - `.agent/planner/design/<slug>/messages.md` — `<Type1>`, `<Type2>`, `<Type3>`
-- `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n> <name>»
-- `.agent/planner/design/<slug>/infrastructure.md` — подключение в `internal/cli/cli.go`
+- `.agent/planner/design/<slug>/contracts-graph.md` — section "S<n> <name>"
+- `.agent/planner/design/<slug>/infrastructure.md` — wiring in `internal/cli/cli.go`
 
-**Зависимости:** S<m> (в main) — `<Store>`, `<Sink>`, `New<Target>`,
-`NewConfig`, `buildReport`, egress. Новых внешних Go-зависимостей нет.
+**Dependencies:** S<m> (in main) — `<Store>`, `<Sink>`, `New<Target>`,
+`NewConfig`, `buildReport`, egress. No new external Go dependencies.
 
-**Ветка:** `feat/slice-<name>`
+**Branch:** `feat/slice-<name>`
 
 **Definition of Done:**
 
-- [ ] `internal/slice/<name>/domain.go`: типы `<Type1>{...}`,
-  `<Type2>{...}`, `<Type3>`; конструктор `New<Type3>(input) -> <Type3>`
+- [ ] `internal/slice/<name>/domain.go`: types `<Type1>{...}`,
+  `<Type2>{...}`, `<Type3>`; constructor `New<Type3>(input) -> <Type3>`
 - [ ] `internal/slice/<name>/logic.go`: `<extractX>`, `<verifyX>`,
   `<buildX>`, `<mergeX>`, `New<Report>`, `<buildOutcome>`
-  — чистые функции, без I/O
-- [ ] `internal/io/<dep>.go`: интерфейс `<Dep>` + `<NoopDep>{}` (null-object)
+  — pure functions, no I/O
+- [ ] `internal/io/<dep>.go`: interface `<Dep>` + `<NoopDep>{}` (null-object)
 - [ ] `internal/slice/<name>/adapter.go`: `ParseArgs(args,stderr) -> (Request, error)`
 - [ ] `internal/slice/<name>/head.go`: `Process<Slice>(req, Deps) -> (Report, error)`
 - [ ] `internal/slice/<name>/register.go`: `Deps{Store, <Dep>}` + `NewDeps`
-- [ ] `internal/cli/cli.go`: `run<Slice>Cmd` добавлен, `"<name>"` убран из `subcommandsTodo`
-- [ ] юнит-тесты по формуле написаны и зелёные — `go test ./...` проходит.
-  **<N> новых тестов**: `<extractX>`(2) + `New<Type3>`(1) + `<verifyX>`(3)
+- [ ] `internal/cli/cli.go`: `run<Slice>Cmd` added, `"<name>"` removed from `subcommandsTodo`
+- [ ] unit tests by formula written and green — `go test ./...` passes.
+  **<N> new tests**: `<extractX>`(2) + `New<Type3>`(1) + `<verifyX>`(3)
   + `<buildX>`(3) + `<mergeX>`(3) + `New<Report>`(1)
-  + `<buildOutcome>`(2). Голова, адаптер, `<NoopDep>` юнитами не покрываются.
-- [ ] компонентные тесты зелёные — `./component-tests/scripts/run-tests.sh healthy`.
-  `@wip` снят с `<name>.feature`; сценарии: «<happy → pass>»,
-  «<плохой вход → fail>», «<нет ресурса → not_found>».
-  Ранее зелёные сценарии S1–S<m> продолжают проходить.
-- [ ] `backlog.md` обновлён по каждому подтверждённому пункту
-- [ ] `.agent/planner/design/<slug>/devlog.md` дополнен блоком S<n>
-- [ ] PR создан, описание заполнено по шаблону Шага 8 скилла
-- [ ] PR смержен в main, CI на main зелёный
+  + `<buildOutcome>`(2). Head, adapter, `<NoopDep>` are not unit-covered.
+- [ ] component tests green — `./component-tests/scripts/run-tests.sh healthy`.
+  `@wip` removed from `<name>.feature`; scenarios: "<happy → pass>",
+  "<bad input → fail>", "<no resource → not_found>".
+  Previously green scenarios S1–S<m> still pass.
+- [ ] `backlog.md` updated per each confirmed item
+- [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block
+- [ ] PR created, description filled by the skill's Step 8 template
+- [ ] PR merged into main, CI on main green
 
-**Ссылки на источники:**
-- Скилл реализации: `program-implementation`
-- Граф вызовов: `.agent/planner/design/<slug>/contracts-graph.md` — секция «S<n> <name>»
-- Gherkin-mapping: раздел `## Gherkin-mapping` в `slices/<n>-<name>.md`
-- Принцип голова без ветвления: `slices/<n>-<name>.md` §«Принцип: голова без ветвления»
+**Source links:**
+- Implementation skill: `program-implementation`
+- Call graph: `.agent/planner/design/<slug>/contracts-graph.md` — section "S<n> <name>"
+- Gherkin-mapping: section `## Gherkin-mapping` in `slices/<n>-<name>.md`
+- Head-without-branching principle: `slices/<n>-<name>.md` §"Head without branching"
 ```
 
-## Замечание к примеру
+## Note on the example
 
-Замечание к примеру: голова `Process<Slice>` — **линейная труба без
-ветвления**. Опциональный режим (например, дополнительный тир за флагом)
-решается **на краю** — роутер выбирает реализацию интерфейса-зависимости
-(реальный клиент / null-object), а не ветвит голову; слияние результатов
-основной и опциональной логики — отдельный узел-конструктор (`New<Report>`).
-Это держит голову читаемой и тестируемой одним компонентным сценарием.
+Note on the example: the head `Process<Slice>` is a **linear pipe without branching**. An
+optional mode (e.g. an extra tier behind a flag) is resolved **at the edge** — the router picks
+the dependency-interface implementation (real client / null-object) rather than branching the
+head; merging the results of the main and optional logic is a separate constructor node
+(`New<Report>`). This keeps the head readable and testable by one component scenario.

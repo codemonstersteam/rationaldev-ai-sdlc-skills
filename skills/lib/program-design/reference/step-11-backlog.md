@@ -1,29 +1,31 @@
-<!-- program-design · деталь шага 11. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 11 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 11. Сформировать бэклог тикетов
+### Step 11. Build the ticket backlog
 
-**Вход:** собранный пакет дизайна с Шага 10. **Выход:** `backlog.md` — по одному тикету на slice с конкретным DoD.
+**In:** the assembled design package from Step 10. **Out:** `backlog.md` — one ticket per slice with a concrete DoD.
 
-Один тикет = один slice.
+One ticket = one slice.
 
-**Жёсткое правило: шаблон ниже — каркас, а не финальный текст.** Каждый
-обобщённый пункт DoD должен быть заменён конкретикой из уже выполненных шагов.
-Плейсхолдеры в готовом тикете — признак, что Шаг 11 не завершён.
+**Hard rule: the template below is a skeleton, not the final text.** Each generic DoD item MUST
+be replaced with specifics from the already-completed steps. Placeholders in a finished ticket
+are a sign Step 11 isn't done.
 
-Таблица подстановок:
+Substitution table:
 
-| Пункт DoD (шаблон) | Откуда брать конкретику |
+| DoD item (template) | Where to take the specifics |
 |---|---|
-| «ингресс-адаптер реализован» | Указать имя функции и файл из `infrastructure.md` (Шаг 7) |
-| «конструкторы … реализованы» | Перечислить конкретные `NewT` из карточки слайса (Шаг 3/5) |
-| «модули логики реализованы» | Перечислить конкретные функции из карточки слайса (Шаг 3) |
-| «модуль I/O изолирует…» | Указать имя I/O-объекта и его методы (Шаг 6) |
-| «головной модуль реализован» | Указать имя `Process<Slice>` и файл `head.go` (Шаг 3) |
-| «slice подключён» | Указать конкретный файл и точку входа из `infrastructure.md` (Шаг 7) |
-| «юнит-тесты по формуле» | Вставить итоговое число из таблицы Шага 8.1 с разбивкой по модулям |
-| «компонентный тест зелёный» | Назвать конкретные сценарии из `.feature` (Шаг 8.3/8.4) и команду запуска |
+| "ingress adapter implemented" | Name the function and file from `infrastructure.md` (Step 7) |
+| "constructors … implemented" | List the concrete `NewT` from the slice card (Step 3/5) |
+| "logic modules implemented" | List the concrete functions from the slice card (Step 3) |
+| "I/O module isolates…" | Name the I/O object and its methods (Step 6) |
+| "head module implemented" | Name `Process<Slice>` and the file `head.go` (Step 3) |
+| "slice wired" | Name the concrete file and entry point from `infrastructure.md` (Step 7) |
+| "unit tests by formula" | Insert the total from the Step 8.1 table with a per-module breakdown |
+| "component test green" | Name the concrete scenarios from `.feature` (Step 8.3/8.4) and the run command |
 
-**Шаблон тикета и заполненный пример вынесены в [`ticket-template.md`](ticket-template.md)** (открывается на этом шаге, не держится в контексте постоянно).
+**The ticket template and a filled example are in [`ticket-template.md`](ticket-template.md)**
+(opened at this step, not kept in context permanently).
 
-**Действие (обязательно):** открой `ticket-template.md`, скопируй нужный шаблон в `backlog.md` дословно, затем замени каждый плейсхолдер `<…>` конкретикой по таблице подстановок выше. Не воспроизводи шаблон по памяти — копируй из файла.
-
+**Action (mandatory):** open `ticket-template.md`, copy the needed template into `backlog.md`
+verbatim, then replace each placeholder `<…>` with specifics per the substitution table above.
+Don't reproduce the template from memory — copy from the file.

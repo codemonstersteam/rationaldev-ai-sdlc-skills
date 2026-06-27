@@ -1,75 +1,65 @@
-<!-- program-design · деталь шага 06. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 06 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 6. Изолировать I/O
+### Step 6. Isolate I/O
 
-**Вход:** контракты модулей с Шага 5. **Выход:** автономные I/O-объекты (`Store`/`Client`/`Publisher`/`Consumer`), сырых зависимостей в `Deps` нет.
+**In:** the module contracts from Step 5. **Out:** autonomous I/O objects (`Store`/`Client`/`Publisher`/`Consumer`), no raw dependencies in `Deps`.
 
-В каждом slice'е **вся работа с внешним миром собрана в I/O-модулях**
-(`*_io.go`, `*Repository`, `*Gateway`, `*Adapter`). Бизнес-логика slice'а —
-чистые функции, никакого HTTP / БД / брокера / файловой системы.
+In each slice **all work with the external world is collected in I/O modules** (`*_io.go`,
+`*Repository`, `*Gateway`, `*Adapter`). The slice's business logic is pure functions — no HTTP /
+DB / broker / file system.
 
-**I/O-модулей в slice'е может быть несколько** — это нормально. Реальный
-slice часто делает: «получить запрос → достать состояние из БД →
-вызвать внешний REST → записать результат в БД → опубликовать событие».
-Здесь четыре разных I/O, каждый — отдельный модуль с собственным
-контрактом и режимом отказа. Это не повод дробить slice — это
-естественная сложность бизнес-операции.
+**A slice may have several I/O modules** — that's normal. A real slice often does: "receive
+request → fetch state from DB → call external REST → write result to DB → publish event". That's
+four different I/O, each a separate module with its own contract and failure mode. Not a reason
+to split the slice — it's the natural complexity of a business operation.
 
-Признак, что slice пора дробить — **не количество I/O-модулей, а
-количество независимых use case'ов** в одном slice'е. Если в одном
-slice'е сосуществуют «зарегистрировать пользователя» и «запустить
-отчёт по администраторам» — это два slice'а, не один с двумя I/O.
+The sign a slice should be split is **not the number of I/O modules, but the number of
+independent use cases** in one slice. If "register a user" and "run an admin report" coexist in
+one slice — that's two slices, not one with two I/O.
 
-Что **должно** быть в одном I/O-модуле:
+What **must** be in one I/O module:
 
-- одна внешняя зависимость (одна БД, один брокер, один внешний сервис);
-- один режим работы с этой зависимостью (чтение или запись, не «чтение
-  и запись подряд» внутри одного модуля).
+- one external dependency (one DB, one broker, one external service);
+- one mode of working with it (read or write, not "read and write in a row" inside one module).
 
-Почему это правильно: каждый I/O-модуль проверяется ровно одним
-сценарием отказа в компонентных тестах. Если в один модуль запихнуть два
-режима работы — отказы перемешаются и сценарии компонентных тестов
-перестанут быть различимыми.
+Why this is right: each I/O module is checked by exactly one failure scenario in the component
+tests. Cram two modes into one module and the failures mix — the component scenarios stop being
+distinguishable.
 
-#### Правило автономного IO-объекта
+#### Autonomous I/O object rule
 
-Каждый I/O-модуль проектируется как **автономный объект**, инкапсулирующий
-свою зависимость. Головной модуль знает только методы объекта (API),
-не его внутренние зависимости.
+Each I/O module is designed as an **autonomous object** encapsulating its dependency. The head
+module knows only the object's methods (API), not its inner dependencies.
 
-Имя объекта по типу интеграции:
+Object name by integration type:
 
-| Интеграция | Имя объекта | Зависимость (скрыта внутри объекта) |
+| Integration | Object name | Dependency (hidden inside the object) |
 |---|---|---|
-| База данных | `Store` | `*sql.DB` |
-| Внешний HTTP API | `Client` | `*http.Client` + baseURL |
-| Брокер сообщений | `Publisher` / `Consumer` | соединение брокера |
+| Database | `Store` | `*sql.DB` |
+| External HTTP API | `Client` | `*http.Client` + baseURL |
+| Message broker | `Publisher` / `Consumer` | broker connection |
 
-В контракте (Шаг 5) строки I/O-модуля:
-- `Input (data):` — одно доменное сообщение;
-- `Dependencies:` — `—` (зависимость инкапсулирована в объект,
-  головной модуль её не видит);
-- в описании `Deps` головного модуля — поле типа `Store` / `Client` /
-  `Publisher`, **не** сырая зависимость (`*sql.DB`, `*http.Client`…).
+In the contract (Step 5), an I/O module's lines:
+- `Input (data):` — one domain message;
+- `Dependencies:` — `—` (the dependency is encapsulated in the object, the head doesn't see it);
+- in the head module's `Deps` — a field of type `Store` / `Client` / `Publisher`, **not** the
+  raw dependency (`*sql.DB`, `*http.Client`…).
 
-Признак нарушения при проверке дизайна: сырая зависимость (`*sql.DB`,
-`*http.Client`) в строке `Dependencies:` контракта или в `Deps` headmodule'а.
-Это значит — IO-объект не введён. Стоп, вернуться к Шагу 3.
+Violation sign during design review: a raw dependency (`*sql.DB`, `*http.Client`) in a
+contract's `Dependencies:` line or in the head module's `Deps`. It means the I/O object wasn't
+introduced. Stop, return to Step 3.
 
-**Исходящий HTTP к дозируемому сервису** (внешний REST/LLM/любой
-rate-limited эндпоинт) проектируется по skill `http-io`: два бюджета
-(нагрузки/payload) считаются ДО кода, контракт замораживается машинной
-спекой, из неё выводятся клиент, стаб и фикстуры. Дизайн-карта слайса
-с таким вызовом проходит чеклист дизайна `http-io` до кода.
+**Outbound HTTP to a rate-limited service** (external REST/LLM/any rate-limited endpoint) is
+designed by the `http-io` skill: two budgets (load/payload) computed BEFORE code, the contract
+frozen by a machine spec, from which the client, stub and fixtures are derived. A slice design
+card with such a call passes the `http-io` design checklist before code.
 
-#### Правило пустой трубы IO-модуля
+#### Empty-pipe rule of the I/O module
 
-IO-модуль не содержит бизнес-логики. Каждый метод объекта — труба:
-взять доменное сообщение → вызвать внешнюю систему → вернуть результат
-или ошибку. Никаких условных ветвлений по данным, никаких трансформаций.
-Единственное допустимое ветвление — маппинг кодов ошибок внешней
-системы на доменные ошибки (`SQLITE_BUSY → ErrDBLocked`).
+An I/O module contains no business logic. Each object method is a pipe: take a domain message →
+call the external system → return the result or an error. No conditional data branching, no
+transformations. The only allowed branching is mapping the external system's error codes to
+domain errors (`SQLITE_BUSY → ErrDBLocked`).
 
-IO-модули юнит-тестами **не покрываются**: success-ветка зеленит
-happy-path компонентный сценарий, failure-ветки — сценарии отказа.
-
+I/O modules are **not unit-covered**: the success branch greens the happy-path component
+scenario, the failure branches green the failure scenarios.

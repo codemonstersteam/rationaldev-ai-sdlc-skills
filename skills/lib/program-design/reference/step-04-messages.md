@@ -1,45 +1,38 @@
-<!-- program-design · деталь шага 04. Открывается по Step-индексу из ../SKILL.md. Не редактировать в отрыве от SKILL.md. -->
+<!-- program-design · step 04 detail. Opened via the Step-index in ../SKILL.md. Do not edit apart from SKILL.md. -->
 
-### Шаг 4. Описать каталог сообщений
+### Step 4. Describe the message catalog
 
-**Вход:** деревья модулей с Шага 3. **Выход:** каталог сообщений — все типы данных и `Result<T, Error>`.
+**In:** the module trees from Step 3. **Out:** the message catalog — all data types and `Result<T, Error>`.
 
-Все структуры данных, которыми обмениваются модули внутри slice'а:
+All data structures exchanged between modules inside a slice:
 
-- `Request` — невалидированный вход из адаптера. Поля публичные,
-  без правил домена.
-- `Command` / `Entity` / `DTO` — валидированный объект предметной области.
-  **Поля неэкспортируемые. Создаётся только через конструктор**
-  `NewT(...) -> (T, error)`, который проверяет правила домена.
-  Если правила не выполнены — структура не создаётся.
-- `Event` — факт для брокера/наблюдателей.
-- `Error` — описание провала.
-- `Result<T, Error>` — результат: успех с T или ошибка.
+- `Request` — unvalidated input from the adapter. Public fields, no domain rules.
+- `Command` / `Entity` / `DTO` — a validated domain object. **Unexported fields. Created only
+  through the constructor** `NewT(...) -> (T, error)`, which checks the domain rules. If the
+  rules don't hold — the struct isn't created.
+- `Event` — a fact for the broker/observers.
+- `Error` — a failure description.
+- `Result<T, Error>` — the result: success with T or an error.
 
-**Правило сигнатур:** в `Result` всегда указываем оба типа-параметра:
-`Result<Client, Error>`, не `Result<Client>`.
+**Signature rule:** in `Result` always state both type parameters: `Result<Client, Error>`, not
+`Result<Client>`.
 
-**Приписка для Go.** В Go идиоматический эквивалент `Result<T, Error>`
-— пара возвратов `(T, error)`. Везде, где в спецификации стоит
-`Result<T, Error>`, в Go-коде это означает функцию, возвращающую
-`(T, error)`. Семантика та же: успех с T или ошибка. Дженерик-тип
-`Result[T any]` в Go-проектах не вводим — это ломает идиому языка
-и не даёт ничего сверх стандартной пары.
+**Note for Go.** In Go the idiomatic equivalent of `Result<T, Error>` is the return pair
+`(T, error)`. Wherever the spec says `Result<T, Error>`, in Go code it means a function
+returning `(T, error)`. Same semantics: success with T or an error. Don't introduce a generic
+type `Result[T any]` in Go projects — it breaks the language idiom and adds nothing over the
+standard pair.
 
-#### Модель ошибок (явная, документируемая)
+#### Error model (explicit, documented)
 
-В `messages.md` фиксируется **полная модель ошибок**, а не только тип
-`Error`:
+`messages.md` freezes the **full error model**, not just the `Error` type:
 
-- **словарь кодов** `error.code` (машиночитаемые), закрытое перечисление;
-- **поля диагностики**: `code` / `message` (человек) / `location` (где) /
-  `context` (детали);
-- **маппинг `код → exit` (CLI) или `код → HTTP-статус`** — таблицей; её же
-  потребляет `documentation` (Pass A5b, таблица сбоев) и ингресс/egress;
-- **правило видимости:** непроверенное / частичный результат / деградация
-  **видна** в выходе (свой код или ненулевой exit), **не маскируется под
-  успех**. «Не смог проверить» ≠ «совместимо/ок».
+- **code dictionary** `error.code` (machine-readable), a closed enumeration;
+- **diagnostic fields**: `code` / `message` (human) / `location` (where) / `context` (details);
+- **mapping `code → exit` (CLI) or `code → HTTP status`** — as a table; the same one is
+  consumed by `documentation` (Pass A5b, failure table) and the ingress/egress;
+- **visibility rule:** an unchecked / partial result / degradation is **visible** in the output
+  (its own code or a non-zero exit), **not masked as success**. "Couldn't check" ≠ "compatible/ok".
 
-Этот словарь — единый источник для таблицы сбоев README и для Extensions
-системного use case (Шаг 8): один режим отказа = один код = один Extension.
-
+This dictionary is the single source for the README failure table and for the system use case's
+Extensions (Step 8): one failure mode = one code = one Extension.
