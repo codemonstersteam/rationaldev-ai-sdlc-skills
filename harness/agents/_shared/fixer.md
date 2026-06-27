@@ -2,7 +2,7 @@
 role: fixer
 izi: Linger
 version: "1.0"
-tier: big
+tier: large
 mode: subagent
 temperature: 0.1
 steps: 40

@@ -2,7 +2,7 @@
 role: planner
 izi: Wirth
 version: "1.0"
-tier: big
+tier: large
 mode: subagent
 temperature: 0.3
 steps: 30

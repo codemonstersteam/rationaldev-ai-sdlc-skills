@@ -2,7 +2,7 @@
 role: plan-reviewer
 izi: Mills
 version: "1.0"
-tier: big
+tier: large
 mode: subagent
 temperature: 0.1
 steps: 20

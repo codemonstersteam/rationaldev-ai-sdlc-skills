@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Wirth
 - **Версия:** 1.0
-- **Тир / модель:** big → opus
+- **Тир / модель:** large → opus
 - **Режим:** subagent
 - **Запись (edit):** `.agent/**`: allow, `api-specification/**`: allow, `contracts/**`: allow, `*`: deny
 
