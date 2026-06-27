@@ -8,6 +8,8 @@ temperature: 0.1
 steps: 25
 description: "Релиз и здоровье (Michtom): канареечный выкат за фиче-тогглом + оценка golden signals, вердикт GREEN/YELLOW/RED, решение об откате. Keywords: релиз, деплой, канарейка, rollout, health, SLO, откат."
 skills: [observability, security]
+inputs: [release-artifact, .agent/planner/rollout-plan.md, metrics, gate2]
+outputs: [.agent/release-health/deploy-log.md, .agent/release-health/release-health.md, .agent/decisions.log]
 permission:
   read: allow
   grep: allow

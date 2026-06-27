@@ -8,6 +8,8 @@ temperature: 0.2
 steps: 40
 description: "Дирижёр-роутер: точка входа, классифицирует уровень задачи, делегирует роли, держит human-gates. Keywords: оркестрация, роутинг, делегирование, gate, уровень задачи, SDLC."
 skills: [memory, platform-landing]
+inputs: [requirements, .agent/memory.md, .agent/decisions.log]
+outputs: [.agent/decisions.log]
 permission:
   task: allow
   read: allow

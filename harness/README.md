@@ -9,13 +9,13 @@
 
 | Путь | Назначение | Править вручную? |
 |---|---|---|
-| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`version/tier/mode/temperature/steps/skills/permission/description`) + тело-промпт | **да** — это источник |
+| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`version/tier/mode/temperature/steps/skills/inputs/outputs/permission/description`) + тело-промпт | **да** — это источник |
 | `agents/{claude,opencode,codex}/<role>.md` | сгенерированные проекции с per-runner frontmatter | **нет** — перегенерируются |
 | `../skills/roles/<role>/<role>.md` | сгенерированный человекочитаемый контракт роли (для README/docs) | **нет** — перегенерируется |
 | `../skills/INDEX.json` | сгенерированный реестр скиллов (name/path/version/status/description) + карта роль→скиллы | **нет** — перегенерируется |
 | `frontmatter.mjs` | общий парсер frontmatter (используют оба генератора) | да |
 | `gen-agents.mjs` | генератор: читает frontmatter `_shared` → 3 раннера + контракт роли | да (только рендереры) |
-| `gen-skill-index.mjs` | реестр `INDEX.json` + CI-инвариант: каждый скилл из `skills:` роли существует и `stable` | да |
+| `gen-skill-index.mjs` | реестр `INDEX.json` + CI-инварианты: скилл из `skills:` роли существует и `stable`; целостность пайплайна (каждый `input` роли производится апстримом или внешний) | да |
 
 ## Перегенерация
 

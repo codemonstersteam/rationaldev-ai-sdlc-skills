@@ -25,7 +25,7 @@ function loadRole(role) {
   const text = readFileSync(join(SHARED, `${role}.md`), "utf8")
   const { data, body: raw } = parseFrontmatter(text)
   if (!data) throw new Error(`${role}.md: нет frontmatter (источник правды роли)`)
-  for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description", "skills"]) {
+  for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description", "skills", "inputs", "outputs"]) {
     if (data[f] === undefined) throw new Error(`${role}.md: в frontmatter нет поля '${f}'`)
   }
   return { data, body: raw.trim() + "\n" }

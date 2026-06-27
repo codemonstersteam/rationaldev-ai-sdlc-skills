@@ -28,9 +28,12 @@
   (PASS 21). Парсер frontmatter вынесен в общий `harness/frontmatter.mjs` (DRY).
   _Осталось:_ (2) `outputs[N] ⊇ inputs[N+1]` — требует структурных `inputs/outputs` в
   ролях, вынесено в отдельный пункт ниже.
-- [ ] **D2 · P1 — целостность пайплайна.** Добавить `inputs/outputs` в frontmatter ролей
-  и проверку `outputs` роли N ⊇ `inputs` роли N+1 («роль = модуль» машинно). Сейчас
-  вход/выход описаны прозой в теле роли.
+- [x] **D2 · P1 — целостность пайплайна.** В frontmatter ролей добавлены `inputs/outputs`
+  (токены-артефакты `.agent/...` + внешние). `gen-skill-index.mjs` проверяет: каждый `input`
+  роли либо внешний (gate/CI/build/требования/общие логи), либо производится как `output`
+  апстрим-шага — обобщение `outputs[N] ⊇ inputs[N+1]` на реальный DAG (implementer читает
+  `plan.md` planner'а, не предыдущего plan-reviewer). Висячий артефакт → `exit 1` (негативный
+  тест подтверждён). inputs/outputs попали в `INDEX.json`. smoke PASS 21.
 - [x] **C · P1 — progressive disclosure для `program-design`.** `SKILL.md` 1053 → 111 строк:
   голова + Step-индекс + навигация + сводка жёстких правил/STOP (conformance-gate) + DoD.
   Тело каждого из 12 шагов вынесено в `reference/step-NN-*.md` (механический split, контент

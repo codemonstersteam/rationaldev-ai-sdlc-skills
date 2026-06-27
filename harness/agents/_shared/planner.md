@@ -8,6 +8,8 @@ temperature: 0.3
 steps: 30
 description: "Планировщик (Wirth): проектирует вертикальные срезы, контракты модулей, карту режимов отказа. Вызывать на модульных задачах ПЕРЕД реализацией. Keywords: план, дизайн, контракт, OpenAPI, срезы, архитектура."
 skills: [architecture, documentation, http-io, llm-client, memory, observability, platform-landing, program-design, security]
+inputs: [requirements]
+outputs: [.agent/planner/plan.md, .agent/planner/contracts, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md, .agent/planner/design, .agent/decisions.log]
 permission:
   read: allow
   grep: allow

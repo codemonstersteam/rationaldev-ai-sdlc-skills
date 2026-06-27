@@ -10,7 +10,22 @@
 //   1. У каждого скилла frontmatter с name (== имя каталога), version, description.
 //   2. Каждый скилл из skills: роли существует в реестре и status == stable
 //      (битая ссылка / незаведённый ПРОБЕЛ ловится здесь, а не молча).
-//   3. В режиме --check: skills/INDEX.json совпадает с тем, что сгенерировалось бы.
+//   3. Целостность пайплайна («роль = модуль»): каждый input роли либо внешний
+//      (gate/CI/build/требования/общие логи), либо производится как output какого-то
+//      апстрим-шага. Висячий артефакт (его никто не производит) → ошибка.
+//   4. В режиме --check: skills/INDEX.json совпадает с тем, что сгенерировалось бы.
+
+// Внешние источники входов — не производятся ролью-агентом (человек/CI/сборка/среда/
+// общие append-логи). Вход из этого набора не требует апстрим-производителя.
+const EXTERNAL_INPUTS = new Set([
+  "requirements",        // постановка от дирижёра (Discovery)
+  "ci-signals",          // сигналы CI (unit/component/contract/lint/security)
+  "release-artifact",    // сборка после Gate #2 (merge)
+  "metrics",             // метрики целевой среды
+  "gate1", "gate2",      // человеческие гейты (акцепт плана / мерж)
+  ".agent/memory.md",    // рабочая память цикла (общая)
+  ".agent/decisions.log", // трассировка решений (общий append-лог)
+])
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs"
 import { dirname, join } from "node:path"
@@ -55,12 +70,27 @@ const roles = []
 for (const role of ROLES) {
   const { data } = parseFrontmatter(readFileSync(join(SHARED, `${role}.md`), "utf8"))
   const used = (data && data.skills) || []
-  roles.push({ role, skills: used })
+  const inputs = (data && data.inputs) || []
+  const outputs = (data && data.outputs) || []
+  roles.push({ role, skills: used, inputs, outputs })
   for (const name of used) {
     const s = byName.get(name)
     if (!s) errors.push(`роль ${role}: скилл '${name}' не существует (битая ссылка или незаведённый ПРОБЕЛ → в SKILLS-BACKLOG)`)
     else if (s.status !== "stable") errors.push(`роль ${role}: скилл '${name}' имеет status='${s.status}', роль может ссылаться только на stable`)
   }
+}
+
+// --- Целостность пайплайна: каждый input производится апстримом или внешний ---
+// ROLES задаёт порядок (orchestrator → planner → … → release-health). «Апстрим» роли i —
+// объединение outputs ролей 0..i-1. Это обобщение outputs[N] ⊇ inputs[N+1] на реальный DAG.
+const upstream = new Set()
+for (const r of roles) {
+  for (const inp of r.inputs) {
+    if (!EXTERNAL_INPUTS.has(inp) && !upstream.has(inp)) {
+      errors.push(`роль ${r.role}: вход '${inp}' не производится ни одним апстрим-шагом и не объявлен внешним (висячий артефакт пайплайна)`)
+    }
+  }
+  for (const out of r.outputs) upstream.add(out)
 }
 
 // --- Сборка INDEX.json ---
