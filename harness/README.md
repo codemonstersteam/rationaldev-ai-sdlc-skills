@@ -1,15 +1,18 @@
 # harness/ — проекции ролей под раннеры
 
-Подключаемый мультиагентный харнес. Источник правды — `../skills/roles/` (контракты
-ролей) и `../skills/lib/` (скиллы). Здесь — **проекции** под Claude / OpenCode / Codex.
+Подключаемый мультиагентный харнес. **Единый источник правды роли** —
+`agents/_shared/<role>.md` (frontmatter-идентичность + тело-промпт); скиллы — в
+`../skills/lib/`. Отсюда генерируются **проекции**: Claude / OpenCode / Codex и
+человекочитаемый контракт роли `../skills/roles/<role>/<role>.md`.
 
 ## Что где
 
 | Путь | Назначение | Править вручную? |
 |---|---|---|
-| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`tier/mode/temperature/steps/permission/description`) + тело-промпт | **да** — это источник |
+| `agents/_shared/<role>.md` | **единый источник правды роли**: frontmatter-идентичность (`version/tier/mode/temperature/steps/permission/description`) + тело-промпт | **да** — это источник |
 | `agents/{claude,opencode,codex}/<role>.md` | сгенерированные проекции с per-runner frontmatter | **нет** — перегенерируются |
-| `gen-agents.mjs` | генератор: читает frontmatter `_shared` → 3 раннера | да (только рендереры) |
+| `../skills/roles/<role>/<role>.md` | сгенерированный человекочитаемый контракт роли (для README/docs) | **нет** — перегенерируется |
+| `gen-agents.mjs` | генератор: читает frontmatter `_shared` → 3 раннера + контракт роли | да (только рендереры) |
 
 ## Перегенерация
 

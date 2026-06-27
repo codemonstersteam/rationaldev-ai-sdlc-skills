@@ -97,6 +97,28 @@ function codexFile(role, m, body) {
   return `<!-- role: ${role} (тир: ${m.tier}, v${m.version}). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->\n\n${body}`
 }
 
+// Человекочитаемый контракт роли (проекция в skills/roles/<role>/<role>.md).
+// На него ссылаются README / docs / GLOSSARY как на «манифест роли».
+function roleContractFile(role, m, body) {
+  const lines = body.split("\n")
+  const h1 = lines[0]                                  // «# Planner — … (izi: …)»
+  const rest = lines.slice(1).join("\n").replace(/^\n+/, "")
+  const edit = m.permission.edit
+    ? Object.entries(m.permission.edit).map(([g, a]) => `\`${g}\`: ${a}`).join(", ")
+    : "—"
+  const meta = [
+    `- **Агент (izi):** ${m.izi}`,
+    `- **Версия:** ${m.version}`,
+    `- **Тир / модель:** ${m.tier} → ${CLAUDE_MODEL[m.tier]}`,
+    `- **Режим:** ${m.mode}`,
+    `- **Запись (edit):** ${edit}`,
+  ].join("\n")
+  const head = "<!-- СГЕНЕРИРОВАНО из harness/agents/_shared/" + role +
+    ".md — НЕ редактировать вручную.\n     Источник правды роли: frontmatter + тело там. " +
+    "Перегенерация: node harness/gen-agents.mjs -->"
+  return `${head}\n\n${h1}\n\n${meta}\n\n${rest}`
+}
+
 const roles = ORDER.map((role) => ({ role, ...loadRole(role) }))
 
 let n = 0
@@ -107,6 +129,11 @@ for (const { role, data, body } of roles) {
     writeFileSync(join(dir, `${role}.md`), render(role, data, body))
     n++
   }
+  // 4-я проекция: человекочитаемый контракт роли в ../skills/roles/<role>/<role>.md
+  const contractDir = join(ROOT, "..", "skills", "roles", role)
+  mkdirSync(contractDir, { recursive: true })
+  writeFileSync(join(contractDir, `${role}.md`), roleContractFile(role, data, body))
+  n++
 }
 
 // --- Codex: собрать роутер + блоки ролей в один AGENTS.codex.md ---
@@ -127,4 +154,4 @@ const instrDir = join(ROOT, "instructions")
 mkdirSync(instrDir, { recursive: true })
 writeFileSync(join(instrDir, "AGENTS.codex.md"), codex)
 
-console.log(`generated ${n} agent files for ${roles.length} roles × 3 runners + AGENTS.codex.md`)
+console.log(`generated ${n} files for ${roles.length} roles (claude/opencode/codex + skills/roles contract) + AGENTS.codex.md`)
