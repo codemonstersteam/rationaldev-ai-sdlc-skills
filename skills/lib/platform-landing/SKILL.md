@@ -1,223 +1,222 @@
 ---
 name: platform-landing
-description: Детерминированная процедура для concept-репозитория платформы (он же coordination/solution-root для полирепозиторной платформы). Две части. PART I — сборка и 5-pass рефактор лендинга-витрины concept README + парного docs/get-started.md под потребителя concept-уровня (за 60 секунд решить «годится ли платформа», затем первый шаг). PART II — полный жизненный цикл кросс-сервисной фичи (на >1 сервис): spec → plan → декомпозиция на per-service задачи со ссылками на backlog каждого сервиса → синхронизация статусов → закрытие; по практике spec-driven development и polyrepo-координации (PR в порядке зависимости, «Depends on #X», единые имена веток). Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): проходы, жёсткие лимиты, таблицы-роутеры, STOP-правила, чеклисты. Применять В CONCEPT-репозитории. Не применять для документации одного сервиса — это скилл documentation; для ревью качества — doc-quality-review.
+description: Deterministic procedure for a platform concept-repository (the coordination/solution-root of a polyrepo platform). Two parts. PART I — build and 5-pass refactor the concept README showcase landing plus its paired docs/get-started.md for the concept-level consumer (decide "is this platform for me" in 60 seconds, then take the first step). PART II — full lifecycle of a cross-service feature (touches >1 service): spec → plan → decomposition into per-service tasks linked to each service's backlog → status sync → close; via spec-driven development and polyrepo coordination (PRs in dependency order, "Depends on #X", shared branch names). Built for an orchestrator/planner tier: passes, hard limits, router tables, STOP rules, checklists. Apply IN the concept-repository. Do NOT apply for single-service documentation — that is the documentation skill; for quality review — doc-quality-review.
 version: "1.0"
 ---
 
-# platform-landing — concept-репозиторий платформы
+# platform-landing — platform concept-repository
 
-Concept-репо играет две роли сразу:
-- **витрина платформы** для внешнего потребителя (PART I);
-- **coordination-root** для кросс-сервисных фич полирепозиторной платформы (PART II).
+The concept-repo plays two roles at once:
+- **platform showcase** for the external consumer (PART I);
+- **coordination-root** for cross-service features of a polyrepo platform (PART II).
 
-Скилл — процедура, а не справочник. Делай по шагам, не импровизируй. Соблюдай
-числовые лимиты буквально. Сработало STOP-правило → остановись, спроси оператора.
+This skill is a procedure, not a reference. Work step by step, don't improvise. Obey the
+numeric limits literally. A STOP rule fired → stop and ask the operator.
 
-> Документация одного сервиса (README сервиса, его `docs/architecture.md`) — скилл
-> [`documentation`](../documentation/SKILL.md). Ревью качества готовой доки — скилл
-> [`doc-quality-review`](../doc-quality-review/SKILL.md).
+> Single-service documentation (a service README, its `docs/architecture.md`) is the
+> [`documentation`](../documentation/SKILL.md) skill. Quality review of finished docs is
+> the [`doc-quality-review`](../doc-quality-review/SKILL.md) skill.
 
-Выбор части:
+Pick the part:
 
-| Задача | Часть |
+| Task | Part |
 | --- | --- |
-| Собрать/рефакторить лендинг concept (README + get-started) | **PART I** |
-| Фича затрагивает **>1 сервис** платформы | **PART II** |
-| Фича внутри одного сервиса | НЕ сюда → `documentation` + per-repo флоу |
+| Build/refactor the concept landing (README + get-started) | **PART I** |
+| Feature touches **>1 service** of the platform | **PART II** |
+| Feature inside a single service | NOT here → `documentation` + per-repo flow |
 
 ---
 
-# PART I — лендинг-витрина concept
+# PART I — concept showcase landing
 
-**Потребитель:** инженер-потребитель concept-уровня и менеджер. **Job:** за 60 секунд
-решить «годится ли мне эта платформа», затем сделать первый шаг.
+**Consumer:** concept-level consumer engineer and manager. **Job:** in 60 seconds decide
+"is this platform for me", then take the first step.
 
-**Документы:** `README.md` концепт-репо (витрина) + парный `docs/get-started.md`
-(пошаговое подключение).
+**Documents:** the concept-repo `README.md` (showcase) + the paired `docs/get-started.md`
+(stepwise onboarding).
 
-## I.0 Жёсткие лимиты (буквально)
+## I.0 Hard limits (literal)
 
-- README concept — **одна прокрутка**: ≤ 60 строк тела (без больших ASCII-блоков).
-- Hero-предложение «что это» — **≤ 25 слов**, одно предложение.
-- Любой пункт списка — **≤ 12 слов**.
-- Команды запуска конкретного сервиса в concept README — **0** (они в репо сервиса).
+- Concept README — **one scroll**: ≤ 60 lines of body (excluding large ASCII blocks).
+- Hero "what it is" sentence — **≤ 25 words**, one sentence.
+- Any list item — **≤ 12 words**.
+- Run commands for a specific service in the concept README — **0** (they live in the service repo).
 
-## I.1 Анти-контент: чего НЕ должно быть в concept README
+## I.1 Anti-content: what MUST NOT be in the concept README
 
-Пройди по таблице. Нашёл такой контент → вынеси по колонке «куда», не оставляй.
+Walk the table. Found such content → move it per the "move to" column, don't leave it.
 
-| Если в concept README есть… | …куда вынести |
+| If the concept README has… | …move to |
 | --- | --- |
-| API-эндпоинты, pipe-описания | README сервиса |
-| Архитектура конкретного сервиса | `docs/architecture.md` сервиса |
-| Модель данных, структура проекта, команды запуска | README сервиса |
-| Детали реализации любого уровня | репо сервиса |
-| Длинный quickstart, troubleshooting | `docs/get-started.md` концепта |
-| Манифест / архитектура платформы / roadmap (развёрнуто) | `docs/manifesto.md` / `docs/architecture.md` / `docs/roadmap.md` концепта |
+| API endpoints, pipe descriptions | service README |
+| A specific service's architecture | service `docs/architecture.md` |
+| Data model, project structure, run commands | service README |
+| Implementation details at any level | service repo |
+| Long quickstart, troubleshooting | concept `docs/get-started.md` |
+| Manifesto / platform architecture / roadmap (expanded) | concept `docs/manifesto.md` / `docs/architecture.md` / `docs/roadmap.md` |
 
-Правило: **concept описывает СИСТЕМУ, не сервис.** Concept ссылается, не копирует.
+Rule: **the concept describes the SYSTEM, not a service.** The concept links, it does not copy.
 
-## I.2 Пять проходов рефактора README (по порядку)
+## I.2 Five README refactor passes (in order)
 
-**Pass L1 — Hero.** Первая строка после заголовка: что за платформа, ≤ 25 слов, одно
-предложение. Затем — для кого (1 строка).
-(Проверка: одно предложение, ≤ 25 слов.)
+**Pass L1 — Hero.** First line after the title: what the platform is, ≤ 25 words, one
+sentence. Then — who it is for (1 line).
+(Check: one sentence, ≤ 25 words.)
 
-**Pass L2 — Из чего состоит.** Картина целого: список нод/сервисов/форматов платформы,
-каждый — одна строка ≤ 12 слов. Это «из каких кусков система», без деталей куска.
-(Проверка: список, не проза; нет деталей одного сервиса.)
+**Pass L2 — What it is made of.** The whole picture: a list of the platform's nodes/services/formats,
+each one line ≤ 12 words. This is "which pieces the system is made of", without piece detail.
+(Check: a list, not prose; no single-service detail.)
 
-**Pass L3 — Анти-контент чистка.** Прогони раздел I.1 по всему README. Каждый
-найденный класс — вынеси.
-(Проверка: ни одна строка таблицы I.1 не применима.)
+**Pass L3 — Anti-content cleanup.** Run section I.1 across the whole README. Each found
+class — move it.
+(Check: no row of table I.1 applies.)
 
-**Pass L4 — Стек и схема платформы.** Таблица `компонент платформы → технология` +
-одна ASCII-диаграмма верхнего уровня (ноды/связи), не внутренности сервиса.
-(Проверка: диаграмма про платформу, не про один сервис.)
+**Pass L4 — Platform stack and diagram.** A `platform component → technology` table +
+one top-level ASCII diagram (nodes/links), not a service's internals.
+(Check: the diagram is about the platform, not one service.)
 
-**Pass L5 — Первый шаг.** Ссылки: на `docs/get-started.md` (пошаговое подключение) и
-на конкретные сервисы-примеры. Текст ссылки описателен.
-(Проверка: есть ссылка на get-started и хотя бы один сервис.)
+**Pass L5 — First step.** Links: to `docs/get-started.md` (stepwise onboarding) and to
+specific example services. Link text is descriptive.
+(Check: there is a link to get-started and at least one service.)
 
-## I.3 Парная страница docs/get-started.md
+## I.3 Paired docs/get-started.md page
 
-Отдельный файл — пошаговое подключение к платформе (то, что не влезает в витрину):
-предпосылки → шаги подключения (нумерованные, одно действие на шаг) → проверка →
-troubleshooting. Лимит проходов A6 из `documentation` (команды копируются и работают).
+A separate file — stepwise onboarding to the platform (what does not fit the showcase):
+prerequisites → onboarding steps (numbered, one action per step) → verification →
+troubleshooting. Use the A6 pass limit from `documentation` (commands copy-paste and work).
 
-## I.4 Готовые шаблоны
+## I.4 Ready templates
 
-В директории [`templates/`](templates/) лежат `.tmpl`-файлы — заполняемые каркасы
-для PART I:
+The [`templates/`](templates/) directory holds `.tmpl` files — fillable scaffolds for PART I:
 
-| Файл | Назначение |
+| File | Purpose |
 | --- | --- |
-| `templates/landing-README.md.tmpl` | Скелет `README.md` концепт-репо со слотами |
-| `templates/get-started.md.tmpl` | Скелет `docs/get-started.md` со слотами |
-| `templates/component-row.md.tmpl` | Одна строка таблицы компонентов (вставляется в `<<SLOT_COMPONENT_ROWS>>`) |
+| `templates/landing-README.md.tmpl` | Skeleton of the concept-repo `README.md` with slots |
+| `templates/get-started.md.tmpl` | Skeleton of `docs/get-started.md` with slots |
+| `templates/component-row.md.tmpl` | One component-table row (inserted into `<<SLOT_COMPONENT_ROWS>>`) |
 
-Использование: скопировать `.tmpl` в целевой файл, заполнить слоты `<<SLOT_…>>` по
-проходам I.2–I.3. Незаполненные слоты → `<<HUMAN_NEEDED: причина>>`, не удалять.
+Usage: copy the `.tmpl` into the target file, fill the `<<SLOT_…>>` slots via passes
+I.2–I.3. Unfilled slots → `<<HUMAN_NEEDED: reason>>`, do not delete.
 
 ## I.5 STOP (PART I)
 
-- Просят положить в concept README API/архитектуру/данные конкретного сервиса → STOP, вынеси по I.1.
-- README уже написан человеком и правка масштабная → STOP, подтверди before.
+- Asked to put a specific service's API/architecture/data into the concept README → STOP, move it per I.1.
+- README is already human-written and the edit is large → STOP, confirm beforehand.
 
 ---
 
-# PART II — кросс-сервисная фича
+# PART II — cross-service feature
 
-Применяй, когда фича затрагивает **больше одного сервиса** платформы. Concept-репо —
-coordination-root: проектирование и общий план стартуют здесь, потом «впадают» в
-локальные `backlog.md` сервисов.
+Apply when a feature touches **more than one service** of the platform. The concept-repo is
+the coordination-root: design and the shared plan start here, then "flow into" the services'
+local `backlog.md`.
 
-Метод — spec-driven development (spec → plan → tasks) поверх polyrepo-координации.
+The method is spec-driven development (spec → plan → tasks) over polyrepo coordination.
 
-## II.0 Где живёт артефакт
+## II.0 Where the artifact lives
 
 ```
 <concept-repo>/docs/features/<slug>/
-  spec.md   — что и зачем (SDD spec)
-  plan.md   — кросс-сервисная декомпозиция + ссылки на backlog сервисов + статусы
+  spec.md   — what and why (SDD spec)
+  plan.md   — cross-service decomposition + links to service backlogs + statuses
 ```
 
-`<slug>` — kebab-case имя фичи. Один каталог = одна фича.
+`<slug>` — kebab-case feature name. One directory = one feature.
 
-Шаблоны (заполнять по фазам ниже):
+Templates (fill per the phases below):
 - spec.md — [`docs/templates/feature-spec.md`](../../docs/templates/feature-spec.md)
 - plan.md — [`docs/templates/feature-plan.md`](../../docs/templates/feature-plan.md)
 
-## II.1 Фаза 1 — Specify (spec.md)
+## II.1 Phase 1 — Specify (spec.md)
 
-Создай `docs/features/<slug>/spec.md`. Заполни ровно эти блоки (SDD — 6 элементов):
+Create `docs/features/<slug>/spec.md`. Fill exactly these blocks (SDD — 6 elements):
 
-| Блок | Что писать |
+| Block | What to write |
 | --- | --- |
-| Проблема / outcome | какую задачу решаем, что считается успехом |
-| Затронутые сервисы | список репозиториев платформы, которые меняются |
-| Границы (scope) | что входит и что НЕ входит |
-| Constraints | контракты/совместимость/нефункциональные ограничения |
-| Прежние решения | ссылки на ADR/concept (на чём стоим, что не пересматриваем) |
-| Критерии приёмки | как поймём, что фича готова (кросс-сервисный сценарий) |
+| Problem / outcome | which task we solve, what counts as success |
+| Affected services | list of platform repos that change |
+| Scope | what is in and what is NOT in |
+| Constraints | contracts/compatibility/non-functional constraints |
+| Prior decisions | links to ADR/concept (what we stand on, what we don't reopen) |
+| Acceptance criteria | how we'll know the feature is done (cross-service scenario) |
 
-(Проверка: все 6 блоков заполнены; «затронутые сервисы» ≥ 2 — иначе это не PART II.)
+(Check: all 6 blocks filled; "affected services" ≥ 2 — otherwise this is not PART II.)
 
-## II.2 Фаза 2 — Дизайн (high-level, в spec.md)
+## II.2 Phase 2 — Design (high-level, in spec.md)
 
-Как фича ложится на платформу: какие **контракты между сервисами** появляются/меняются
-(OpenAPI/AsyncAPI), кто кого вызывает, последовательность.
+How the feature maps onto the platform: which **contracts between services** appear/change
+(OpenAPI/AsyncAPI), who calls whom, the sequence.
 
-- Любой новый контракт между сервисами проектируется **spec-first** (skill `http-io`
-  для исходящего HTTP; контракт в `api-specification/` соответствующего сервиса).
-- STOP, если контракт между сервисами не определён, а декомпозиция его требует.
+- Any new contract between services is designed **spec-first** (skill `http-io` for outbound
+  HTTP; the contract goes in the relevant service's `api-specification/`).
+- STOP if a contract between services is undefined but the decomposition requires it.
 
-## II.3 Фаза 3 — Plan (plan.md, декомпозиция)
+## II.3 Phase 3 — Plan (plan.md, decomposition)
 
-Создай `docs/features/<slug>/plan.md`. Главное — таблица per-service со ссылками:
+Create `docs/features/<slug>/plan.md`. The core is a per-service table with links:
 
 ```
-| # | Сервис (репо)      | Что делает в рамках фичи      | Backlog-задача                         | Зависит от | Статус |
-|---|--------------------|-------------------------------|----------------------------------------|------------|--------|
-| 1 | auth-service       | новый эндпоинт X              | auth-service/backlog.md#<task>          | —          | todo   |
-| 2 | gateway            | проксирование X               | gateway/backlog.md#<task>               | 1          | todo   |
-| 3 | client-sdk         | метод-обёртка                 | client-sdk/backlog.md#<task>            | 2          | todo   |
+| # | Service (repo)     | What it does for the feature  | Backlog task                            | Depends on | Status |
+|---|--------------------|-------------------------------|-----------------------------------------|------------|--------|
+| 1 | auth-service       | new endpoint X                | auth-service/backlog.md#<task>          | —          | todo   |
+| 2 | gateway            | proxy X                       | gateway/backlog.md#<task>               | 1          | todo   |
+| 3 | client-sdk         | wrapper method                | client-sdk/backlog.md#<task>            | 2          | todo   |
 ```
 
-Правила (проверь):
-- Порядок строк = **порядок зависимости** (backend → shared → frontend).
-- Каждая строка ссылается на конкретную задачу в `backlog.md` своего сервиса.
-- Колонка «Зависит от» — номера строк-предшественников (для порядка PR).
+Rules (verify):
+- Row order = **dependency order** (backend → shared → frontend).
+- Each row links to a specific task in its service's `backlog.md`.
+- The "Depends on" column — row numbers of predecessors (for PR order).
 
-## II.4 Фаза 4 — Связывание (per-service)
+## II.4 Phase 4 — Linking (per-service)
 
-Для каждой строки plan.md:
-1. В репо сервиса заведи задачу в его `backlog.md` со **ссылкой обратно** на фичу
+For each plan.md row:
+1. In the service repo create a task in its `backlog.md` with a **back-link** to the feature
    (`<concept-repo>/docs/features/<slug>/`).
-2. Дальше сервис идёт своим флоу: `program-design` → `program-implementation`.
-3. Единое имя ветки во всех репо: `feat/<slug>`.
-4. PR-ы открываются в порядке зависимости; в теле PR — `Depends on <repo>#<PR>`.
+2. Then the service follows its own flow: `program-design` → `program-implementation`.
+3. Shared branch name across all repos: `feat/<slug>`.
+4. PRs open in dependency order; the PR body has `Depends on <repo>#<PR>`.
 
-(Проверка: у каждой задачи в сервисе есть обратная ссылка на фичу.)
+(Check: every per-service task has a back-link to the feature.)
 
-## II.5 Фаза 5 — Синхронизация статусов
+## II.5 Phase 5 — Status sync
 
-`plan.md` — **единственный источник правды о прогрессе фичи**.
-- При каждом merge в сервисе → обнови колонку «Статус» соответствующей строки
+`plan.md` is the **single source of truth for feature progress**.
+- On each merge in a service → update the "Status" column of the matching row
   (`todo` / `in_progress` / `done`).
-- Не дублируй прогресс в других местах — только plan.md.
+- Do not duplicate progress elsewhere — only plan.md.
 
-(Проверка: статус в plan.md совпадает с реальным состоянием задач сервисов.)
+(Check: status in plan.md matches the real state of the services' tasks.)
 
-## II.6 Фаза 6 — Закрытие
+## II.6 Phase 6 — Close
 
-Фича закрывается, когда:
-- все строки plan.md в статусе `done`, И
-- кросс-сервисный сценарий из «Критериев приёмки» (II.1) проходит (кросс-репо
-  компонентные/контракт-тесты зелёные).
+The feature closes when:
+- all plan.md rows are `done`, AND
+- the cross-service scenario from "Acceptance criteria" (II.1) passes (cross-repo
+  component/contract tests green).
 
-Тогда: пометь фичу `done` в `plan.md` (шапка), оставь каталог как запись истории.
+Then: mark the feature `done` in `plan.md` (header), keep the directory as a history record.
 
 ## II.7 STOP (PART II)
 
-- «Затронутые сервисы» < 2 → это не кросс-сервисная фича, верни в `documentation` + per-repo флоу.
-- Контракт между сервисами требуется декомпозицией, но не спроектирован → STOP, спроси.
-- Просят слить PR сервиса вне порядка зависимости → STOP, предупреди о поломке порядка.
-- Мерж PR делает только оператор (агент не мержит).
+- "Affected services" < 2 → this is not a cross-service feature, return to `documentation` + per-repo flow.
+- A contract between services is required by the decomposition but not designed → STOP, ask.
+- Asked to merge a service PR out of dependency order → STOP, warn about breaking the order.
+- Only the operator merges PRs (the agent does not merge).
 
 ---
 
-# Финальный чеклист
+# Final checklist
 
-PART I (лендинг):
-- [ ] README concept ≤ 60 строк, hero ≤ 25 слов.
-- [ ] Ни одна строка анти-таблицы I.1 не применима.
-- [ ] Есть ссылки на `docs/get-started.md` и хотя бы один сервис.
+PART I (landing):
+- [ ] Concept README ≤ 60 lines, hero ≤ 25 words.
+- [ ] No row of anti-table I.1 applies.
+- [ ] Links to `docs/get-started.md` and at least one service exist.
 
-PART II (фича):
-- [ ] `spec.md`: все 6 блоков; затронутых сервисов ≥ 2.
-- [ ] Новые контракты между сервисами — spec-first, в `api-specification/`.
-- [ ] `plan.md`: строки в порядке зависимости, каждая ссылается на backlog сервиса.
-- [ ] У каждой per-service задачи есть обратная ссылка на фичу.
-- [ ] Статусы в `plan.md` синхронны с реальностью; других источников прогресса нет.
-- [ ] Закрытие — только при всех `done` + зелёных кросс-сервисных критериях приёмки.
+PART II (feature):
+- [ ] `spec.md`: all 6 blocks; affected services ≥ 2.
+- [ ] New contracts between services — spec-first, in `api-specification/`.
+- [ ] `plan.md`: rows in dependency order, each links to a service backlog.
+- [ ] Every per-service task has a back-link to the feature.
+- [ ] Statuses in `plan.md` are synced with reality; no other progress sources.
+- [ ] Close only when all `done` + green cross-service acceptance criteria.

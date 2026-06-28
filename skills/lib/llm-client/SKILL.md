@@ -1,26 +1,26 @@
 ---
 name: llm-client
-description: LLM-специфика I/O-объекта взаимодействия с моделью (Anthropic / OpenAI-совместимые) — выбор протокола (OpenAI chat completions), structured output через response_format, фан-аут по ролям-потребителям, маркер role в стабе, фиксация реальных ответов. Применять вместе с http-io (общая дисциплина исходящего HTTP — бюджеты нагрузки/payload, спека провайдера, режимы отказа, стаб). Не применять для выбора модели под задачу — это отдельное решение. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): таблицы-решения, фикс-шаблоны, чеклисты, STOP-правила.
+description: LLM specifics of the I/O object talking to a model (Anthropic / OpenAI-compatible) — protocol choice (OpenAI chat completions), structured output via response_format, fan-out over consumer roles, role marker in the stub, fixing real model responses. Use together with http-io (the shared outbound-HTTP discipline — load/payload budgets, provider spec, failure modes, stub). Do NOT use for picking a model for a task — that is a separate decision. Built for a small-tier model: decision tables, fixed templates, checklists, STOP rules.
 version: "1.0"
 ---
 
-# LLM-клиент — специфика взаимодействия с моделью
+# llm-client — model-interaction specifics
 
-> **Общая дисциплина исходящего HTTP — в скилле [`http-io`](../http-io/SKILL.md):**
-> два бюджета (нагрузки и payload), curl-проба, спека провайдера (OpenAPI/AsyncAPI),
-> пацинг/бэкофф, классы отказа transient/permanent/quota, стаб в Compose, мост
-> «от curl к тестам с учётом формул». Этот скилл — **LLM-частности** поверх той
-> дисциплины: протокол, `response_format`, фан-аут ролей, фиксация ответов.
-> Зафиксировано на реальной реализации `LLMClient` (`internal/slice/<name>/io.go`,
-> девлог слайса).
+> **Shared outbound-HTTP discipline is in the [`http-io`](../http-io/SKILL.md) skill:**
+> two budgets (load and payload), curl probe, provider spec (OpenAPI/AsyncAPI),
+> pacing/backoff, transient/permanent/quota failure classes, stub in Compose, the
+> "from curl to tests with the formulas" bridge. This skill is the **LLM specifics**
+> on top of that discipline: protocol, `response_format`, role fan-out, fixing
+> responses. Anchored on a real `LLMClient` implementation
+> (`internal/slice/<name>/io.go`, slice devlog).
 
 ---
 
-## Протокол: OpenAI-совместимый слой, не нативный API
+## Protocol: OpenAI-compatible layer, not the native API
 
-Используем **OpenAI chat completions format** (`POST /v1/chat/completions`)
-даже для Anthropic. Причина: один код работает с любым провайдером —
-Anthropic, OpenAI, локальный Ollama, корпоративный прокси.
+Use the **OpenAI chat completions format** (`POST /v1/chat/completions`) even for
+Anthropic. Reason: one codebase works with any provider — Anthropic, OpenAI, local
+Ollama, corporate proxy.
 
 ```
 Anthropic base URL: https://api.anthropic.com/v1
@@ -28,27 +28,27 @@ Endpoint:          POST {base_url}/chat/completions
 Auth header:       Authorization: Bearer <key>
 ```
 
-Нативный Anthropic API (`POST /v1/messages`, заголовок `x-api-key`,
-поле `anthropic-version`) — **не используем**. Он даёт больше возможностей
-(thinking, citations), но ломает провайдер-агностичность.
+The native Anthropic API (`POST /v1/messages`, `x-api-key` header,
+`anthropic-version` field) is **not used**. It offers more (thinking, citations) but
+breaks provider-agnosticism.
 
-**Ловушка:** дефолтный `baseURL = "https://api.anthropic.com"` без `/v1`
-даёт `POST https://api.anthropic.com/chat/completions` — 404 или 400.
-Всегда включать `/v1` в `baseURL` (curl-проба ловит это до кода — см. `http-io`).
+**Trap:** a default `baseURL = "https://api.anthropic.com"` without `/v1` gives
+`POST https://api.anthropic.com/chat/completions` — 404 or 400. Always include `/v1`
+in `baseURL` (the curl probe catches this before code — see `http-io`).
 
-Машинная спека этого среза провайдера —
-`api-specification/providers/anthropic-openai-compat.openapi.yaml`
-(из неё выводятся структуры клиента и стаб; см. `http-io` → «Спека провайдера»).
+Machine spec of this provider slice —
+`api-specification/providers/anthropic-openai-compat.openapi.yaml` (client structs and
+stub derive from it; see `http-io` → "Provider spec").
 
 ---
 
-## Structured output — обязателен
+## Structured output — mandatory
 
-Без `response_format` модель оборачивает JSON в markdown-блок
-(` ```json ... ``` `), даже при явной инструкции «только JSON».
-Это ломает парсинг — формат вывода задаётся API-механизмом, не инструкцией в тексте.
+Without `response_format` the model wraps JSON in a markdown block
+(` ```json ... ``` `), even when explicitly told "JSON only". This breaks parsing —
+the output format is set by an API mechanism, not by an instruction in the text.
 
-**Правильный запрос для Anthropic (OpenAI-слой):**
+**Correct request for Anthropic (OpenAI layer):**
 
 ```json
 {
@@ -75,20 +75,20 @@ Auth header:       Authorization: Bearer <key>
 }
 ```
 
-**Ловушки `response_format` у Anthropic** (три итерации curl, зафиксированы в девлоге слайса):
+**`response_format` traps on Anthropic** (three curl iterations, recorded in the slice devlog):
 - `"type": "json_object"` → 400 `Input should be 'json_schema'`
-- Без `"strict": true` → 400 `Field required`
-- Без `"additionalProperties": false` → 400 при некоторых схемах
+- no `"strict": true` → 400 `Field required`
+- no `"additionalProperties": false` → 400 on some schemas
 
-С `json_schema + strict: true + additionalProperties: false` модель возвращает
-чистый JSON строкой в `choices[0].message.content` без обёрток.
+With `json_schema + strict: true + additionalProperties: false` the model returns
+clean JSON as a string in `choices[0].message.content`, no wrappers.
 
-**Fallback-парсинг** оставляем как второй эшелон — на случай провайдера, не
-поддерживающего `response_format`:
+**Fallback parsing** stays as a second echelon — for a provider that does not support
+`response_format`:
 
 ```go
-// extractJSON вырезает первый JSON-объект из строки ответа модели,
-// игнорируя markdown-обёртки и любой текст вокруг.
+// extractJSON cuts the first JSON object out of the model's response string,
+// ignoring markdown wrappers and any surrounding text.
 func extractJSON(s string) string {
     start := strings.Index(s, "{")
     end := strings.LastIndex(s, "}")
@@ -99,35 +99,34 @@ func extractJSON(s string) string {
 }
 ```
 
-`extractJSON` юнит-тестируется на фикстурах «чистый JSON» и «```json```-обёртка»
-(см. `http-io` → «От curl к тестам»).
+`extractJSON` is unit-tested on "clean JSON" and "```json``` wrapper" fixtures
+(see `http-io` → "From curl to tests").
 
 ---
 
-## Фан-аут по ролям-потребителям
+## Fan-out over consumer roles
 
-Если задача требует независимой оценки от лица нескольких потребителей,
-`Ask(PromptSet) -> []Verdict` делает **N независимых вызовов** (по одному на роль),
-каждый — один и тот же входной корпус под своим промптом роли. Результаты
-**не усредняются** — N независимых score.
+If a task needs an independent assessment from several consumers,
+`Ask(PromptSet) -> []Verdict` makes **N independent calls** (one per role), each over
+the same input corpus under its own role prompt. Results are **not averaged** — N
+independent scores.
 
-Например, роли maintainer / consumer / manager / agent — каждая смотрит на
-один и тот же корпус документации со своей точки зрения. Число и состав ролей
-зависят от слайса; сама схема «один корпус → N промптов → N независимых вердиктов»
-универсальна.
+For example, roles maintainer / consumer / manager / agent each look at the same
+documentation corpus from their own viewpoint. The count and set of roles depend on
+the slice; the scheme "one corpus → N prompts → N independent verdicts" is universal.
 
-Это N последовательных вызовов → попадает прямо под бюджет нагрузки и пацинг из
-[`http-io`](../http-io/SKILL.md): `N × токены/вызов ≤ TPM`, пауза/бэкофф между
-вызовами. Промпты ролей — в конфиге (`prompts:`), дорабатываются без пересборки.
+These are N sequential calls → they fall straight under the load budget and pacing from
+[`http-io`](../http-io/SKILL.md): `N × tokens/call ≤ TPM`, pause/backoff between calls.
+Role prompts live in config (`prompts:`), tunable without a rebuild.
 
 ---
 
-## Стаб: различение ролей маркером `role:<key>`
+## Stub: distinguishing roles by a `role:<key>` marker
 
-Общая механика стаба (отдельный HTTP-сервис в Compose, тот же эндпоинт,
-`POST /control` для режима) — в [`http-io`](../http-io/SKILL.md). LLM-специфика:
-стаб различает вердикт по роли через маркер `role:<key>` в теле промпта.
-**Дефолтные промпты обязаны нести этот маркер.**
+Shared stub mechanics (a separate HTTP service in Compose, same endpoint,
+`POST /control` for the mode) are in [`http-io`](../http-io/SKILL.md). LLM specific: the
+stub tells verdicts apart by role via a `role:<key>` marker in the prompt body.
+**Default prompts MUST carry this marker.**
 
 ```go
 func detectRole(r *http.Request) string {
@@ -142,23 +141,23 @@ func detectRole(r *http.Request) string {
 }
 ```
 
-Реальный провайдер маркер игнорирует; стаб реагирует детерминированно. Это даёт
-специфицировать независимость и не-усреднение score по ролям. Дополнительный
-LLM-режим стаба `markdown_fenced` (вердикт в ```json```-обёртке) специфицирует,
-что клиент обязан справляться с ответом без `response_format`.
+The real provider ignores the marker; the stub reacts deterministically. This lets you
+specify role independence and the non-averaging of scores. An extra LLM stub mode
+`markdown_fenced` (verdict in a ```json``` wrapper) specifies that the client MUST cope
+with a response that has no `response_format`.
 
 ---
 
-## Тестовые данные: фиксировать реальные ответы модели
+## Test data: fix real model responses
 
-При первом успешном прогоне на реальной модели — сохранить ответ в
+On the first successful run against a real model — save the response to
 `component-tests/testdata/real-responses/<repo>-<slice>.json`:
 
 ```json
 {
   "_meta": {
     "source": "real Sonnet (claude-sonnet-4-6)",
-    "repo": "<целевой репозиторий>",
+    "repo": "<target repository>",
     "docs_checked": ["README.md", "CLAUDE.md", "CONTRIBUTING.md", "AGENTS.md"],
     "date": "YYYY-MM-DD"
   },
@@ -166,66 +165,64 @@ LLM-режим стаба `markdown_fenced` (вердикт в ```json```-обё
 }
 ```
 
-На основе этих данных — отдельный режим стаба (`good_repo`, `bad_repo`): стаб
-возвращает зафиксированные вердикты детерминированно, воспроизводя поведение
-реальной модели без сети. Покрыть минимум два варианта:
-- **Хороший вход** (часть ролей FAIL/PARTIAL — это норма, не провал);
-- **Плохой вход** (все роли FAIL, score 2-3, gaps про отсутствие содержимого).
+From this data — a dedicated stub mode (`good_repo`, `bad_repo`): the stub returns the
+fixed verdicts deterministically, reproducing real-model behavior without the network.
+Cover at least two variants:
+- **Good input** (some roles FAIL/PARTIAL — this is normal, not a failure);
+- **Bad input** (all roles FAIL, score 2–3, gaps about missing content).
 
 ---
 
-## STOP-правила
+## STOP rules
 
-Останавливайся и спрашивай оператора, не угадывай:
+Stop and ask the operator, don't guess:
 
-- Провайдер не поддерживает `response_format` / `json_schema` (curl показал 400)
-  → STOP, согласуй fallback-стратегию (`extractJSON` как второй эшелон — решение,
-  не молчаливый дефолт).
-- Структура ответа не совпала с зафиксированной спекой провайдера
-  (`api-specification/providers/<name>.openapi.yaml`) → STOP: клиент и стаб должны
-  выводиться из одного контракта.
-- Нет реального ответа модели для фиксации в фикстуру
-  (`testdata/real-responses/`) → STOP, получи прогон на реальной модели: стаб
-  воспроизводит зафиксированный ответ, а не выдуманный.
+- Provider does not support `response_format` / `json_schema` (curl showed 400) → STOP,
+  agree the fallback strategy (`extractJSON` as a second echelon is a decision, not a
+  silent default).
+- Response shape did not match the fixed provider spec
+  (`api-specification/providers/<name>.openapi.yaml`) → STOP: client and stub must
+  derive from one contract.
+- No real model response to fix into a fixture (`testdata/real-responses/`) → STOP, get
+  a run on a real model: the stub reproduces a fixed response, not an invented one.
 
-## Чеклист LLM-специфики
+## LLM-specific checklist
 
-(общий чеклист исходящего HTTP — в [`http-io`](../http-io/SKILL.md))
+(the general outbound-HTTP checklist is in [`http-io`](../http-io/SKILL.md))
 
-- [ ] протокол — OpenAI chat completions; `baseURL` с `/v1`; `Authorization: Bearer`
+- [ ] protocol — OpenAI chat completions; `baseURL` with `/v1`; `Authorization: Bearer`
 - [ ] `response_format.type = "json_schema"` + `strict: true` + `additionalProperties: false`
-- [ ] fallback `extractJSON` после `response_format`, юнит-тест на чистый + fenced
-- [ ] фан-аут ролей (если он есть в слайсе); вердикты не усредняются; промпты ролей в конфиге
-- [ ] дефолтные промпты несут маркер `role:<key>`; стаб различает роль по нему
-- [ ] LLM-режим стаба `markdown_fenced`
-- [ ] реальные ответы сохранены в `testdata/real-responses/`; режимы `good_repo`/`bad_repo`
+- [ ] fallback `extractJSON` after `response_format`, unit test on clean + fenced
+- [ ] role fan-out (if the slice has it); verdicts not averaged; role prompts in config
+- [ ] default prompts carry the `role:<key>` marker; stub tells the role by it
+- [ ] LLM stub mode `markdown_fenced`
+- [ ] real responses saved in `testdata/real-responses/`; modes `good_repo`/`bad_repo`
 
 ---
 
-## Перед коммитом
+## Before commit
 
-Два обязательных шага — системные ошибки CI из практики (общие для всех слайсов,
-здесь — потому что новая зависимость и I/O появились именно тут):
+Two mandatory steps — systemic CI failures from practice (common to all slices, here
+because the new dependency and I/O appeared exactly here):
 
 **1. gofmt**
 
 ```bash
-gofmt -l ./internal/slice/<name>/     # пусто = чисто; иначе gofmt -w
+gofmt -l ./internal/slice/<name>/     # empty = clean; otherwise gofmt -w
 ```
 
-Проверять все `.go`-файлы слайса перед каждым коммитом. gofmt-ошибка в CI —
-признак пропущенного шага, а не нового правила.
+Check every `.go` file of the slice before each commit. A gofmt failure in CI is a sign
+of a skipped step, not a new rule.
 
-**2. go.sum в Dockerfile**
+**2. go.sum in the Dockerfile**
 
-Если в слайсе появилась новая зависимость (`go.mod` изменился):
-- `go.sum` закоммичен (`git add go.sum`);
-- `Dockerfile.runtime` копирует оба файла:
+If the slice gained a new dependency (`go.mod` changed):
+- `go.sum` committed (`git add go.sum`);
+- `Dockerfile.runtime` copies both files:
   ```dockerfile
   COPY go.mod go.sum ./
   RUN go mod download
   ```
 
-Без `go.sum` в образе `go build` падает с
-`missing go.sum entry for module providing package <dep>`
-даже если go.sum есть в репозитории.
+Without `go.sum` in the image, `go build` fails with
+`missing go.sum entry for module providing package <dep>` even if go.sum is in the repo.

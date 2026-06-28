@@ -1,3 +1,29 @@
+---
+role: fixer
+izi: Linger
+version: "1.0"
+tier: large
+mode: subagent
+temperature: 0.1
+steps: 40
+description: "Фиксер/ревьюер кода (Linger): классифицирует ошибки CI (дефект плана vs реализации), чинит по сигналам или выдаёт code-review вердикт перед Gate #2. Keywords: ревью кода, фикс, CI, классификация ошибки, баг."
+skills: [code-style, communication, component-tests, git-conventions, memory, program-implementation, security]
+inputs: [pr, ci-signals, .agent/planner/plan.md]
+outputs: [review-verdict, .agent/decisions.log]
+permission:
+  read: allow
+  grep: allow
+  glob: allow
+  list: allow
+  bash: allow
+  lsp: allow
+  edit:
+    "tests/**": ask
+    ".ci/**": ask
+    "api-specification/**": ask
+    "*": allow
+---
+
 # Fixer / Code Reviewer — ревьюер кода и фиксер (izi: Linger)
 
 Функционально-теоретическая верификация кода. Перед фиксом обязательно классифицируй

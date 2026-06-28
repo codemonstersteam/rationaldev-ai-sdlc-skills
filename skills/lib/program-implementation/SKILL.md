@@ -1,90 +1,61 @@
 ---
 name: program-implementation
-description: Реализация программы по тикетам через Trunk Based Development. Применять, когда есть пакет проектной документации `.agent/planner/design/<slug>/` с зааппрувленным оператором хендофф-чеклистом, и нужно реализовать срезы по одному (один тикет = один slice = одна ветка = один PR). Не применять, если пакет неполный, чеклист не зааппрувлен оператором, или обнаружено противоречие в спецификации — остановиться и сообщить. Рассчитан на слабую модель (Qwen3.5-397B-A17B, ~17B активных параметров): пошаговые шаги, чеклисты-гейты, STOP-правила.
+description: Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong, e.g. GLM / Qwen through Opus): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum.
 version: "1.0"
 ---
 
-# program-implementation.skill — Реализация программы по тикетам, через Trunk Based Development
+# program-implementation — implement a program ticket by ticket (TBD)
 
-## Назначение
+The implementer's skill. **In:** the design package `.agent/planner/design/<slug>/` from
+the planner. **Out:** the program merged into main, slice by slice.
 
-Скилл для исполнителя. На вход — пакет `.agent/planner/design/<slug>/` от проектировщика.
-На выход — реализация программы, влитая в main по тикетам.
+> Roles are work modes, not necessarily different models — one model can play both in
+> sequence. What matters is the artifact handoff (an approved design package), not a
+> model switch. Method: TBD, **one ticket = one slice = one branch = one PR**.
 
-> Роли — это режимы работы, не обязательно разные модели. Одна модель
-> (например, Qwen3.5-397B-A17B, ~17B активных) может исполнять обе роли
-> последовательно; важен артефакт-хендофф (пакет дизайна с отметкой
-> аппрува), а не смена модели.
+## Scope
 
-Метод: TBD + один тикет = один slice = одна ветка = один PR.
+**DO:** implement exactly what the ticket says; run the TBD cycle per ticket; stop and
+report on an incomplete spec or a contradiction.
+**DON'T (MUST NOT):** change module contracts without the operator; implement several
+slices in one branch; make unrelated "drive-by" improvements; make architecture decisions
+— on a fork in the road, you **MUST** stop and ask.
 
-## Зона ответственности
+## Steps of one ticket
 
-DO:
-- Реализовывать ровно то, что в тикете.
-- Идти TBD-циклом для каждого тикета.
-- Останавливаться и сообщать, если спецификация неполная или
-  обнаружено противоречие.
-
-DON'T:
-- Менять контракты модулей без согласования с оператором.
-- Реализовывать сразу несколько slice'ов в одной ветке.
-- Делать «попутные улучшения», не относящиеся к тикету.
-- Принимать архитектурные решения. Если возникает развилка — стоп, спросить.
-
-## Шаги одного тикета
-
-| Шаг | Что делает | Выход |
+| Step | Does | Out |
 |---|---|---|
-| 0 | Проверить хендофф пакета (один раз на пакет) | `[x]` на строке аппрува подтверждён |
-| 1 | Подтянуть main, создать ветку | ветка `feat/slice-<name>` от свежего main |
-| 2 | Прочитать спецификацию slice'а | понятые контракты, граф, Gherkin-mapping |
-| 3 | Реализация по формуле (восходящий порядок) | модули + юнит-тесты, все сценарии slice'а зелёные |
-| 4 | Прогнать локальный CI (4 шага) | gofmt/vet/юниты/компонент — зелёные |
-| 5 | Отметить тикет в `backlog.md` | пункты Definition of Done = `[x]` |
-| 6 | Записать в `devlog.md` | блок тикета добавлен |
-| 7 | Pre-push гейт: grep-самопроверка + сводка | дисциплина чиста, ждём «пушим» |
-| 8 | Commit, push, открыть PR, уведомить | PR открыт, URL в чате |
-| 9 | Дождаться мержа, подтянуть main, следующий тикет | тикет закрыт, main зелёный |
+| 0 | Verify package handoff (once per package) | approval line confirmed `[x]` |
+| 1 | Pull main, create branch | `feat/slice-<name>` off fresh main |
+| 2 | Read the slice spec | contracts, call graph, Gherkin-mapping understood |
+| 3 | Implement by formula (bottom-up) | modules + unit tests, slice scenarios green |
+| 4 | Run local CI (4 steps) | gofmt/vet/unit/component green |
+| 5 | Tick the ticket in `backlog.md` | DoD items `[x]` |
+| 6 | Write the devlog | ticket block added |
+| 7 | Pre-push gate: grep self-check + summary | discipline clean, await "push" |
+| 8 | Commit, push, open PR, notify | PR open, URL in chat |
+| 9 | Await merge, pull main, next ticket | ticket closed, main green |
 
-### Шаг 0. Проверить хендофф (выполняется один раз, при старте работы над пакетом)
+### Step 0. Verify handoff (once per package, at start)
 
-Прежде чем брать первый тикет — открыть **в main** `.agent/planner/design/<slug>/backlog.md`,
-найти раздел `## Хендофф-чеклист`. Все пункты должны быть `[x]`,
-включая **последнюю строку** в строгом формате:
+Before the first ticket, open `.agent/planner/design/<slug>/backlog.md` **in main**, find
+`## Хендофф-чеклист`. Every item must be `[x]`, including the **last line**:
 
 ```
 - [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
 ```
 
-Эта строка — единственный детерминированный признак, что пакет принят.
-Заполняется проектировщиком при открытии дизайн-PR; **акт мержа дизайн-PR =
-аппрув оператора** (если оператор не согласен с дизайном, он не мержит,
-а оставляет ревью с правками; проектировщик пересобирает пакет). Отдельной
-post-merge ceremonии флипа нет — `[x]` уже стоит на момент создания PR
-и переезжает в main вместе с мержем.
+This line is the **only** deterministic sign the package is accepted (merging the design
+PR = operator approval; see `program-design` Step 12). Without `[x]` on it — or if it's
+missing — you **MUST NOT** start, even if every other item is `[x]`.
 
-Без `[x]` на последней строке (или если строки нет) исполнитель **не начинает
-работу**, даже если все остальные пункты `[x]`.
+- No checklist → package not ready → stop, report.
+- `[ ]` on the approval line → design PR not merged / line not filled → stop, report.
+- `[ ]` on any other item → planner left it open deliberately; check the slice card's
+  "Решения по дизайну" for the rationale; if none → stop, report.
+- All `[x]` with handle + date → proceed to Step 1.
 
-- Если чеклист отсутствует — пакет не готов. Остановиться, сообщить
-  оператору. Без чеклиста начинать нельзя: без согласованного
-  `contracts-graph.md` и зафиксированных контрактов исполнитель будет
-  упираться в расхождения на каждом тикете.
-- Если в main стоит `[ ]` на последней строке аппрува — дизайн-PR
-  ещё не смержен либо проектировщик забыл заполнить строку перед пушем.
-  Остановиться, сообщить оператору.
-- Если в чеклисте есть `[ ]` на любом другом пункте (не строка аппрува)
-  — проектировщик сознательно оставил позицию незакрытой (расхождение со скиллом,
-  отложенное решение оператора и т.п.). Открыть карточку слайса,
-  раздел «Решения по дизайну» — там должно быть обоснование. Если
-  обоснования нет — остановиться, сообщить оператору.
-- Если все `[x]` и последняя строка содержит handle и дату — продолжаем
-  со Шага 1.
-
-Этот шаг выполняется **один раз** на весь пакет, не на каждый тикет.
-
-### Шаг 1. Подтянуть main и создать ветку
+### Step 1. Pull main and create a branch
 
 ```bash
 git checkout main
@@ -92,454 +63,237 @@ git pull --ff-only origin main
 git checkout -b feat/slice-<name>
 ```
 
-Главное правило: новая ветка всегда от свежего main. Никаких ответвлений
-от вчерашних веток.
+Rule: a new branch is **always** off fresh main — never off yesterday's branch.
 
-### Шаг 2. Прочитать спецификацию slice'а
+### Step 2. Read the slice spec
 
-- `.agent/planner/design/<slug>/slices/<n>-<name>.md` — дерево модулей и контракты;
-  здесь же раздел **`## Gherkin-mapping`** — таблица сверки Then-шагов
-  Gherkin-сценариев slice'а с узлами графа (Шаг 8.3 скилла проектировщика)
-- `.agent/planner/design/<slug>/messages.md` — структуры данных
-- `.agent/planner/design/<slug>/contracts-graph.md` — **граф вызовов и согласованность контрактов**
-- `component-tests/features/*.feature` — компонентные сценарии slice'а
-  (исполняемая спецификация); читаются вместе с таблицей `## Gherkin-mapping`
-- `AGENTS.md`, `CLAUDE.md` — конвенции репозитория
+- `slices/<n>-<name>.md` — module tree, contracts, and the **`## Gherkin-mapping`** table
+  (each Gherkin Then-step → call-graph node);
+- `messages.md` — data structures;
+- `contracts-graph.md` — **call graph + contract consistency** (the source of truth on
+  what passes to what; if a module card and the graph disagree, the graph wins — it
+  passed the planner's check);
+- `component-tests/features/*.feature` — the slice's executable spec;
+- `AGENTS.md`, `CLAUDE.md` — repo conventions.
 
-`contracts-graph.md` — основной источник истины о том, **что чему передаётся**
-между модулями slice'а. Если в карточке модуля написано одно, а в графе
-вызовов — другое, прав граф (он прошёл сверку проектировщика).
+You **MUST stop and report** on any contradiction, gap, or requirement that breaks the
+discipline — never implement "somehow". Triggers: a module too big for a one-phrase "what it does"; two
+I/O in one module; a logic module without antecedent/consequent; contracts disagreeing
+with `contracts-graph.md`; **a module with 2+ data args** (violates the planner's
+single-argument rule — `Input (data):` listing entities joined by "and"/","). Each → back
+to the planner's Step 3/9. Don't patch code to fit the graph ad hoc — fix the spec, then
+continue.
 
-Таблица `## Gherkin-mapping` — карта от модулей к Then-шагам Gherkin.
-Используется в Шаге 3 для прогона ровно тех сценариев, которые
-зеленит реализованный модуль.
+### Step 3. Implement by formula (bottom-up: leaves → root)
 
-Если в спецификации обнаружено противоречие, недосказанность или
-требование, нарушающее принципы дисциплины — **остановиться и сообщить**.
-Не реализовывать «как-нибудь». Конкретные триггеры остановки:
+1. **Messages:** `Request` (public fields, no rules) and domain structs (`Command`,
+   `Entity`) with **unexported fields**.
+2. **Domain constructors** `NewT(raw) -> (T, error)` — check the antecedent; invalid data →
+   error, struct not built. This is the slice's **only** validation point.
+3. **Logic modules** — pure functions over already-validated structs.
+4. **I/O modules** — one per external operation (DB read/write, broker publish, REST call).
+   Each is an **autonomous object encapsulating its dependency**; the head knows only its
+   methods, not the dependency:
 
-- большой модуль, не помещающийся в одну фразу «что делает»;
-- два I/O в одном модуле (одна внешняя зависимость + один режим работы
-  на модуль — см. Шаг 6 скилла проектировщика);
-- отсутствие антецедента или консеквента у модуля логики;
-- рассогласование контрактов с графом (`contracts-graph.md`);
-- **модуль с 2+ data-аргументами на входе** (нарушение «жёсткого
-  правила одного аргумента» — Шаг 3 скилла проектировщика). Признак: в
-  сигнатуре или в графе у узла больше одной стрелки-входа,
-  не считая deps. Признак-приметка в шаблоне Шага 5: строка
-  `Input (data):` содержит «и», «,» между сущностями. Это сигнал,
-  что проектировщик пропустил введение доменной сущности — возврат на его
-  Шаг 3.
-
-**Особое правило про расхождения с графом контрактов.** Если по ходу
-реализации обнаружено, что сигнатура модуля по графу не стыкуется
-с реальностью (возвращаемая структура не подходит вызывающему,
-тип ошибки не разбирается, антецедент следующего модуля сильнее
-консеквента предыдущего) — это **архитектурное расхождение**.
-Не подгоняем код под граф ad hoc, не «починим в реализации» —
-останавливаемся, сообщаем оператору, проектировщик возвращается на свой
-Шаг 9 и перепроверяет согласованность. После правки графа исполнитель
-продолжает.
-
-### Шаг 3. Реализация по формуле
-
-Восходящий порядок (от листьев дерева к корню):
-
-1. Структуры сообщений: `Request` (публичные поля, без правил) и
-   доменные структуры (`Command`, `Entity`) — **с неэкспортируемыми
-   полями**.
-2. **Конструкторы доменных структур** — `NewT(raw) -> (T, error)`.
-   Проверяют антецедент: невалидные данные → ошибка, структура не
-   создаётся. Это точка валидации slice'а; никакой валидации больше
-   нигде нет.
-3. Модули логики slice'а — чистые функции над уже валидированными
-   доменными структурами (листья → узлы выше).
-4. Модули I/O slice'а (по одному на каждую внешнюю операцию: чтение БД,
-   запись БД, публикация в брокер, вызов внешнего REST). Их может быть
-   несколько — это нормально, см. Шаг 6 скилла проектировщика.
-
-   **Правило автономного IO-объекта.** Каждый I/O-модуль оборачивается
-   в объект, который **инкапсулирует свою зависимость**. Головной модуль
-   знает только методы объекта (API), не его зависимости. Имя объекта
-   отражает тип интеграции:
-
-   | Интеграция | Имя объекта | Зависимость |
+   | Integration | Object | Dependency (hidden inside) |
    |---|---|---|
-   | База данных | `Store` | `*sql.DB` |
-   | Внешний HTTP API | `Client` | `*http.Client` + baseURL |
-   | Брокер сообщений | `Publisher` / `Consumer` | соединение брокера |
-
-   Форма реализации (на примере Store):
+   | Database | `Store` | `*sql.DB` |
+   | External HTTP API | `Client` | `*http.Client` + baseURL |
+   | Message broker | `Publisher` / `Consumer` | broker connection |
 
    ```go
-   // io.go
    type Store struct{ db *sql.DB }
    func NewStore(db *sql.DB) Store { return Store{db: db} }
    func (s Store) Save(msg DomainMessage) error { ... }
 
-   // register.go — Deps содержит объект, а не его зависимость
-   type Deps struct {
-       Store  Store   // или Client, Publisher — по типу интеграции
-       Clock  clock.Clock
-       // ...
-   }
-
-   // wire.go или NewDeps — зависимость скрывается здесь
-   func NewDeps(db *sql.DB, ...) Deps {
-       return Deps{Store: NewStore(db), ...}
-   }
+   type Deps struct { Store Store; Clock clock.Clock }   // the object, not its dependency
+   func NewDeps(db *sql.DB) Deps { return Deps{Store: NewStore(db)} }   // dependency hidden here
    ```
 
-   Признак нарушения: сырая зависимость (`*sql.DB`, `*http.Client`)
-   в `head.go` или в `Deps` напрямую. Если видишь — исправить до коммита.
+   Violation sign: a raw `*sql.DB`/`*http.Client` in `head.go` or `Deps` → fix before
+   commit. **Empty-pipe rule:** an I/O method takes a domain message → calls the external
+   system → returns result or error; no data branching, the only mapping is external code →
+   domain error (`SQLITE_BUSY → ErrDBLocked`).
+5. **Head module** — orchestrator: calls the command constructor, then the pipe of logic
+   and I/O modules.
+6. **Ingress adapter** — parsing only (external input → `Request`), no business validation;
+   form (HTTP/Broker/gRPC/CLI) from the slice card.
+7. **Wire the slice to its entry point** in the app infrastructure module (route / topic /
+   gRPC handler / CLI command). One per program — not the slice head.
 
-   **Правило пустой трубы.** IO-модуль не содержит бизнес-логики.
-   Внутри метода: взять доменное сообщение → вызвать внешнюю систему →
-   вернуть результат или ошибку. Никаких условных ветвлений по данным,
-   никаких трансформаций. Единственное допустимое ветвление —
-   маппинг кодов ошибок внешней системы на доменные ошибки
-   (`SQLITE_BUSY → ErrDBLocked`). Вся бизнес-логика живёт в модулях
-   логики (шаг 3), не здесь. IO-модули тестируются только компонентными
-   тестами — юнит-тесты на них не пишутся.
+**What gets unit tests:** only constructors and logic modules (steps 2–3), by the formula
+`1 happy + Σ antecedent branches`. The head, ingress adapter and I/O modules **MUST NOT** be
+unit-tested — they're glue/pipes, proven by component scenarios through the real input. A
+unit test against in-memory SQLite is a small integration test, not a unit. **No mocks
+(MUST NOT):** unit tests use only real objects (pure functions, domain structs); if a test needs an
+external dependency, it's a component test.
 
-5. **Головной модуль slice'а** — оркестратор: вызывает конструктор
-   доменной команды (получает либо команду, либо ошибку), описывает
-   пайп исполнения, вызывает модули логики и I/O.
-6. **Ингресс-адаптер slice'а** — только парсинг: внешний вход → `Request`.
-   Никакой бизнес-валидации. Конкретная форма: HTTP handler / Broker
-   listener / gRPC handler / CLI command — берётся из карточки slice'а.
-7. **Подключение slice'а к его типу входа в инфраструктурном модуле
-   приложения**: регистрация HTTP-роута, подписка на топик/очередь
-   брокера, регистрация gRPC-handler'а или CLI-команды. Один на всю
-   программу, не путать с головным модулем slice'а.
+**Green map — the `## Gherkin-mapping` table.** Written by the planner (Step 8.3), it ties
+each Then-step to the node that turns it green. Use it as deterministic feedback —
+"implemented X → scenario Y must go green" — with no guessing:
 
-На конструкторах и модулях логики (шаги 2–3):
+1. constructor / logic module done → run the scenarios in its rows (none → it's unit-only);
+2. I/O Success-branch wired into the head → run the happy scenarios listing it;
+3. I/O Failure-branch + adapter mapping → run the failure scenario for that error class;
+4. by the end of Step 3, **every table row is closed and all the slice's component
+   scenarios are green**.
 
-- сначала юнит-тесты по формуле (happy + ветки антецедента);
-- затем реализация, до зелёных юнит-тестов;
-- никаких лишних веток, не описанных в контракте.
+If a component scenario won't go green while unit tests pass and the table says the node is
+done — **the problem is the spec, not the code** (slice contract vs OpenAPI/AsyncAPI, a
+path missed in `contracts-graph.md`, or a row pointing at a non-existent node) → stop,
+report, planner revisits Step 8.3/9. If a unit test is red due to a bug in the test itself,
+fix the test.
 
-Головной модуль (шаг 5), ингресс-адаптер (шаг 6) и I/O-модули (шаг 4)
-юнит-тестами **не покрываются**. Головной модуль — склейка уже
-протестированных частей; его корректность доказывается компонентным
-сценарием через реальный вход. I/O и ингресс-адаптер — трубы,
-проверяются компонентными тестами.
+### Step 4. Run local CI
 
-**Никаких моков.** Юнит-тесты работают только с реальными объектами
-(чистые функции, доменные структуры). Если тест требует внешней
-зависимости — это не юнит, это компонентный тест.
-
-**TDD outside-in поверх slice'а.** Компонентный Gherkin-сценарий для
-этого slice'а **уже написан** (этап проектировщика + скилл компонентных тестов
-до начала реализации). До начала Шага 3 он красный — slice ещё
-не реализован. По мере того как исполнитель реализует модули по списку
-выше, сценарий проходит от **красного к зелёному**.
-
-Главный навигационный артефакт здесь — **таблица `## Gherkin-mapping`**
-в карточке slice'а (`.agent/planner/design/<slug>/slices/<n>-<name>.md`,
-сделана проектировщиком на Шаге 8.3). В ней для каждого Then-шага каждого
-сценария явно указан узел графа (модуль / маппинг адаптера),
-который этот Then зеленит. Исполнитель использует таблицу как «карту
-зелёного»: реализовал узел X — нашёл в таблице все строки с этим X —
-прогнал ровно те сценарии, которые эти строки покрывают.
-
-Алгоритм:
-
-1. Реализован конструктор / модуль логики → найти в таблице строки
-   с этим узлом → прогнать соответствующие Gherkin-сценарии. Если строк
-   нет — узел не виден в Gherkin (нормально для чистых конструкторов;
-   их зеленят юниты).
-2. Реализован I/O-модуль (Success-ветка) и подключён в головном модуле
-   slice'а → запустить happy-path сценарии, в чьих строках этот I/O
-   фигурирует. Должны позеленеть.
-3. Реализована Failure-ветка I/O-модуля + соответствующий маппинг
-   в ингресс-адаптере → запустить сценарий отказа, в чьих строках стоит
-   этот класс ошибки. Должен позеленеть.
-4. К концу Шага 3 **все строки таблицы `## Gherkin-mapping` закрыты,
-   все компонентные сценарии этого slice'а зелёные**.
-
-Это даёт детерминированную обратную связь: «реализовал X → должен
-позеленеть сценарий Y» прямо из таблицы, без догадок.
-
-Если компонентный сценарий зелёным не становится, а юнит-тесты модулей
-зелёные и таблица `## Gherkin-mapping` говорит, что узел реализован —
-**проблема не в коде, а в спецификации**: либо контракт slice'а
-не соответствует тому, что обещано в OpenAPI/AsyncAPI, либо
-`contracts-graph.md` не учёл какой-то путь, либо строка таблицы
-указывает на несуществующий узел. Стоп, сообщить оператору,
-проектировщик возвращается на Шаг 8.3 / Шаг 9 проверить согласованность.
-
-Если юнит-тест красный потому, что в самом тесте ошибка — править тест.
-Если контракт явно противоречит реальности — стоп, сообщить (см. Шаг 2).
-
-Конструкторы доменных структур — главный объект юнит-тестирования
-slice'а. Они инкапсулируют все правила валидации, по формуле получают
-«1 happy + по тесту на каждую ветку антецедента». Модули логики —
-чистые функции, тестируются по той же формуле (обычно только happy,
-если антецедент тривиален). Головной модуль, ингресс-адаптер и
-инфраструктурный модуль юнит-тестами не покрываются — только
-компонентные тесты через реальный вход.
-
-### Шаг 4. Прогнать локальный CI
-
-**Локальный CI** — четыре шага, зеркалящие `.github/workflows/ci.yml`.
-Все четыре обязательны **до** отчёта оператору. Пропустить любой = CI на PR упадёт.
+Four steps mirroring `.github/workflows/ci.yml`, all mandatory **before** reporting —
+skipping any means the PR's CI fails:
 
 ```bash
-# 1. Форматирование — должно вернуть пустой вывод
-unformatted=$(gofmt -l .); [ -n "$unformatted" ] && echo "$unformatted" && exit 1
-
-# 2. Статический анализ
-go vet ./...
-
-# 3. Юнит-тесты
-go test ./...
-
-# 4. Компонентные тесты
-./component-tests/scripts/run-tests.sh healthy
+unformatted=$(gofmt -l .); [ -n "$unformatted" ] && echo "$unformatted" && exit 1   # 1. format
+go vet ./...                                                                          # 2. static
+go test ./...                                                                         # 3. unit
+./component-tests/scripts/run-tests.sh healthy                                        # 4. component
 ```
 
-Не останавливаться после шага 3 — компонентные тесты обязательны.
-Не пропускать шаги 1–2 — они первые в CI и валят PR независимо от тестов.
+**Green before review:** gofmt empty, vet clean, unit all green, component green for the
+**current and all prior** slices. Red is allowed only for not-yet-implemented slices
+(expected 404 on unwired routes); a red scenario of an implemented slice → stop.
 
-**Критерий зелёного состояния перед ревью:**
+- Unit red: bug in the module → fix code (not the contract); bug in the test → fix the test;
+  contract contradicts callers → stop, report (Step 2).
+- Component red on the current slice: modules done but the slice won't assemble → check head
+  + adapter; scenario expects undescribed behavior → stop, planner revisits Step 9.
 
-- gofmt: пустой вывод (нет неформатированных файлов).
-- go vet: нет замечаний.
-- Юнит-тесты: все зелёные.
-- Компонентные тесты: зелёные сценарии **текущего slice'а** и всех
-  ранее реализованных slice'ов. Красные — только сценарии ещё не
-  реализованных slice'ов (ожидаемые 404 на не подключённых роутах).
-  Красный сценарий реализованного slice'а — стоп, разобраться.
+### Step 5. Tick the ticket in backlog.md
 
-Если **юнит-тест** красный:
-- ошибка в реализации модуля → править реализацию, не трогая контракт;
-- ошибка в самом тесте (опечатка, неверное ожидание) → править тест;
-- контракт модуля противоречит вызывающим модулям → стоп, сообщить
-  (см. правило про расхождения в Шаге 2).
-
-Если **компонентный тест** красный на сценарии текущего slice'а:
-- модули реализованы, но slice не складывается → проверить головной
-  модуль и ингресс-адаптер;
-- сценарий ожидает поведение, не описанное в спецификации → стоп,
-  сообщить, проектировщик возвращается на Шаг 9 (`contracts-graph.md`).
-
-### Шаг 5. Отметить тикет в backlog.md
+Update the checklist **per confirmed item, not one batch at the end** — backlog is the only
+source of truth on status.
 
 ```diff
-- [ ] компонентные тесты режимов отказа зелёные
-+ [x] компонентные тесты режимов отказа зелёные
+- [ ] failure-mode component tests green
++ [x] failure-mode component tests green
 ```
 
-Чек-лист обновляется по каждому подтверждённому пункту, **не одним батчем
-в конце**. Backlog — единственный источник истины о статусе.
+### Step 6. Write the devlog
 
-### Шаг 6. Записать в devlog
-
-`.agent/planner/design/<slug>/devlog.md` — журнал реализации, по одному блоку
-на тикет, в порядке закрытия. Исполнитель добавляет блок текущего тикета
-**после** того как локальный CI стал зелёным, и **до** подготовки
-коммита (чтобы devlog попал в этот же коммит).
-
-Формат блока:
+`.agent/planner/design/<slug>/devlog.md` — one block per ticket, in close order, added
+**after** local CI is green and **before** preparing the commit (so it lands in the same
+commit). For humans, not CI; 5–15 lines.
 
 ```
-## S<n> — <идентификатор входа> (<YYYY-MM-DD>)
+## S<n> — <input id> (<YYYY-MM-DD>)
 
-**Что сделано:** одна-две фразы по сути изменения.
-
-**Решения, принятые по ходу:** локальные решения, которые не меняют
-архитектуру, но которые читателю через год полезно знать. Если
-решений не было — пропустить раздел.
-
-**Что застряло:** если исполнитель останавливался на расхождении и проектировщик
-правил `contracts-graph.md` — короткое описание ситуации. Если
-не застрял — пропустить раздел.
-
-**Тесты:** юниты <число>, покрытие <%>. Компонентные сценарии:
-<имена сценариев>, все зелёные.
+**Что сделано:** one or two phrases.
+**Решения по ходу:** local decisions worth knowing in a year (skip if none).
+**Что застряло:** if you stopped on a mismatch and the planner fixed the graph (skip if none).
+**Тесты:** units <n>, coverage <%>. Component scenarios: <names>, all green.
 ```
 
-Devlog — для людей, не для CI. Длина блока — 5–15 строк.
+### Step 7. Pre-push gate: discipline self-check + operator summary
 
-### Шаг 7. Pre-push гейт: самопроверка дисциплины + сводка оператору
+Last sanity gate before pushing. Run four grep self-checks, prepare the commit message, post
+a short summary in chat, await "push". Goal: catch discipline violations and commit-message
+typos **before** they go public (push triggers CI; undoing a pushed message is a force-push).
+**Don't dump the full diff** — it's in the PR; the terminal gets only the summary.
 
-Прежде чем пушить ветку наружу — последний sanity gate. Исполнитель прогоняет
-четыре grep-самопроверки (правила дисциплины), готовит сообщение коммита
-и собирает короткую сводку в чат. Ждёт «пушим» от оператора.
-
-Цель этого гейта — **поймать дисциплинарные нарушения и опечатки в
-commit-message до публичности** (push гонит CI; отозвать commit-сообщение
-после push'а — это force-push, что само по себе церемония). Полный diff
-в терминале **не выводим** — он есть в PR, и GitHub UI лучшая поверхность
-для построчного ревью. В терминале — только сводка.
-
-#### 7.1. Grep-самопроверка дисциплины
-
-Выполнить четыре команды. Каждая **должна вернуть пустой вывод**.
-Непустой вывод = нарушение = исправить до сводки. Без исключений.
+#### 7.1. Grep self-check — each **MUST** return empty (non-empty = violation = fix first)
 
 ```bash
-# 1. Head-модуль не знает про зависимости I/O.
-#    Если видишь sql/http/amqp/kafka — перенеси в IO-объект.
+# 1. Head knows no I/O deps — if you see sql/http/amqp/kafka, move it into the I/O object.
 grep -rn "database/sql\|net/http\|\"io\"\|amqp\|kafka" internal/slice/*/head.go
 
-# 2. Тесты не вызывают головной модуль.
-#    Head — склейка уже протестированных частей. Его корректность
-#    доказывает компонентный сценарий, а не юнит. Если видишь вызов
-#    Process*/Handle* в *_test.go — удалить весь блок теста.
-grep -rn "^func Test" internal/slice/*/*_test.go \
-  | grep -iE "Process|Handle|Head|Orchestrat"
+# 2. Tests don't call the head — its correctness is proven by a component scenario, not a
+#    unit. A Process*/Handle* call in *_test.go → delete the whole test block.
+grep -rn "^func Test" internal/slice/*/*_test.go | grep -iE "Process|Handle|Head|Orchestrat"
 
-# 3. Нет тест-дублей (stubs, fakes, mocks).
-#    Нельзя: type alwaysFailX struct{}, type mockDB struct{}.
-#    Единственное исключение — testClock (инъекция времени — стандарт Go).
-#    Если видишь любой другой тип-заглушку — удалить тест, который его требует.
-grep -rn "^type.*struct{}" internal/slice/*/*_test.go \
-  | grep -iv "testclock\|testClock"
+# 3. No test doubles (stubs/fakes/mocks). Only exception: testClock (time injection).
+grep -rn "^type.*struct{}" internal/slice/*/*_test.go | grep -iv "testclock\|testClock"
 
-# 4. Deps не содержит полей под подмену в тестах.
-#    Каждое поле Deps — одна реальная зависимость. Если поле нужно только
-#    чтобы в тесте подставить заглушку (Rand io.Reader, Persist func(...))
-#    — убрать поле, захардкодить реальную зависимость внутри функции.
+# 4. Deps has no fields for test substitution — each field is one real dependency.
 grep -n "func(" internal/slice/*/register.go
 ```
 
-**Типичная ловушка:** тесты головного модуля с реальным in-memory SQLite
-кажутся «честными» (не мок же!), но нарушают правило — головной модуль
-не тестируется юнитами **независимо от того, реальные ли зависимости**.
-Компонентный сценарий уже покрывает этот путь через реальный HTTP-вход.
+**Trap:** head tests against real in-memory SQLite feel "honest" (not a mock!) but still
+break the rule — the head is never unit-tested, regardless of real vs fake deps; the
+component scenario already covers that path through the real input.
 
-#### 7.2. Подготовить сообщение коммита
-
-Атомарный, в формате `<type>(<scope>): <subject>` (Conventional Commits,
-см. AGENTS.md §12):
+#### 7.2. Commit message — atomic, Conventional Commits (AGENTS.md §12)
 
 ```
-feat(slice-<name>): реализовать <идентификатор входа>
+feat(slice-<name>): implement <input id>
 
-- ингресс-адаптер <name>
-- модули <перечисление: конструкторы, логика, I/O>
-- юнит-тесты по формуле, покрытие 100%
-- компонентный тест happy + <режимы отказа> зелёные
-- backlog.md обновлён, devlog.md дополнен
+- ingress adapter <name>
+- modules <constructors, logic, I/O>
+- unit tests by formula, 100% coverage
+- component test: happy + <failure modes> green
+- backlog.md updated, devlog.md appended
 
 Closes S<n>
 ```
 
-Где `<идентификатор входа>` — то же, что в заголовке тикета: например,
-`HTTP POST /v1/registrations`, `Broker registrations.created`,
-`gRPC RegistrationService.Create`, `CLI registrations:cleanup`.
+`<input id>` matches the ticket title, e.g. `HTTP POST /v1/registrations`,
+`Broker registrations.created`, `gRPC RegistrationService.Create`.
 
-#### 7.3. Сводка оператору + ожидание «пушим»
-
-В чат — короткая сводка для финальной проверки. **Без полного diff'а.**
+#### 7.3. Summary to operator + await "push" (no full diff)
 
 ```
-Слайс готов к push'у.
+Slice ready to push.
 
-Файлы:
-- <ключевые изменённые/созданные файлы>
+Files: <key changed/created files>
+Local CI: gofmt clean · vet clean · units <n> green · component <n> scenarios green · discipline (grep 1-4) clean
+Commit message:
+<block from 7.2>
 
-Локальный CI (все четыре шага):
-- gofmt: чисто
-- go vet: чисто
-- Юниты: <число> зелёных
-- Компонент: <число> сценариев Gherkin зелёных
-- Дисциплина (grep 1-4): чисто
-
-Сообщение коммита:
-<блок коммита из 7.2>
-
-Жду «пушим» / правки.
+Awaiting "push" / changes.
 ```
 
-Исполнитель ждёт **ответа оператора**. Дальнейшие действия:
+- "push"/"ok"/explicit yes → Step 8.
+- Comments (grep, message, file list) → fix, repeat 7.1–7.3.
+- Silence / a question → answer, don't push.
 
-- «пушим» / «ок» / «push» / любое явное согласие → переход на Шаг 8
-  (commit + push + PR).
-- Замечания (по grep'у, тексту коммита, перечню файлов) → исполнитель правит,
-  повторяет 7.1-7.3.
-- Молчание / уточняющий вопрос → отвечать, не пушить.
+### Step 8. Commit, push, open PR, notify
 
-### Шаг 8. Commit, push, открыть PR, уведомить
-
-После аппрува «пушим» в Шаге 7 — исполнитель выполняет атомарную
-последовательность без дальнейших остановок:
+After "push" approval — an atomic sequence, no further stops:
 
 ```bash
-git commit -m "..."                         # сообщение из Шага 7.2
+git commit -m "..."                    # message from 7.2
 git push -u origin feat/slice-<name>
 gh pr create --base main --fill
 ```
 
-Шаблон описания PR:
+PR body: ticket id, what's done (ticked DoD), spec path, tests (units + coverage, component
+scenarios), TBD checklist (branch off fresh main, local CI green, backlog + devlog updated).
+After `gh pr create` returns the URL, post a short notification (not a question — merge is
+the operator's right):
 
-```
-## Тикет
-S<n> — slice <name>: <идентификатор входа>
+> PR #<n> open: <url>
+> **Done:** <1-2 phrases>. **Key files:** <slice card, head, tests>.
 
-## Что сделано
-<пункты Definition of Done, отмеченные галочками>
+**STOP. The agent MUST NOT merge the PR itself.** `gh pr merge` runs only on an explicit
+operator command ("merge"/"влей"). "push", "ok", green CI are **not** grounds to merge.
 
-## Спецификация
-.agent/planner/design/<slug>/slices/<n>-<name>.md
+### Step 9. Await merge, pull main, next ticket
 
-## Тесты
-- юниты: <число>, покрытие <%>
-- компонентные: <число> сценариев Gherkin зелёные
+The operator merges via GitHub `Merge` (both required: operator clicked merge **and** CI
+green). Fixes go as commits to the **same branch**, never a new one or main:
 
-## Чек-лист TBD
-- [x] ветка от свежего main
-- [x] локальный CI зелёный
-- [x] backlog.md обновлён
-- [x] devlog.md дополнен
-```
+- CI red → repair in the same branch;
+- operator left comments → fix in the same branch (back to Step 3+ where relevant), push,
+  update PR; operator reviews again.
 
-После того как `gh pr create` вернул URL — короткое уведомление в чат
-(не вопрос; мерж — право оператора, видит PR и решает сам; см.
-`skills/program-design/SKILL.md` Шаг 12 «merge = аппрув»).
-
-**СТОП. Агент не мержит PR самостоятельно — никогда.**
-`gh pr merge` вызывается только по явной команде оператора («мердж», «влей», «merge»).
-«пуш», «ок», CI зелёный — не основание для мержа.
-
-> PR #<номер> открыт: <url>
->
-> **Что сделано:** <1-2 фразы>.
-> **Ключевые файлы:** <карточка слайса, головной модуль, тесты>.
-
-Переход на Шаг 9.
-
-### Шаг 9. Дождаться мержа + подтянуть main + следующий тикет
-
-Мерж делает оператор кнопкой `Merge` в GitHub-интерфейсе. К моменту
-мержа должны быть выполнены **оба условия**: оператор нажал merge и
-CI на PR зелёный.
-
-- Если CI красный — исполнитель ремонтирует коммитами в ту же ветку, не новой
-  веткой и не на main.
-- Если оператор оставил замечания в PR — исполнитель правит в той же ветке
-  (возвращается на Шаг 3 или дальше — туда, где правка релевантна),
-  пушит, обновляет PR. Оператор смотрит снова и решает, мержить ли.
-
-После мержа:
+After merge:
 
 ```bash
 git checkout main
 git pull --ff-only origin main
 ```
 
-Тикет считается **закрытым**, когда CI на main зелёный после мержа.
-Исполнитель возвращается на Шаг 1 для следующего тикета (`backlog.md` →
-следующий тикет с выполненными зависимостями → новая ветка от свежего
-main).
+The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for the next
+ticket (a `backlog.md` ticket whose dependencies are done → new branch off fresh main).
 
-## Definition of Done скилла
+## Definition of Done (whole package)
 
-Применительно ко всему пакету:
-
-- Все тикеты в `backlog.md` отмечены `[x]`.
-- main зелёный.
-- Все компонентные сценарии Gherkin зелёные.
-- Devlog `.agent/planner/design/<slug>/devlog.md` заполнен по тикетам.
+- All `backlog.md` tickets `[x]`; main green.
+- All Gherkin component scenarios green.
+- `.agent/planner/design/<slug>/devlog.md` filled per ticket.

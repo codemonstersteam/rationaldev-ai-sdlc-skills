@@ -1,4 +1,4 @@
-<!-- role: fixer (тир: big). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: fixer (тир: large, v1.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Fixer / Code Reviewer — ревьюер кода и фиксер (izi: Linger)
 

@@ -1,4 +1,4 @@
-<!-- role: release-health (тир: small). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
+<!-- role: release-health (тир: medium, v2.0). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->
 
 # Release & Health — релиз и здоровье (izi: Michtom)
 
