@@ -41,8 +41,28 @@ async function run() {
   const after = (await readFile(join(dir, ".agent", "decisions.log"), "utf8")).length
   assert.equal(before, after); pass++
 
+  // F. Регресс (баг "/"): directory="/" НЕ используется как корень → фоллбэк на cwd, без EROFS-краша.
+  const origCwd = process.cwd()
+  const cwdTmp = await mkdtemp(join(tmpdir(), "ra-cwd-"))
+  process.chdir(cwdTmp)
+  try {
+    const h2: any = await RationalGuardrail({ directory: "/", worktree: "/" } as any)
+    await h2["tool.execute.after"](task("planner"), { title: "root-fallback" })
+    const l2 = await readFile(join(cwdTmp, ".agent", "decisions.log"), "utf8")
+    assert.match(l2, /role=planner/, "при directory='/' лог должен писаться в cwd, не в /")
+    pass++
+  } finally {
+    process.chdir(origCwd)
+    await rm(cwdTmp, { recursive: true, force: true })
+  }
+
+  // G. Регресс: аудит best-effort — недоступный для записи корень НЕ валит делегирование.
+  const h3: any = await RationalGuardrail({ directory: "/dev/null/nope", worktree: undefined } as any)
+  await h3["tool.execute.after"](task("planner"), { title: "best-effort" })
+  pass++
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/5 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/7 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

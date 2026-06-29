@@ -16,7 +16,12 @@ function pickRole(args: unknown): string {
 }
 
 export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
-  const root = (worktree as string) || (directory as string) || process.cwd()
+  // Резолв корня проекта: пропускаем "/" (под headless `opencode run` directory/worktree
+  // может быть "/" — read-only → EROFS и ложная блокировка) и пустые; фоллбэк на
+  // process.cwd() (каталог запуска opencode = каталог проекта).
+  const pick = (...c: unknown[]) =>
+    c.find((p): p is string => typeof p === "string" && p.length > 0 && p !== "/")
+  const root = pick(worktree, directory) ?? process.cwd()
   const agentDir = join(root, ".agent")
   const logPath = join(agentDir, "decisions.log")
   const gate1 = join(agentDir, "gates", "gate1.approved")
@@ -44,11 +49,15 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
     // Гарантированный decisions.log: каждое завершённое делегирование роли.
     "tool.execute.after": async (input: any, output: any) => {
       if (input?.tool !== "task") return
-      await mkdir(join(agentDir, "gates"), { recursive: true })
-      const role = pickRole(input?.args)
-      const ts = new Date().toISOString()
-      const title = String(output?.title ?? output?.metadata?.title ?? "").slice(0, 120)
-      await appendFile(logPath, `${ts}\trole=${role}\tvia=opencode-plugin\t${title}\n`)
+      try {
+        await mkdir(join(agentDir, "gates"), { recursive: true })
+        const role = pickRole(input?.args)
+        const ts = new Date().toISOString()
+        const title = String(output?.title ?? output?.metadata?.title ?? "").slice(0, 120)
+        await appendFile(logPath, `${ts}\trole=${role}\tvia=opencode-plugin\t${title}\n`)
+      } catch {
+        // Аудит best-effort: сбой записи (например EROFS) НЕ валит делегирование.
+      }
     },
   }
 }
