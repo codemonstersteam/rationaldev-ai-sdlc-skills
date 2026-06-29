@@ -2,23 +2,35 @@
 # POSIX-аналог — install.sh. На Windows симлинки требуют админ/developer-mode, поэтому
 # раскладка идёт КОПИРОВАНИЕМ (после обновления харнеса перезапусти установку).
 #
-#   ./install.ps1 <claude|codex|opencode> [-Global | -Project <dir>] [-Hard]
+#   ./install.ps1 <claude|codex|opencode> [-Global | -Project <dir>] [-Hard] [-NoInput]
 #
 #   ./install.ps1 claude -Project . -Hard      # в текущий проект + Node-хуки (Gate #1)
 #   ./install.ps1 opencode -Global             # глобально
+#   ./install.ps1 claude -Project . -NoInput   # без интерактива (модели — из конфига как есть)
 #
 # Источник правды: skills/lib + harness/agents. Хуки enforcement — на Node (.mjs),
-# работают одинаково в PowerShell/cmd/bash.
+# работают одинаково в PowerShell/cmd/bash. При установке интерактивно спрашивает
+# 3 модели (large/medium/small) → harness/models.config.json + перегенерация проекций.
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)][ValidateSet('claude', 'codex', 'opencode')][string]$Runner,
   [switch]$Global,
   [string]$Project = (Get-Location).Path,
-  [switch]$Hard
+  [switch]$Hard,
+  [switch]$NoInput
 )
 $ErrorActionPreference = 'Stop'
 $Bundle = $PSScriptRoot
 $Lib = Join-Path $Bundle 'skills/lib'
+
+# --- модели: интерактивная настройка тиров + перегенерация проекций ---
+# configure-models сам молчит, если stdin не TTY; gen-agents идемпотентен.
+if (Get-Command node -ErrorAction SilentlyContinue) {
+  if (-not $NoInput) { node (Join-Path $Bundle 'harness/configure-models.mjs') $Runner }
+  node (Join-Path $Bundle 'harness/gen-agents.mjs') | Out-Null
+} else {
+  Write-Host '  node не найден — модели/проекции не обновлены (правь harness/models.config.json, затем node harness/gen-agents.mjs)'
+}
 
 function Copy-Skills($dst) {
   New-Item -ItemType Directory -Force -Path (Join-Path $dst 'reference') | Out-Null
@@ -115,9 +127,16 @@ if ($Hard) {
 
 $skCount = (Get-ChildItem $skillsDst -ErrorAction SilentlyContinue | Measure-Object).Count
 $agCount = (Get-ChildItem $agentsDst -ErrorAction SilentlyContinue | Measure-Object).Count
+$modelsMsg = 'см. harness/models.config.json'
+try {
+  $t = (Get-Content (Join-Path $Bundle 'harness/models.config.json') -Raw | ConvertFrom-Json).$Runner.tiers
+  $f = { param($v) if ($v) { $v } else { '(наследует)' } }
+  $modelsMsg = "large=$(& $f $t.large) medium=$(& $f $t.medium) small=$(& $f $t.small)"
+} catch {}
 Write-Host "rationaldev harness -> $Runner ($(if ($Global) {'global'} else {'project'}))"
 Write-Host "  agents/roles: $agentsDst ($agCount)"
 Write-Host "  skills:       $skillsDst ($skCount)"
+Write-Host "  models:       $modelsMsg"
 Write-Host "  instructions: $instrNote"
 Write-Host "  hard mode:    $hardMsg"
 Write-Host ''

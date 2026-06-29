@@ -19,6 +19,11 @@ cd rationaldev-ai-sdlc-skills
 ./install.sh claude ~/path/to/project     # или --global — для всех проектов
 ```
 
+Установщик **интерактивно спросит три модели** — большую/среднюю/малую (`large`/`medium`/`small`);
+Enter оставляет дефолт. Имена — любого провайдера (харнес к Anthropic не привязан); правятся
+позже в [`harness/models.config.json`](harness/models.config.json). Без диалога — флаг `--no-input`.
+На Windows — `install.ps1` (то же, `-NoInput`). Подробно — [`harness/README.md`](harness/README.md).
+
 Затем открой Claude Code в проекте и поставь задачу — маршрутизирует роль `orchestrator`.
 
 **Как работать:**
