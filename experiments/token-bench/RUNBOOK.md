@@ -1,0 +1,75 @@
+# RUNBOOK — как запустить эксперимент (оператор или агент)
+
+Пошаговая инструкция для **агента, запускающего прогон в песочнице**. Все пути — относительно
+корня репозитория. Секреты — только в `proxy/.env` (в `.gitignore`), в гит не коммитить.
+
+## 0. Предусловия
+- Инструменты: `go`, `jq`, `curl`, `docker` (запущен), `tmux`. Для армов — `opencode` и/или
+  `claude` (Claude Code), для арма omo — глобально установленный `oh-my-openagent`.
+- Ключ провайдера: `cp proxy/.env.example proxy/.env` и вписать `ANTHROPIC_API_KEY`. Также
+  `export ANTHROPIC_API_KEY=...` в окружении.
+
+## 1. Настройка стенда
+```sh
+sh experiments/token-bench/setup.sh      # проверит среду, соберёт прокси, самопроверит стоп-линию
+```
+
+## 2. Поднять прокси токенов (терминал A)
+```sh
+sh experiments/token-bench/proxy/run-proxy.sh    # слушает :4000, лог → proxy/<arm>.jsonl (задай PROXY_LOG)
+```
+Направить OpenCode на прокси: чистый XDG-конфиг с baseURL (`/v1` обязателен):
+```sh
+mkdir -p /tmp/xdg-bench/opencode
+printf '{ "$schema":"https://opencode.ai/config.json", "provider":{"anthropic":{"options":{"baseURL":"http://localhost:4000/v1"}}} }\n' \
+  > /tmp/xdg-bench/opencode/opencode.json
+export XDG_CONFIG_HOME=/tmp/xdg-bench
+```
+> Claude Code: если honor'ит `ANTHROPIC_BASE_URL` — `export ANTHROPIC_BASE_URL=http://localhost:4000/v1`;
+> иначе снимай стоимость из `/cost` сессии (оговорка метода).
+
+## 3. Прогон арма (терминал B)
+ВАЖНО: для каждого арма — **свой** лог токенов (не затирать):
+```sh
+SB=/tmp/sb-opencode
+PROXY_LOG=experiments/token-bench/proxy/opencode.jsonl   # отдельный файл!
+# OpenCode + харнес:
+sh experiments/token-bench/runners/run.sh opencode "$SB"
+# omo (XDG = глобальный конфиг omo с baseURL; не /tmp/xdg-bench):
+sh experiments/token-bench/runners/run.sh omo /tmp/sb-omo
+# Claude:
+sh experiments/token-bench/runners/run-claude.sh harness /tmp/sb-claude-harness
+sh experiments/token-bench/runners/run-claude.sh plain   /tmp/sb-claude-plain
+```
+Раннер `run.sh` сам ставит харнес, вшивает модели по тирам, авто-аппрувит Gate #1, авто-allow'ит
+permission-промпты, пишет «скриншоты» в `<SB>/tmux.log`. Следи: `tmux attach -t bench-opencode`.
+
+## 4. Оценка и замер
+```sh
+sh experiments/token-bench/acceptance/check.sh "$SB"        # арбитр: PASS/FAIL
+sh experiments/token-bench/inventory.sh "$SB"               # сколько/каких тестов
+# токены арма:
+jq -s '{calls:length, out:(map(.completion_tokens)|add), in:(map(.input_tokens)|add)}' \
+  experiments/token-bench/proxy/opencode.jsonl
+```
+Стоимость `$` бери из TUI/`/cost` (включает input+кэш — честный сигнал). Время — из таймстемпов
+`ts` в логе прокси (span − максимальный разрыв = активное, без простоя на пополнение кредитов).
+
+## 5. Сохранить результат (ВНЕ гита)
+Сырые прогоны, реализации харнесов, `usage.jsonl`, секреты — **не коммитить**. Складывай рядом
+с репо: `../token-bench-results/<dd-mm-yyyy>/test<N>/<arm>/` — реализация + `usage.jsonl` +
+`metrics.md` (check.sh, токены in/out/cache, $, время, модели). Сводку-анализ можно занести в
+`README.md` (как test0).
+
+## 6. Новый прогон / доработанная задача
+- Правь `spec/task.md` (это BRD; FRD генерит сам харнес скиллом `requirements-intake`).
+- Заводи новую папку результатов `test<N>/`. Спеку держи замороженной в пределах одного теста.
+- Перед каждым армом — `reset.sh` чистит песочницу (он внутри `run.sh`).
+
+## Армы и установка (справка)
+| Арм | команда |
+|---|---|
+| Харнес OpenCode | `runners/run.sh opencode <sb>` (`install.sh opencode <sb> --hard`) |
+| omo | `runners/run.sh omo <sb>` (глобальный omo) |
+| Харнес Claude | `runners/run-claude.sh harness <sb>` (`install.sh claude <sb>`) |
+| Голый Claude | `runners/run-claude.sh plain <sb>` |
