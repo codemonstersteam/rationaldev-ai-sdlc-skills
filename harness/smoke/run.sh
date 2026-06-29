@@ -26,6 +26,8 @@ sh "$REPO/install.sh" claude "$P" >/dev/null
 [ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 6 ] || fail "claude: ролей не 6"; ok
 [ -f "$P/.claude/skills/memory/SKILL.md" ] || fail "claude: нет скилла memory"; ok
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
+# назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
+grep -q '^model:' "$P/.claude/agents/planner.md" || fail "claude: модель из конфига не проставлена"; ok
 
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"

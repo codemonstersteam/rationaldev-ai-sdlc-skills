@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Linger
 - **Версия:** 1.0
-- **Тир / модель:** large → opus
+- **Тир / модель (claude):** large → opus
 - **Режим:** subagent
 - **Запись (edit):** `tests/**`: ask, `.ci/**`: ask, `api-specification/**`: ask, `*`: allow
 

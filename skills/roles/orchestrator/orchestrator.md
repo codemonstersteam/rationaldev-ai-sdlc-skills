@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Witt
 - **Версия:** 1.0
-- **Тир / модель:** large → opus
+- **Тир / модель (claude):** large → opus
 - **Режим:** primary
 - **Запись (edit):** `.agent/**`: allow, `*`: deny
 

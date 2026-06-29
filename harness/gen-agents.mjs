@@ -15,10 +15,22 @@ import { parseFrontmatter } from "./frontmatter.mjs"
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
 
-// tier (S/M/L) → алиас модели Claude. Тир — абстракция размера; opus/sonnet/haiku —
-// её claude-рендер (OpenCode/Codex/прочие раннеры маппят те же тиры на свои модели,
-// поэтому `model` у них опущен — наследуется от пользователя).
-const CLAUDE_MODEL = { large: "opus", medium: "sonnet", small: "haiku" }
+// Тир (S/M/L) — абстракция размера роли (frontmatter `tier`). Конкретные имена
+// моделей вынесены в harness/models.config.json (код генератора имён НЕ содержит —
+// харнес не привязан к Anthropic). Резолвинг на роль: roles[<роль>] > tiers[<тир>] >
+// (ничего → `model` опущен, раннер берёт модель пользователя).
+const TIERS = ["large", "medium", "small"]
+const MODELS = JSON.parse(readFileSync(join(ROOT, "models.config.json"), "utf8"))
+
+function resolveModel(runner, role, tier) {
+  const cfg = MODELS[runner]
+  if (!cfg) return null
+  const byRole = cfg.roles && cfg.roles[role]
+  if (typeof byRole === "string" && byRole.trim()) return byRole.trim()
+  const byTier = cfg.tiers && cfg.tiers[tier]
+  if (typeof byTier === "string" && byTier.trim()) return byTier.trim()
+  return null
+}
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
 const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
@@ -30,8 +42,8 @@ function loadRole(role) {
   for (const f of ["version", "tier", "mode", "temperature", "steps", "permission", "description", "skills", "inputs", "outputs"]) {
     if (data[f] === undefined) throw new Error(`${role}.md: в frontmatter нет поля '${f}'`)
   }
-  if (CLAUDE_MODEL[data.tier] === undefined) {
-    throw new Error(`${role}.md: неизвестный tier '${data.tier}' (ожидается ${Object.keys(CLAUDE_MODEL).join("/")})`)
+  if (!TIERS.includes(data.tier)) {
+    throw new Error(`${role}.md: неизвестный tier '${data.tier}' (ожидается ${TIERS.join("/")})`)
   }
   return { data, body: raw.trim() + "\n" }
 }
@@ -48,15 +60,17 @@ function permYaml(perm) {
   return lines.join("\n")
 }
 
-function claudeFile(role, m, body) {
-  return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmodel: ${CLAUDE_MODEL[m.tier]}\n---\n\n${body}`
+function claudeFile(role, m, body, model) {
+  const modelLine = model ? `model: ${model}\n` : ""
+  return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\n${modelLine}---\n\n${body}`
 }
 
-function opencodeFile(role, m, body) {
-  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${permYaml(m.permission)}\n---\n\n${body}`
+function opencodeFile(role, m, body, model) {
+  const modelLine = model ? `model: ${model}\n` : ""
+  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
 }
 
-function codexFile(role, m, body) {
+function codexFile(role, m, body, _model) {
   return `<!-- role: ${role} (тир: ${m.tier}, v${m.version}). Frontmatter не нужен — блок собирается в AGENTS.md установщиком. -->\n\n${body}`
 }
 
@@ -72,7 +86,7 @@ function roleContractFile(role, m, body) {
   const meta = [
     `- **Агент (izi):** ${m.izi}`,
     `- **Версия:** ${m.version}`,
-    `- **Тир / модель:** ${m.tier} → ${CLAUDE_MODEL[m.tier]}`,
+    `- **Тир / модель (claude):** ${m.tier} → ${resolveModel("claude", role, m.tier) ?? "(наследуется)"}`,
     `- **Режим:** ${m.mode}`,
     `- **Запись (edit):** ${edit}`,
   ].join("\n")
@@ -89,7 +103,7 @@ for (const { role, data, body } of roles) {
   for (const [runner, render] of [["claude", claudeFile], ["opencode", opencodeFile], ["codex", codexFile]]) {
     const dir = join(ROOT, "agents", runner)
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, `${role}.md`), render(role, data, body))
+    writeFileSync(join(dir, `${role}.md`), render(role, data, body, resolveModel(runner, role, data.tier)))
     n++
   }
   // 4-я проекция: человекочитаемый контракт роли в ../skills/roles/<role>/<role>.md
