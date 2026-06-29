@@ -2,10 +2,10 @@
 # POSIX-аналог — install.sh. На Windows симлинки требуют админ/developer-mode, поэтому
 # раскладка идёт КОПИРОВАНИЕМ (после обновления харнеса перезапусти установку).
 #
-#   .\install.ps1 <claude|codex|opencode> [-Global | -Project <dir>] [-Hard]
+#   ./install.ps1 <claude|codex|opencode> [-Global | -Project <dir>] [-Hard]
 #
-#   .\install.ps1 claude -Project . -Hard      # в текущий проект + Node-хуки (Gate #1)
-#   .\install.ps1 opencode -Global             # глобально
+#   ./install.ps1 claude -Project . -Hard      # в текущий проект + Node-хуки (Gate #1)
+#   ./install.ps1 opencode -Global             # глобально
 #
 # Источник правды: skills/lib + harness/agents. Хуки enforcement — на Node (.mjs),
 # работают одинаково в PowerShell/cmd/bash.
@@ -18,7 +18,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Bundle = $PSScriptRoot
-$Lib = Join-Path $Bundle 'skills\lib'
+$Lib = Join-Path $Bundle 'skills/lib'
 
 function Copy-Skills($dst) {
   New-Item -ItemType Directory -Force -Path (Join-Path $dst 'reference') | Out-Null
@@ -26,7 +26,7 @@ function Copy-Skills($dst) {
     if ($_.PSIsContainer -and (Test-Path (Join-Path $_.FullName 'SKILL.md'))) {
       Copy-Item $_.FullName (Join-Path $dst $_.Name) -Recurse -Force
     } elseif (-not $_.PSIsContainer) {
-      Copy-Item $_.FullName (Join-Path $dst "reference\$($_.Name)") -Force
+      Copy-Item $_.FullName (Join-Path $dst "reference/$($_.Name)") -Force
     }
   }
 }
@@ -50,27 +50,27 @@ function Place-Instruction($src, $dst) {
 switch ($Runner) {
   'claude' {
     $base = if ($Global) { Join-Path $HOME '.claude' } else { Join-Path $Project '.claude' }
-    Copy-Agents (Join-Path $base 'agents') (Join-Path $Bundle 'harness\agents\claude')
+    Copy-Agents (Join-Path $base 'agents') (Join-Path $Bundle 'harness/agents/claude')
     Copy-Skills (Join-Path $base 'skills')
     $agentsDst = Join-Path $base 'agents'; $skillsDst = Join-Path $base 'skills'
-    $instrSrc = Join-Path $Bundle 'harness\instructions\CLAUDE.md'
-    $instrDst = if ($Global) { Join-Path $HOME '.claude\CLAUDE.md' } else { Join-Path $Project 'CLAUDE.md' }
+    $instrSrc = Join-Path $Bundle 'harness/instructions/CLAUDE.md'
+    $instrDst = if ($Global) { Join-Path $HOME '.claude/CLAUDE.md' } else { Join-Path $Project 'CLAUDE.md' }
   }
   'opencode' {
     $base = if ($Global) { Join-Path $env:APPDATA 'opencode' } else { Join-Path $Project '.opencode' }
-    Copy-Agents (Join-Path $base 'agent') (Join-Path $Bundle 'harness\agents\opencode')
+    Copy-Agents (Join-Path $base 'agent') (Join-Path $Bundle 'harness/agents/opencode')
     Copy-Skills (Join-Path $base 'skills')
     $agentsDst = Join-Path $base 'agent'; $skillsDst = Join-Path $base 'skills'
-    $instrSrc = Join-Path $Bundle 'harness\instructions\AGENTS.opencode.md'
+    $instrSrc = Join-Path $Bundle 'harness/instructions/AGENTS.opencode.md'
     $instrDst = if ($Global) { Join-Path $base 'AGENTS.md' } else { Join-Path $Project 'AGENTS.md' }
   }
   'codex' {
     $root = if ($Global) { $HOME } else { $Project }
-    Copy-Agents (Join-Path $root '.agents\roles') (Join-Path $Bundle 'harness\agents\codex')
-    Copy-Skills (Join-Path $root '.agents\skills')
-    $agentsDst = Join-Path $root '.agents\roles'; $skillsDst = Join-Path $root '.agents\skills'
-    $instrSrc = Join-Path $Bundle 'harness\instructions\AGENTS.codex.md'
-    $instrDst = if ($Global) { Join-Path $HOME '.codex\AGENTS.md' } else { Join-Path $Project 'AGENTS.md' }
+    Copy-Agents (Join-Path $root '.agents/roles') (Join-Path $Bundle 'harness/agents/codex')
+    Copy-Skills (Join-Path $root '.agents/skills')
+    $agentsDst = Join-Path $root '.agents/roles'; $skillsDst = Join-Path $root '.agents/skills'
+    $instrSrc = Join-Path $Bundle 'harness/instructions/AGENTS.codex.md'
+    $instrDst = if ($Global) { Join-Path $HOME '.codex/AGENTS.md' } else { Join-Path $Project 'AGENTS.md' }
   }
 }
 
@@ -79,13 +79,13 @@ $instrNote = Place-Instruction $instrSrc $instrDst
 # --- enforcement (-Hard) ---
 $hardMsg = 'off (enforcement инструкцией)'
 if ($Hard) {
-  $adapter = Join-Path $Bundle "harness\enforcement\$Runner"
+  $adapter = Join-Path $Bundle "harness/enforcement/$Runner"
   switch ($Runner) {
     'opencode' {
-      $pdir = if ($Global) { Join-Path $env:APPDATA 'opencode\plugins' } else { Join-Path $Project '.opencode\plugins' }
+      $pdir = if ($Global) { Join-Path $env:APPDATA 'opencode/plugins' } else { Join-Path $Project '.opencode/plugins' }
       New-Item -ItemType Directory -Force -Path $pdir | Out-Null
       Copy-Item (Join-Path $adapter 'rational-guardrail.ts') (Join-Path $pdir 'rational-guardrail.ts') -Force
-      $hardMsg = "on → OpenCode-плагин ($pdir\rational-guardrail.ts)"
+      $hardMsg = "on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
     }
     'claude' {
       $cbase = if ($Global) { Join-Path $HOME '.claude' } else { Join-Path $Project '.claude' }
@@ -103,7 +103,7 @@ if ($Hard) {
       $sjPath = Join-Path $cbase 'settings.json'
       if (Test-Path $sjPath) {
         $json | Set-Content -Encoding UTF8 (Join-Path $cbase 'settings.harness.json')
-        $hardMsg = "on → хуки в $hooks; settings.json есть → слей $cbase\settings.harness.json вручную"
+        $hardMsg = "on → хуки в $hooks; settings.json есть → слей $cbase/settings.harness.json вручную"
       } else {
         $json | Set-Content -Encoding UTF8 $sjPath
         $hardMsg = "on → Claude-хуки ($sjPath)"
