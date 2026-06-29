@@ -1,11 +1,11 @@
 {
-  "//": "Шаблон Claude-хуков --hard. install.sh генерирует реальный settings с абсолютными путями к hooks/. Здесь — вариант с $CLAUDE_PROJECT_DIR для project-scope.",
+  "//": "Шаблон Claude-хуков --hard. Хуки на Node (.mjs) — кросс-платформенно (Windows/macOS/Linux). install.sh/install.ps1 генерирует реальный settings с абсолютными путями к hooks/. Здесь — вариант с $CLAUDE_PROJECT_DIR для project-scope.",
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Task",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/gate-check.sh" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate-check.mjs\"" }
         ]
       }
     ],
@@ -13,7 +13,7 @@
       {
         "matcher": "Task",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/log-decision.sh" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-decision.mjs\"" }
         ]
       }
     ]
