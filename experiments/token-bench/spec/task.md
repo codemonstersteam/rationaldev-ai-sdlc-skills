@@ -1,7 +1,7 @@
 # Bench task — service `services-by-platform` (Go)
 
-> This is the **frozen prompt** handed identically to both harnesses (rational-agents and
-> omo). Do not edit between runs — edits invalidate the comparison.
+> This is the **frozen prompt** handed identically to every agent/harness under test.
+> Do not edit between runs — edits invalidate the comparison.
 
 ## Business requirement
 

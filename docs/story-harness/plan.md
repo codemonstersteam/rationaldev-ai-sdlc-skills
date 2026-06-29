@@ -85,7 +85,7 @@ Gherkin-смоук сохранён (проект Gherkin-first, `AGENTS.md` §6
 
 - Точный механизм субагентов Codex (конфиг vs промпт) — сверить по `developers.openai.com/codex`.
 - Нужен ли единый генератор `agents/<runner>/` из `skills/roles/` или достаточно статических файлов + install-маппинга.
-- `--hard`-enforcement (Slice 6) — порядок реализации: сперва OpenCode-плагин (есть референс из rational-agents), затем Claude-хуки; Codex — инструкция.
+- `--hard`-enforcement (Slice 6) — порядок реализации: сперва OpenCode-плагин, затем Claude-хуки; Codex — инструкция.
 
 ## 8. Один репозиторий (не три)
 
