@@ -19,32 +19,32 @@ if ($LASTEXITCODE -ne 0) { Fail "skill-index устарел" }; Ok
 
 # --- Claude: раскладка ---
 $P = Join-Path $Tmp 'claude'; New-Item -ItemType Directory -Force -Path $P | Out-Null
-& pwsh -File "$Repo/install.ps1" claude -Project $P | Out-Null
+& pwsh -File "$Repo/install.ps1" claude -Project $P -NoInput | Out-Null
 if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 6) { Fail "claude: ролей не 6" }; Ok
 if (-not (Test-Path "$P/.claude/skills/memory/SKILL.md")) { Fail "claude: нет скилла memory" }; Ok
 if (-not (Test-Path "$P/CLAUDE.md")) { Fail "claude: нет CLAUDE.md" }; Ok
 
 # --- OpenCode / Codex: раскладка ---
 $P = Join-Path $Tmp 'opencode'; New-Item -ItemType Directory -Force -Path $P | Out-Null
-& pwsh -File "$Repo/install.ps1" opencode -Project $P | Out-Null
+& pwsh -File "$Repo/install.ps1" opencode -Project $P -NoInput | Out-Null
 if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 6) { Fail "opencode: агентов не 6" }; Ok
 if (-not (Test-Path "$P/AGENTS.md")) { Fail "opencode: нет AGENTS.md" }; Ok
 
 $P = Join-Path $Tmp 'codex'; New-Item -ItemType Directory -Force -Path $P | Out-Null
-& pwsh -File "$Repo/install.ps1" codex -Project $P | Out-Null
+& pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
 if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 6) { Fail "codex: ролей не 6" }; Ok
 if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Orchestrator' -Quiet)) { Fail "codex: нет orchestrator" }; Ok
 
 # --- Недеструктивность: существующий AGENTS.md ---
 $P = Join-Path $Tmp 'existing'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 Set-Content "$P/AGENTS.md" 'ORIGINAL OPERATOR RULES'
-& pwsh -File "$Repo/install.ps1" codex -Project $P | Out-Null
+& pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
 if (@(Get-Content "$P/AGENTS.md")[0] -ne 'ORIGINAL OPERATOR RULES') { Fail "existing AGENTS.md затёрт" }; Ok
 if (-not (Test-Path "$P/AGENTS.harness.md")) { Fail "инструкции харнеса не рядом" }; Ok
 
 # === enforcement (--hard) ===
 $P = Join-Path $Tmp 'cl-hard'; New-Item -ItemType Directory -Force -Path $P | Out-Null
-& pwsh -File "$Repo/install.ps1" claude -Project $P -Hard | Out-Null
+& pwsh -File "$Repo/install.ps1" claude -Project $P -Hard -NoInput | Out-Null
 if (-not (Test-Path "$P/.claude/hooks/gate-check.mjs")) { Fail "claude --hard: нет хука gate-check.mjs" }; Ok
 if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'PreToolUse' -Quiet)) { Fail "settings без хуков" }; Ok
 if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'gate-check.mjs' -Quiet)) { Fail "settings не ссылается на .mjs" }; Ok

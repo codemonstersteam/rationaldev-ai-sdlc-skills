@@ -1,31 +1,44 @@
 #!/usr/bin/env sh
 # Подключает харнес rationaldev к выбранному раннеру (симлинки).
 #
-#   ./install.sh <claude|codex|opencode> [--global | <project-dir>] [--hard]
+#   ./install.sh <claude|codex|opencode> [--global | <project-dir>] [--hard] [--no-input]
 #
 #   ./install.sh opencode --global         # глобально для всех проектов
 #   ./install.sh claude ~/myproject        # в конкретный проект
 #   ./install.sh codex                     # в текущую директорию
 #   ./install.sh opencode . --hard         # + enforcement-адаптер (Slice 6)
+#   ./install.sh claude . --no-input       # без интерактива (модели — из конфига как есть)
 #
 # Идемпотентно (ln -sfn). Источник правды: skills/lib + harness/agents.
+# При установке интерактивно спрашивает 3 модели (large/medium/small) → пишет
+# harness/models.config.json и перегенерирует проекции. Подробно — harness/README.md.
 set -eu
 
 BUNDLE="$(cd "$(dirname "$0")" && pwd)"
 LIB="$BUNDLE/skills/lib"
 
 RUNNER="${1:-}"
-[ -n "$RUNNER" ] || { echo "usage: ./install.sh <claude|codex|opencode> [--global | <dir>] [--hard]"; exit 1; }
+[ -n "$RUNNER" ] || { echo "usage: ./install.sh <claude|codex|opencode> [--global | <dir>] [--hard] [--no-input]"; exit 1; }
 shift
 
-SCOPE="project"; PROJ="$(pwd)"; HARD="no"
+SCOPE="project"; PROJ="$(pwd)"; HARD="no"; NOINPUT="no"
 for arg in "$@"; do
   case "$arg" in
-    --global) SCOPE="global" ;;
-    --hard)   HARD="yes" ;;
-    *)        PROJ="$arg" ;;
+    --global)   SCOPE="global" ;;
+    --hard)     HARD="yes" ;;
+    --no-input) NOINPUT="yes" ;;
+    *)          PROJ="$arg" ;;
   esac
 done
+
+# --- модели: интерактивная настройка тиров + перегенерация проекций ---
+# configure-models сам молчит, если stdin не TTY (CI/пайп). gen-agents идемпотентен.
+if command -v node >/dev/null 2>&1; then
+  [ "$NOINPUT" = yes ] || node "$BUNDLE/harness/configure-models.mjs" "$RUNNER" || true
+  node "$BUNDLE/harness/gen-agents.mjs" >/dev/null 2>&1 || true
+else
+  echo "  ⚠ node не найден — модели/проекции не обновлены (правь harness/models.config.json, затем node harness/gen-agents.mjs)"
+fi
 
 # --- хелперы ---
 link_dir_skills() {  # $1 = каталог назначения скиллов
@@ -126,9 +139,15 @@ if [ "$HARD" = yes ]; then
   esac
 fi
 
+MODELS_MSG="(node не найден)"
+if command -v node >/dev/null 2>&1; then
+  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} medium=${f(t.medium)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
+fi
+
 echo "rationaldev harness → $RUNNER ($SCOPE)"
 echo "  agents/roles: $AGENTS_DST ($(count "$AGENTS_DST"))"
 echo "  skills:       $SKILLS_DST ($(count "$SKILLS_DST"))"
+echo "  models:       $MODELS_MSG"
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
 echo
