@@ -39,7 +39,7 @@ if (-not (Select-String -Path "$P\AGENTS.md" -Pattern 'Orchestrator' -Quiet)) { 
 $P = Join-Path $Tmp 'existing'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 Set-Content "$P\AGENTS.md" 'ORIGINAL OPERATOR RULES'
 & pwsh -File "$Repo\install.ps1" codex -Project $P | Out-Null
-if ((Get-Content "$P\AGENTS.md")[0] -ne 'ORIGINAL OPERATOR RULES') { Fail "existing AGENTS.md затёрт" }; Ok
+if (@(Get-Content "$P\AGENTS.md")[0] -ne 'ORIGINAL OPERATOR RULES') { Fail "existing AGENTS.md затёрт" }; Ok
 if (-not (Test-Path "$P\AGENTS.harness.md")) { Fail "инструкции харнеса не рядом" }; Ok
 
 # === enforcement (--hard) ===
