@@ -1,0 +1,10 @@
+# секреты и транзиентное стенда — не в гит
+proxy/.env
+proxy/bin/
+proxy/*.jsonl
+sandbox/
+results/
+# артефакты самопроверки эталона
+acceptance/reference/services.yaml
+acceptance/reference/svc
+acceptance/reference/bench-reference

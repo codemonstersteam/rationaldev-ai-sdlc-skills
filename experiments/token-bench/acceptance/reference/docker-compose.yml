@@ -1,0 +1,12 @@
+services:
+  svc:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/services?sort=platform,service"]
+      interval: 1s
+      timeout: 2s
+      retries: 20

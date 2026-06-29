@@ -1,0 +1,29 @@
+# Snapshot of repositories grouped by platform.
+# commits_2m is a PRECOMPUTED 2-month commit count (snapshot): the service reads and
+# serves it as-is. Kept in the fixture so every bench run solves an identical, deterministic
+# task (no live git / no current-date dependence).
+services:
+  - platform: web
+    service: storefront
+    git_url: https://git.example.com/web/storefront
+    commits_2m: 42
+  - platform: web
+    service: checkout
+    git_url: https://git.example.com/web/checkout
+    commits_2m: 17
+  - platform: mobile
+    service: ios-app
+    git_url: https://git.example.com/mobile/ios-app
+    commits_2m: 8
+  - platform: mobile
+    service: android-app
+    git_url: https://git.example.com/mobile/android-app
+    commits_2m: 23
+  - platform: backend
+    service: auth
+    git_url: https://git.example.com/backend/auth
+    commits_2m: 55
+  - platform: backend
+    service: payments
+    git_url: https://git.example.com/backend/payments
+    commits_2m: 31
