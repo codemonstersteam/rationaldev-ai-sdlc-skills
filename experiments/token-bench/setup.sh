@@ -9,7 +9,7 @@ chk(){ name="$1"; shift; if "$@" >/dev/null 2>&1; then echo "  ✓ $name"; ok=$(
 
 echo "== token-bench setup =="
 echo "[1] обязательные инструменты (стоп-линия + прокси + Docker-тесты)"
-chk "go" go version; chk "jq" jq --version; chk "curl" curl --version; chk "docker" docker --version
+chk "go" go version; chk "jq" jq --version; chk "curl" curl --version; chk "tmux" tmux -V; chk "docker" docker --version
 if docker info >/dev/null 2>&1; then echo "  ✓ docker daemon"; ok=$((ok+1)); else echo "  ✗ docker daemon не запущен"; fail=$((fail+1)); fi
 
 echo "[2] сборка прокси-бинаря"
