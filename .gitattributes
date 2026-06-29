@@ -1,0 +1,10 @@
+# Харнес читает/генерирует текстовые артефакты построчно (frontmatter, smoke,
+# хуки). Принудительный LF при checkout — чтобы на Windows git не подменял
+# концы строк на CRLF и не ломал парсер frontmatter / Node-хуки.
+* text=auto eol=lf
+
+# Бинарники — не трогать.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.svg text eol=lf

@@ -42,7 +42,10 @@ function parseYaml(src) {
 }
 
 // Разбирает `---\n<yaml>\n---\n<body>`. Без frontmatter → { data: null, body: text }.
+// CRLF-устойчиво: на Windows git раскладывает файлы с \r\n — нормализуем до \n,
+// иначе делимитер `---` не совпадёт и весь харнес «теряет» frontmatter.
 export function parseFrontmatter(text) {
+  text = text.replace(/\r\n/g, "\n")
   const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
   if (!m) return { data: null, body: text }
   return { data: parseYaml(m[1]), body: m[2] }
