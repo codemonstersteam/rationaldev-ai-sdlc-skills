@@ -1,0 +1,31 @@
+name: harness-smoke
+
+# Кросс-платформенный смоук харнеса: POSIX-установка + Node-хуки на Linux,
+# нативная install.ps1 + те же Node-хуки на Windows (это и есть настоящий
+# Windows-прогон, ради которого хуки переписаны с sh на .mjs).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: smoke (sh + Node-хуки)
+        run: sh harness/smoke/run.sh
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: smoke (install.ps1 + Node-хуки)
+        shell: pwsh
+        run: pwsh -File harness/smoke/run.ps1

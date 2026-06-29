@@ -188,6 +188,7 @@
       ],
       "outputs": [
         ".agent/plan-reviewer/plan-review.md",
+        ".agent/plan-reviewer/round",
         ".agent/decisions.log"
       ]
     },

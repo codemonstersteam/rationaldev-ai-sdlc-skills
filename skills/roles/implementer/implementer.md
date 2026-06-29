@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Hughes
 - **Версия:** 1.0
-- **Тир / модель:** small → haiku
+- **Тир / модель (claude):** small → haiku
 - **Режим:** subagent
 - **Запись (edit):** `tests/**`: ask, `**/*_test.*`: ask, `.ci/**`: ask, `.github/**`: ask, `api-specification/**`: ask, `*`: allow
 

@@ -26,6 +26,8 @@ sh "$REPO/install.sh" claude "$P" >/dev/null
 [ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 6 ] || fail "claude: ролей не 6"; ok
 [ -f "$P/.claude/skills/memory/SKILL.md" ] || fail "claude: нет скилла memory"; ok
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
+# назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
+grep -q '^model:' "$P/.claude/agents/planner.md" || fail "claude: модель из конфига не проставлена"; ok
 
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"
@@ -48,8 +50,10 @@ sh "$REPO/install.sh" codex "$P" >/dev/null
 [ -f "$P/AGENTS.harness.md" ] || fail "инструкции харнеса не положены рядом"; ok
 
 # === enforcement (--hard) ===
-GC="$REPO/harness/enforcement/claude/gate-check.sh"
-LD="$REPO/harness/enforcement/claude/log-decision.sh"
+# Хуки резолвят корень как CLAUDE_PROJECT_DIR || cwd; в смоуке корень = cwd подкаталога.
+unset CLAUDE_PROJECT_DIR 2>/dev/null || true
+GC="$REPO/harness/enforcement/claude/gate-check.mjs"
+LD="$REPO/harness/enforcement/claude/log-decision.mjs"
 
 # OpenCode --hard кладёт плагин
 P="$TMP/oc-hard"; mkdir -p "$P"
@@ -59,7 +63,7 @@ sh "$REPO/install.sh" opencode "$P" --hard >/dev/null
 # Claude --hard кладёт хуки и settings
 P="$TMP/cl-hard"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" --hard >/dev/null
-[ -e "$P/.claude/hooks/gate-check.sh" ] || fail "claude --hard: нет хука gate-check"; ok
+[ -e "$P/.claude/hooks/gate-check.mjs" ] || fail "claude --hard: нет хука gate-check"; ok
 grep -q "PreToolUse" "$P/.claude/settings.json" || fail "claude --hard: settings без хуков"; ok
 
 # OpenCode-плагин: детерминированный смоук (Gate #1 + decisions.log)
@@ -67,20 +71,20 @@ node "$REPO/harness/enforcement/opencode/guardrail.smoke.ts" >/dev/null || fail 
 
 # Claude gate-check: implementer без апрува → блок (exit != 0)
 D="$TMP/gate-block"; mkdir -p "$D"
-if ( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | sh "$GC" 2>/dev/null ); then fail "gate не заблокировал implementer без апрува"; fi; ok
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | node "$GC" 2>/dev/null ); then fail "gate не заблокировал implementer без апрува"; fi; ok
 
 # Claude gate-check: implementer с апрувом → проход
 D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates"
 : > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"
-( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | sh "$GC" ) || fail "gate заблокировал при апруве"; ok
+( cd "$D" && printf '{"tool_input":{"subagent_type":"implementer"}}' | node "$GC" ) || fail "gate заблокировал при апруве"; ok
 
 # Claude gate-check: не-implementer проходит свободно
 D="$TMP/gate-planner"; mkdir -p "$D"
-( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | sh "$GC" ) || fail "gate заблокировал planner"; ok
+( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | node "$GC" ) || fail "gate заблокировал planner"; ok
 
 # Claude log-decision: дописывает decisions.log
 D="$TMP/loghook"; mkdir -p "$D"
-( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | sh "$LD" )
+( cd "$D" && printf '{"tool_input":{"subagent_type":"planner"}}' | node "$LD" )
 grep -q "role=planner" "$D/.agent/decisions.log" || fail "log-decision не записал роль"; ok
 grep -q "via=claude-hook" "$D/.agent/decisions.log" || fail "log-decision без метки via"; ok
 

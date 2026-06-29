@@ -103,9 +103,9 @@ if [ "$HARD" = yes ]; then
     claude)
       [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
       mkdir -p "$cbase/hooks"
-      ln -sfn "$ADAPTER/gate-check.sh"   "$cbase/hooks/gate-check.sh"
-      ln -sfn "$ADAPTER/log-decision.sh" "$cbase/hooks/log-decision.sh"
-      gc="$cbase/hooks/gate-check.sh"; ld="$cbase/hooks/log-decision.sh"
+      ln -sfn "$ADAPTER/gate-check.mjs"   "$cbase/hooks/gate-check.mjs"
+      ln -sfn "$ADAPTER/log-decision.mjs" "$cbase/hooks/log-decision.mjs"
+      gc="node \"$cbase/hooks/gate-check.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
       sjson='{
   "hooks": {
     "PreToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] } ],
