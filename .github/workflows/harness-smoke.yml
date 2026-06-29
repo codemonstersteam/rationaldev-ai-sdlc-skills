@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: smoke (sh + Node-хуки)
         run: sh harness/smoke/run.sh
 
@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: smoke (install.ps1 + Node-хуки)
         shell: pwsh
         run: pwsh -File harness/smoke/run.ps1
