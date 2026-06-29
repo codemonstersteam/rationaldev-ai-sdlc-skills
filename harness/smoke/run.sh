@@ -88,4 +88,7 @@ D="$TMP/loghook"; mkdir -p "$D"
 grep -q "role=planner" "$D/.agent/decisions.log" || fail "log-decision не записал роль"; ok
 grep -q "via=claude-hook" "$D/.agent/decisions.log" || fail "log-decision без метки via"; ok
 
-echo "PASS $pass — harness smoke (установка + enforcement)"
+# Раздача моделей по ролям (тир + оверрайд + наследование), самовосстановление конфига
+node "$REPO/component-tests/model-distribution/run.mjs" >/dev/null || fail "model-distribution: роли получили неверные модели"; ok
+
+echo "PASS $pass — harness smoke (установка + enforcement + модели)"

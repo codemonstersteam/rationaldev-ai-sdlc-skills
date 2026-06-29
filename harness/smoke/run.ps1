@@ -85,5 +85,9 @@ Pop-Location
 if (-not (Select-String -Path "$D/.agent/decisions.log" -Pattern 'role=planner' -Quiet)) { Fail "log-decision не записал роль" }; Ok
 if (-not (Select-String -Path "$D/.agent/decisions.log" -Pattern 'via=claude-hook' -Quiet)) { Fail "log-decision без via" }; Ok
 
+# Раздача моделей по ролям (тир + оверрайд + наследование), самовосстановление конфига
+node "$Repo/component-tests/model-distribution/run.mjs" | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "model-distribution: роли получили неверные модели" }; Ok
+
 Remove-Item -Recurse -Force $Tmp -ErrorAction SilentlyContinue
-Write-Host "PASS $script:pass — harness smoke Windows (install.ps1 + Node-хуки)"
+Write-Host "PASS $script:pass — harness smoke Windows (install.ps1 + Node-хуки + модели)"
