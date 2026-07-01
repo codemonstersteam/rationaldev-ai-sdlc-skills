@@ -4,6 +4,7 @@ version: "1.0"
 mode: subagent
 temperature: 0.2
 steps: 50
+model: openrouter/qwen/qwen3.6-27b
 permission:
   read: allow
   grep: allow
