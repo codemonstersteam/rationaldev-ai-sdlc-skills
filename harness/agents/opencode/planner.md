@@ -10,7 +10,29 @@ permission:
   grep: allow
   glob: allow
   list: allow
-  bash: ask
+  bash:
+    "mkdir *": allow
+    "cp *": allow
+    "mv *": allow
+    "touch *": allow
+    "cat *": allow
+    "echo *": allow
+    "printf *": allow
+    "tee *": allow
+    "sed *": allow
+    "awk *": allow
+    "ls *": allow
+    "head *": allow
+    "tail *": allow
+    "wc *": allow
+    "find *": allow
+    "test *": allow
+    "diff *": allow
+    "go *": allow
+    "gofmt *": allow
+    "docker *": allow
+    "sh ./run-tests.sh*": allow
+    "*": ask
   edit:
     ".agent/**": allow
     "api-specification/**": allow

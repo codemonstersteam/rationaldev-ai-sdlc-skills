@@ -15,7 +15,23 @@ permission:
   grep: allow
   glob: allow
   list: allow
-  bash: deny
+  bash:
+    "mkdir *": allow
+    "cp *": allow
+    "mv *": allow
+    "touch *": allow
+    "cat *": allow
+    "echo *": allow
+    "printf *": allow
+    "tee *": allow
+    "ls *": allow
+    "head *": allow
+    "tail *": allow
+    "wc *": allow
+    "find *": allow
+    "test *": allow
+    "diff *": allow
+    "*": ask
   edit:
     ".agent/plan-reviewer/**": allow
     ".agent/decisions.log": allow
