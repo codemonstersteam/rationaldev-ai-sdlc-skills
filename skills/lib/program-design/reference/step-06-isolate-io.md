@@ -56,7 +56,8 @@ set (Step 5), design it with the matching sub-skill — do not improvise best pr
 - `http` → `http-io` (two budgets load/payload BEFORE code; contract frozen by a machine spec →
   client, stub, fixtures derived from it);
 - `llm` → `http-io` + `llm-client` (protocol, structured output, role fan-out);
-- `db` → `db-io` (transactions, isolation, timeout vs unavailable as distinguishable branches);
+- `db` → `db-io` (transactions, isolation, timeout vs unavailable as distinguishable branches)
+  **+ `db-schema`** (KISS tables, no logic in the DB, code-first migrations);
 - `queue` → `queue-io` (delivery semantics, idempotency key, DLQ, redelivery as branches).
 
 A slice design card with such a call passes that sub-skill's design checklist before code. The

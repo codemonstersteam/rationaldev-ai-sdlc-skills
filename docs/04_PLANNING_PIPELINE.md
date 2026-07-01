@@ -66,7 +66,7 @@ io: none | http | llm | queue | db
 | `http`  | `program-design` + `http-io` |
 | `llm`   | `program-design` + `http-io` + `llm-client` |
 | `queue` | `program-design` + `queue-io` |
-| `db`    | `program-design` + `db-io` |
+| `db`    | `program-design` + `db-io` + `db-schema` (проектирование таблиц) |
 
 Имплементер (Qwen) **ничего не выбирает** — получает тикет с уже вложенными нужными скиллами.
 
