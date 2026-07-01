@@ -1,8 +1,8 @@
 ---
 name: component-test-scaffold
 description: Make a slice's authored .feature scenarios EXECUTE and be all RED by business reason against the already-scaffolded service skeleton (service-scaffold, stage 4b, gave you the placeholder-501 service + godog/Docker-Compose runner). Drop in the scenarios, wire the slice's deps/stubs, run — every scenario RED because the placeholder returns 501, never red from setup/compile/wiring. Use at stage 6, after component-tests (stage 5) authored the scenarios. Do NOT clone/scaffold the skeleton (that is service-scaffold), author scenarios/formula (component-tests), or implement logic (program-implementation). Tier-agnostic: red-reason decision table, exact commands, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # component-test-scaffold.skill — make the authored tests RED-ready

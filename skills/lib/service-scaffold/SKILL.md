@@ -1,8 +1,8 @@
 ---
 name: service-scaffold
 description: Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-test-scaffold) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # service-scaffold.skill — start a service from a stack template

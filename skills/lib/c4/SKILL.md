@@ -1,8 +1,8 @@
 ---
 name: c4
 description: Draw the slice's C4 model into docs/design/<slice>/c4.md — C2 Container and C3 Component (the C3 IS the program-design module tree), as Mermaid blocks that render on GitHub. Use at stage 9, once the module tree exists (program-design, stage 8). C1 (system context) lives on the concept landing; C4 (code) is not drawn. The Cockburn use case is its neighbor file use-case.md (cockburn-use-case), not re-authored here. Do NOT design the module tree (program-design) or write the use case (cockburn-use-case). Tier-agnostic: fixed Mermaid templates, a C3=tree conformance rule, checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # c4.skill — the slice's C4 model (C2 + C3)

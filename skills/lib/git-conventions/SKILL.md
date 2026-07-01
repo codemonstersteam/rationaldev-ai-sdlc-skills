@@ -143,6 +143,7 @@ docs/design/XXX/...
 - [ ] commit message `DOS-XXX (type): текст` — Russian, ≤ 50 chars, no period
 - [ ] local CI (4 steps) green; `gofmt -l` empty
 - [ ] PR ≤ 600 lines, ≤ 10 files
+- [ ] index clean: no build artifacts / binaries / secrets / large blobs (`git ls-files`); such files belong in `.gitignore`, not the commit
 
 ## Metrics
 

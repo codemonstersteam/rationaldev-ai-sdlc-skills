@@ -1,8 +1,8 @@
 ---
 name: db-schema
 description: Design a database SCHEMA (tables) the KISS way — simple flat tables, no mandatory columns, NO logic in the DB (no triggers / stored procedures / business CHECKs / cascades), validity guaranteed by code not by the schema. Schema is code-first: versioned, forward-only migrations applied from code with Go tooling (Atlas / goose / golang-migrate — Liquibase-style, in Go). Use when a slice needs new/changed tables (io: db). Pairs with db-io (how to talk to the DB). Do NOT use to design the Store object (db-io) or module logic (program-design). Tier-agnostic: KISS rules, a "no logic in DB" list, migration checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # db-schema — KISS database schema design (code-first)

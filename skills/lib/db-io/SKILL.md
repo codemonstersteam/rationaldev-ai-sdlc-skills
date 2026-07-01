@@ -1,8 +1,8 @@
 ---
 name: db-io
 description: Designing an I/O object (Store) over a database — transactions, isolation, migrations, and the distinguishable failure branches (locked / disk-full / timeout / unavailable / constraint) that become the component-test failure scenarios. Use when a slice reads/writes a DB (io: db). The Store is a pure pipe (no transformations, not unit-tested); the schema + migrations are its contract. Do NOT use for sync HTTP (http-io), queues (queue-io), or module logic (program-design). Tier-agnostic: decision tables, adapter-branch list, checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # db-io — discipline for a database I/O object (Store)

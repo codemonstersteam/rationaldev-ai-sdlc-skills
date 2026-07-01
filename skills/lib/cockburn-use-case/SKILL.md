@@ -1,8 +1,8 @@
 ---
 name: cockburn-use-case
 description: Promote a slice's brief use case (from requirements-intake) into a fully-dressed Cockburn system use case at docs/design/<slice>/use-case.md. Use at stage 2 of the planning pipeline, per slice, once the slice backlog exists — it is the definitive behavioral spec and the traceability source for component tests (each Extension → one failure mode → one error code). Do NOT use to elicit requirements from scratch (that is requirements-intake) or to design modules (program-design). Tier-agnostic: fixed fully-dressed template, a traceability rule, checklist, STOP rules.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # cockburn-use-case.skill — fully-dressed system use case for a slice

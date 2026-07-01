@@ -1,8 +1,8 @@
 ---
 name: queue-io
 description: Designing an I/O object over a message broker / queue (Kafka, RabbitMQ, SQS, NATS…) — Publisher (send) or Consumer (receive). Use when a slice's external input/output is async messaging (io: queue). Backbone — delivery semantics decided in the slice design BEFORE code: at-least-once + idempotency key, ordering, ack-after-process, DLQ + redelivery policy. The object is a pure pipe (no transformations, not unit-tested); its distinguishable adapter branches are the component-test failure scenarios. Pairs with asyncapi-spec (the frozen contract). Do NOT use for sync HTTP (http-io) or module logic (program-design). Tier-agnostic: decision tables, adapter-branch list, checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # queue-io — discipline for a broker / queue I/O object

@@ -9,6 +9,27 @@
       "description": "Design a change within module boundaries plus a network-connectivity map. Use during PLANNING (planner) and PLAN REVIEW (plan-reviewer) to identify affected components and adjacent systems, record new network paths for security, and keep the change agent-ready (1–2 modules). Do NOT use for the internals of a single module (that is program-design) or for writing code (code-style)."
     },
     {
+      "name": "asyncapi-spec",
+      "path": "skills/lib/asyncapi-spec/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Author the service's own AsyncAPI 3.0 contract for asynchronous messaging (events, queues, brokers) at api-specification/asyncapi.yaml — one frozen contract per service, derived deterministically from the slice's fully-dressed use case and failure-mode map. Use at stage 4 for a slice whose external input is a consumed message or whose output is a published event; the spec then feeds contract-tests (pass C1, pinout-asyncapi), component-tests, and program-design Step 0. Do NOT use for synchronous HTTP (openapi-spec) or for consumer expectations of another service (contract-tests). Tier-agnostic: derivation router, hard rules, validation, STOP."
+    },
+    {
+      "name": "c4",
+      "path": "skills/lib/c4/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Draw the slice's C4 model into docs/design/<slice>/c4.md — C2 Container and C3 Component (the C3 IS the program-design module tree), as Mermaid blocks that render on GitHub. Use at stage 9, once the module tree exists (program-design, stage 8). C1 (system context) lives on the concept landing; C4 (code) is not drawn. The Cockburn use case is its neighbor file use-case.md (cockburn-use-case), not re-authored here. Do NOT design the module tree (program-design) or write the use case (cockburn-use-case). Tier-agnostic: fixed Mermaid templates, a C3=tree conformance rule, checklist, STOP."
+    },
+    {
+      "name": "cockburn-use-case",
+      "path": "skills/lib/cockburn-use-case/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Promote a slice's brief use case (from requirements-intake) into a fully-dressed Cockburn system use case at docs/design/<slice>/use-case.md. Use at stage 2 of the planning pipeline, per slice, once the slice backlog exists — it is the definitive behavioral spec and the traceability source for component tests (each Extension → one failure mode → one error code). Do NOT use to elicit requirements from scratch (that is requirements-intake) or to design modules (program-design). Tier-agnostic: fixed fully-dressed template, a traceability rule, checklist, STOP rules."
+    },
+    {
       "name": "code-style",
       "path": "skills/lib/code-style/SKILL.md",
       "version": "1.0",
@@ -23,11 +44,18 @@
       "description": "Pragmatic, token-saving output style for executor roles (implementer, fixer). Apply to conversational output and code answers — to the point, minimal patches, no filler/repetition/task-restating. Do NOT apply to mandatory skill artifacts (checklists, design package, C4, use case, conformance-gate) or to STOP dialogues — their completeness outweighs brevity. Cutting checks for the sake of brevity is forbidden (anti-gaming). Tier-agnostic."
     },
     {
+      "name": "component-test-scaffold",
+      "path": "skills/lib/component-test-scaffold/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Make a slice's authored .feature scenarios EXECUTE and be all RED by business reason against the already-scaffolded service skeleton (service-scaffold, stage 4b, gave you the placeholder-501 service + godog/Docker-Compose runner). Drop in the scenarios, wire the slice's deps/stubs, run — every scenario RED because the placeholder returns 501, never red from setup/compile/wiring. Use at stage 6, after component-tests (stage 5) authored the scenarios. Do NOT clone/scaffold the skeleton (that is service-scaffold), author scenarios/formula (component-tests), or implement logic (program-implementation). Tier-agnostic: red-reason decision table, exact commands, STOP."
+    },
+    {
       "name": "component-tests",
       "path": "skills/lib/component-tests/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula, decision tables, checklists, STOP rules."
+      "description": "Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, decision tables, checklists, STOP rules."
     },
     {
       "name": "contract-tests",
@@ -35,6 +63,20 @@
       "version": "0.1",
       "status": "draft",
       "description": "Deterministic procedure for contract tests between components (consumer-driven). The contract is described by a machine spec (OpenAPI/AsyncAPI), component links by a netlist; checked by the external pinout validator and its components. Use when a service calls another service/broker or exposes an API to consumers. Do NOT use for the internal logic of a single module — that is program-design + component-tests."
+    },
+    {
+      "name": "db-io",
+      "path": "skills/lib/db-io/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Designing an I/O object (Store) over a database — transactions, isolation, migrations, and the distinguishable failure branches (locked / disk-full / timeout / unavailable / constraint) that become the component-test failure scenarios. Use when a slice reads/writes a DB (io: db). The Store is a pure pipe (no transformations, not unit-tested); the schema + migrations are its contract. Do NOT use for sync HTTP (http-io), queues (queue-io), or module logic (program-design). Tier-agnostic: decision tables, adapter-branch list, checklist, STOP."
+    },
+    {
+      "name": "db-schema",
+      "path": "skills/lib/db-schema/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Design a database SCHEMA (tables) the KISS way — simple flat tables, no mandatory columns, NO logic in the DB (no triggers / stored procedures / business CHECKs / cascades), validity guaranteed by code not by the schema. Schema is code-first: versioned, forward-only migrations applied from code with Go tooling (Atlas / goose / golang-migrate — Liquibase-style, in Go). Use when a slice needs new/changed tables (io: db). Pairs with db-io (how to talk to the DB). Do NOT use to design the Store object (db-io) or module logic (program-design). Tier-agnostic: KISS rules, a \"no logic in DB\" list, migration checklist, STOP."
     },
     {
       "name": "doc-quality-review",
@@ -65,6 +107,13 @@
       "description": "Designing an I/O object over HTTP to a metered / rate-limited external service — LLM, linter-as-a-service, embeddings, any external API. Use when a slice needs an outbound HTTP call and you must NOT overload the provider or send excess context. Backbone — two budgets (load and payload), computed in the slice design BEFORE code. Flow — curl probe → provider machine spec (OpenAPI/AsyncAPI; if the provider has none, write your own) → client, stub and unit/component test fixtures derived from it; budgets carried into tests as assertions. For LLM specifics (OpenAI-compatible protocol, response_format, fan-out over consumer roles) see the llm-client skill. Built for a weak model (Qwen3.5-397B-A17B, ~17B active): two budget formulas, decision tables, checklists, STOP rules."
     },
     {
+      "name": "implementation-ticket-writer",
+      "path": "skills/lib/implementation-ticket-writer/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits Qwen3.6-27b, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP."
+    },
+    {
       "name": "llm-client",
       "path": "skills/lib/llm-client/SKILL.md",
       "version": "1.0",
@@ -93,6 +142,13 @@
       "description": "SLI/SLO/guardrail at PLANNING and canary release-health at RELEASE — 4 golden signals (latency/traffic/errors/saturation), GREEN/YELLOW/RED verdict, rollback behind a feature toggle. Apply for planner (writes SLI/SLO/rollback plan into plan.md) and release-health/michtom (prod rollout + health analysis). No test environments — canary straight to prod. Do NOT apply for contracts (contract-tests) or black-box behavior (component-tests)."
     },
     {
+      "name": "openapi-spec",
+      "path": "skills/lib/openapi-spec/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Author the service's own OpenAPI 3.x contract for synchronous HTTP endpoints at api-specification/openapi.yaml — one frozen contract per service, derived deterministically from the slice's fully-dressed use case and failure-mode map. Use at stage 3 for a slice whose external input is HTTP; the spec then feeds contract-tests (pass C1), component-tests, and program-design Step 0. Do NOT use for async/events (asyncapi-spec) or for consumer expectations of another service's API (contract-tests). Tier-agnostic: derivation router, hard rules, validation, STOP."
+    },
+    {
       "name": "platform-landing",
       "path": "skills/lib/platform-landing/SKILL.md",
       "version": "1.0",
@@ -114,6 +170,13 @@
       "description": "Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong, e.g. GLM / Qwen through Opus): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum."
     },
     {
+      "name": "queue-io",
+      "path": "skills/lib/queue-io/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Designing an I/O object over a message broker / queue (Kafka, RabbitMQ, SQS, NATS…) — Publisher (send) or Consumer (receive). Use when a slice's external input/output is async messaging (io: queue). Backbone — delivery semantics decided in the slice design BEFORE code: at-least-once + idempotency key, ordering, ack-after-process, DLQ + redelivery policy. The object is a pure pipe (no transformations, not unit-tested); its distinguishable adapter branches are the component-test failure scenarios. Pairs with asyncapi-spec (the frozen contract). Do NOT use for sync HTTP (http-io) or module logic (program-design). Tier-agnostic: decision tables, adapter-branch list, checklist, STOP."
+    },
+    {
       "name": "requirements-intake",
       "path": "skills/lib/requirements-intake/SKILL.md",
       "version": "1.0",
@@ -126,6 +189,27 @@
       "version": "1.0",
       "status": "stable",
       "description": "Security as a plan requirement, not an afterthought — data classification, PII minimization and masking, encryption/TLS, authentication and authorization for new entry points, secrets from vault, new network paths via ticket, input validation, security-scan in CI (dependencies/secrets = merge block). Apply during PLANNING (planner), PLAN REVIEW (plan-reviewer), IMPLEMENTATION (implementer), CI/CODE REVIEW (fixer). Does NOT replace module design (program-design)."
+    },
+    {
+      "name": "service-scaffold",
+      "path": "skills/lib/service-scaffold/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-test-scaffold) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP."
+    },
+    {
+      "name": "tmux-test-runner",
+      "path": "skills/lib/tmux-test-runner/SKILL.md",
+      "version": "0.3",
+      "status": "draft",
+      "description": "Run a long/interactive test command in a detached tmux pane with a shell watchdog that polls the pane, auto-answers only SAFE prompts via send-keys (default-yes confirms, Press-Enter, pager q) and pings the human for everything else (passwords, [y/N] default-no, destructive or unknown prompts). Use when tests may hang, ask for input, or run long enough that you should not block on them. Do NOT use for fast non-interactive tests — just run them. Written for weaker models (GLM-5.2): a script file (no quoting traps), a strict safe-prompt whitelist, short events. Needs bash + tmux."
+    },
+    {
+      "name": "vertical-slices",
+      "path": "skills/lib/vertical-slices/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Cut a service (or task) into atomic vertical slices — the spine of the planning pipeline. Use right after requirements-intake (FRD + high-level plan exist) and BEFORE specs/design: each slice is one end-to-end path through all layers, tied to exactly one external input, demoable on its own, dependency-ordered. Out — a slice backlog that each downstream stage (use case, OpenAPI/AsyncAPI, component tests, program-design) consumes one slice at a time. Do NOT use to design a slice's module tree (that is program-design) or to write code. Tier-agnostic, built for weak models: rules, a granularity table, checklists, STOP rules."
     }
   ],
   "roles": [
@@ -148,14 +232,24 @@
       "role": "planner",
       "skills": [
         "requirements-intake",
+        "vertical-slices",
+        "cockburn-use-case",
+        "openapi-spec",
+        "asyncapi-spec",
+        "service-scaffold",
+        "program-design",
+        "c4",
+        "implementation-ticket-writer",
         "architecture",
         "documentation",
         "http-io",
         "llm-client",
+        "queue-io",
+        "db-io",
+        "db-schema",
         "memory",
         "observability",
         "platform-landing",
-        "program-design",
         "security"
       ],
       "inputs": [
@@ -177,6 +271,8 @@
         "doc-quality-review",
         "observability",
         "program-design",
+        "c4",
+        "cockburn-use-case",
         "security"
       ],
       "inputs": [
@@ -198,10 +294,15 @@
         "code-style",
         "communication",
         "component-tests",
+        "component-test-scaffold",
+        "service-scaffold",
         "documentation",
         "git-conventions",
         "http-io",
         "llm-client",
+        "queue-io",
+        "db-io",
+        "db-schema",
         "md-formatting",
         "memory",
         "program-implementation"

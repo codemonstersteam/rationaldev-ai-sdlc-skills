@@ -1,8 +1,8 @@
 ---
 name: openapi-spec
 description: Author the service's own OpenAPI 3.x contract for synchronous HTTP endpoints at api-specification/openapi.yaml — one frozen contract per service, derived deterministically from the slice's fully-dressed use case and failure-mode map. Use at stage 3 for a slice whose external input is HTTP; the spec then feeds contract-tests (pass C1), component-tests, and program-design Step 0. Do NOT use for async/events (asyncapi-spec) or for consumer expectations of another service's API (contract-tests). Tier-agnostic: derivation router, hard rules, validation, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # openapi-spec.skill — the service's synchronous HTTP contract

@@ -1,8 +1,8 @@
 ---
 name: asyncapi-spec
 description: Author the service's own AsyncAPI 3.0 contract for asynchronous messaging (events, queues, brokers) at api-specification/asyncapi.yaml — one frozen contract per service, derived deterministically from the slice's fully-dressed use case and failure-mode map. Use at stage 4 for a slice whose external input is a consumed message or whose output is a published event; the spec then feeds contract-tests (pass C1, pinout-asyncapi), component-tests, and program-design Step 0. Do NOT use for synchronous HTTP (openapi-spec) or for consumer expectations of another service (contract-tests). Tier-agnostic: derivation router, hard rules, validation, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # asyncapi-spec.skill — the service's asynchronous messaging contract

@@ -1,8 +1,8 @@
 ---
 name: vertical-slices
 description: Cut a service (or task) into atomic vertical slices — the spine of the planning pipeline. Use right after requirements-intake (FRD + high-level plan exist) and BEFORE specs/design: each slice is one end-to-end path through all layers, tied to exactly one external input, demoable on its own, dependency-ordered. Out — a slice backlog that each downstream stage (use case, OpenAPI/AsyncAPI, component tests, program-design) consumes one slice at a time. Do NOT use to design a slice's module tree (that is program-design) or to write code. Tier-agnostic, built for weak models: rules, a granularity table, checklists, STOP rules.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # vertical-slices.skill — cut a service into atomic vertical slices

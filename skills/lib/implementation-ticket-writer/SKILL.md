@@ -1,8 +1,8 @@
 ---
 name: implementation-ticket-writer
 description: The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits Qwen3.6-27b, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP.
-version: "0.1"
-status: "draft"
+version: "1.0"
+status: "stable"
 ---
 
 # implementation-ticket-writer — cut Qwen-sized implementation tickets
