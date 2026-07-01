@@ -7,7 +7,7 @@ mode: subagent
 temperature: 0.1
 steps: 20
 description: "Ревьюер плана (критик): проверяет полноту и связность плана перед Gate #1. НЕ тот, кто писал план. Вызывать после planner. Keywords: ревью плана, проверка дизайна, вердикт, полнота."
-skills: [architecture, doc-quality-review, observability, program-design, security]
+skills: [architecture, doc-quality-review, observability, program-design, c4, cockburn-use-case, security]
 inputs: [.agent/planner/plan.md, .agent/planner/design, .agent/planner/contracts, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
 outputs: [.agent/plan-reviewer/plan-review.md, .agent/plan-reviewer/round, .agent/decisions.log]
 permission:
@@ -35,6 +35,7 @@ permission:
 ## Скиллы (грузи по имени)
 - `doc-quality-review` — рубрика качества плана как документа (полнота, ясность, организация).
 - `program-design` — эталон полноты пакета (по нему сверяешь `design/<slug>/`).
+- `c4` — сверка C3 == дерево модулей; `cockburn-use-case` — трассируемость use case ↔ тесты.
 - Домены: `architecture` (границы модулей удержаны), `security` (сетевая связанность, угрозы),
   `observability` (заложены ли SLI/guardrail для постмониторинга).
 
@@ -45,7 +46,14 @@ permission:
 ## Проверяемое
 Декомпозиция разумна; нефункциональные требования не упущены; изменение в границах
 модулей (иначе план явно выносит «сначала декомпозиция»); SLI/guardrail заложены —
-иначе Release & Health будет «слеп».
+иначе Release & Health будет «слеп». Дополнительно (для Gate #1):
+- **Дерево модулей + псевдокод головного** есть и согласованы с контрактами (это то, что оператор
+  видит на Gate #1);
+- **`io:` на каждом контракте модуля** (`none|http|llm|queue|db`) — иначе `implementation-ticket-writer`
+  не сможет роутить (blocker);
+- **счёт компонентных = `1 + Σ веток адаптера`** (не `#extensions`); все границы — в юнит-тестах;
+- **карта контекста слайса** (CONTEXT.md/ADR, C4 C3 == дерево, use case рядом) собрана;
+- **тикеты нарезаны** (второй проход) и влезают в целевую модель.
 
 ## Замечания — по тяжести
 Каждое замечание классифицируй:
