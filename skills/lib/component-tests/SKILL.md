@@ -1,6 +1,6 @@
 ---
 name: component-tests
-description: Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula, decision tables, checklists, STOP rules.
+description: Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, decision tables, checklists, STOP rules.
 version: "1.0"
 ---
 
@@ -79,22 +79,32 @@ A fixture **MUST** be minimal: exactly what triggers one contract branch. Extra 
 
 ## Formula
 
+Per slice the count is fixed by the **adapters** (external integrations), **not** by input values:
+
 ```
-N = N_API_endpoints + Σ (distinguishable failure modes of integration i)
+N = 1 (happy path) + Σ (distinguishable branches of adapter i)
 ```
 
-`N_API_endpoints` = OpenAPI endpoints + AsyncAPI events (publish & subscribe); for a CLI,
-the number of subcommands. A distinguishable failure mode = each error type the service
-promises outward for that integration.
+An **adapter** wraps one external dependency (DB, broker, HTTP provider, filesystem). A
+**distinguishable branch** = one error path that adapter surfaces outward and that the service
+handles differently (see the distinguishing rule below). Service-wide this sums over all
+endpoints/events: `N = N_endpoints/events + Σ adapter branches`. Typical result: **3–6 scenarios
+per service** — a small, defensible number. (Source: "Testing mythology: component tests",
+codemonsters.team, 2026-04-25.)
 
-**Failure modes come from the system use-case Extensions (Cockburn).** When the slice's
-use case exists (`program-design` Step 8.6), take failure modes 1:1 from its **Extensions**:
-`Main Success Scenario` → happy-path scenario; each `Extension NNa` → exactly one failure
-scenario (same `error.code` and exit/outcome). So `N = 1 + #extensions` per slice.
+**Boundaries are NOT counted here — they are unit tests.** Input-value boundaries, equivalence
+classes, decision tables, and any `Request`-field branch (lesson D1) belong to the **unit** layer
+(`program-design` Step 8), never to component tests. Component tests count **adapter branches
+only**. This split is a hard invariant of the pipeline ([`docs/04_PLANNING_PIPELINE.md`](../../../docs/04_PLANNING_PIPELINE.md) §5).
 
-**Two-way gate:** `#failure_scenarios == #Extensions == #error_codes` per slice. An
-Extension without a scenario, or a scenario without an Extension → a mismatch you **MUST**
-fix. Chain: use case → slice → Gherkin → contract-graph nodes.
+**Cockburn Extensions give the wording, not the count.** Each **adapter-failure** Extension → one
+component scenario whose name is the Extension's wording verbatim (traceability). An Extension that
+is **input validation** (a bad request field) → a **unit** boundary, not a component scenario.
+
+**Gate (per slice):** `#component_failure_scenarios == #distinguishable_adapter_branches`, and each
+maps to one consumer-visible `error.code`. Input-validation Extensions map to unit boundaries
+instead. A scenario without an adapter branch, or an adapter branch without a scenario → a
+mismatch you **MUST** fix. Chain: use case → slice → Gherkin → contract-graph nodes.
 
 ## What counts as an integration
 
@@ -144,6 +154,25 @@ desire for depth).
 One `.feature` per API resource; filename = resource name lowercased; located at
 `component-tests/<resource>.feature`.
 
+## WIP marker and slice acceptance
+
+Component tests are authored RED before the slice is built (stage 6) and stay RED until the whole
+slice is assembled — they are a black box over the **entire** service, so a half-built slice cannot
+turn them green (test sequence: build → unit → component). To keep a half-built slice from looking
+"done", tag the slice's component scenarios `@wip`:
+
+```gherkin
+@wip
+Scenario: 3a токен истёк возвращает 401
+```
+
+- While `@wip` is present, the slice's suite is **not** a release gate and does not block the slice's
+  per-ticket PRs.
+- On **slice completion** the **fixer** runs the slice's component tests; when they are **GREEN** the
+  fixer **removes `@wip`** and accepts the slice's work. Removing `@wip` **is** the acceptance act.
+- **Only the fixer removes `@wip`.** An implementer MUST NOT (anti-gaming — see
+  `program-implementation`, and orchestration in [`docs/04_PLANNING_PIPELINE.md`](../../../docs/04_PLANNING_PIPELINE.md) §6).
+
 ## What NOT to do (MUST NOT)
 
 Derive failure modes from code as the primary path · generate request-field validation
@@ -169,7 +198,8 @@ You **MUST** stop and ask the operator, don't guess, when:
 - [ ] all scenarios run in Docker Compose with real dependencies.
 - [ ] no field validation, no business logic, no smoke tests.
 - [ ] **fixtures isolated per slice** (`good-<slice>` / `bad-<slice>`); no cross-slice reuse; integration slice has its own.
-- [ ] **scenario count = formula**; extras deleted; each scenario triggers exactly one contract branch that didn't exist without it.
+- [ ] **scenario count = formula** (`1 + Σ adapter branches`); extras deleted; boundaries are unit-level, not here; each scenario triggers exactly one contract branch that didn't exist without it.
+- [ ] slice's component scenarios tagged `@wip`; `@wip` removed **only** by the fixer on GREEN at slice completion.
 
 **Template handoff (Step 0), if preparing a test template for another agent:**
 - [ ] every step in `steps/*.go` is invoked at least once from `features/smoke.feature` — from Gherkin, not a Go macro-call (different arg/parse semantics; "mentally written" steps often fail on first real `.feature` call, e.g. a dynamic id that can't be static in a Gherkin string);
