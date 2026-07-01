@@ -31,10 +31,37 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
     try { await access(p); return true } catch { return false }
   }
 
+  // Строка, по которой ловим попытку агента создать/тронуть маркер Gate #1.
+  const GATE_MARK = ".agent/gates/gate1.approved"
+
   return {
     // Gate #1: жёсткий стоп на делегировании implementer до апрува плана.
     "tool.execute.before": async (input: any, output: any) => {
-      if (input?.tool !== "task") return
+      const tool = input?.tool
+      const args = output?.args ?? input?.args ?? {}
+
+      // (0) Маркер Gate #1 ставит ТОЛЬКО оператор вне сессии. Агент не может его
+      // создавать/трогать — иначе human-gate обходится самоакцептом (найдено на dry-run).
+      if (tool === "bash") {
+        const cmd = String((args as any).command ?? "")
+        if (cmd.includes(GATE_MARK)) {
+          throw new Error(
+            "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") ставит ТОЛЬКО оператор " +
+            "вне сессии. Агенту создавать/трогать его запрещено — на Gate #1 задай question и жди.",
+          )
+        }
+      }
+      if (tool === "write" || tool === "edit") {
+        const p = String((args as any).filePath ?? (args as any).path ?? "")
+        if (p.includes(GATE_MARK)) {
+          throw new Error(
+            "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") нельзя ставить через write/edit " +
+            "агента — только оператор вне сессии.",
+          )
+        }
+      }
+
+      if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
       if (role !== "implementer") return
       if (!(await exists(review)) || !(await exists(gate1))) {

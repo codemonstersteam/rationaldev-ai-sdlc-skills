@@ -22,9 +22,9 @@ KEY="$(grep -h OPENROUTER_API_KEY "$BENCH/proxy/.env" 2>/dev/null | cut -d= -f2 
 [ -n "$KEY" ] || { echo "нет OPENROUTER_API_KEY в $BENCH/proxy/.env (скопируй proxy/.env.example)"; exit 1; }
 command -v jq >/dev/null || { echo "нужен jq"; exit 1; }
 
-# 1) песочница + харнес
+# 1) песочница + харнес (--hard: guardrail-плагин форсит Gate #1 + decisions.log)
 rm -rf "$SB"; mkdir -p "$SB"
-sh "$BUNDLE/install.sh" opencode "$SB" --no-input
+sh "$BUNDLE/install.sh" opencode "$SB" --no-input --hard
 cp "$BENCH/spec/task.md" "$SB/TASK.md"
 
 # 2) глобальный opencode: openrouter → прокси, без omo
@@ -57,6 +57,9 @@ cat <<EOF
   cd "$SB"
   export OPENROUTER_API_KEY=$KEY
   opencode --agent orchestrator     # затем: прочитай ./TASK.md и реализуй
+
+Апрув Gate #1 (guardrail жёстко блокирует @implementer до этого; агент маркер не поставит):
+  touch "$SB/.agent/gates/gate1.approved"     # ← ставит ОПЕРАТОР, когда принял план
 
 Модель по факту (в другом терминале):
   tail -f "$BENCH/proxy/usage.jsonl" | jq -c '{req_model,input_tokens,completion_tokens}'
