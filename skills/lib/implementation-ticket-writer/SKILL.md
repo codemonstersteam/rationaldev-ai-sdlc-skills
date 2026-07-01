@@ -44,6 +44,10 @@ The `io:` field (set by `program-design` Step 5) is the sole routing key — no 
 The implementer subagent receives exactly these — it **selects nothing**. A module with `io: none`
 gets no io sub-skill.
 
+**`io: http`/`queue` are OUTBOUND only.** They tag an autonomous `Client`/`Publisher`/`Consumer` the
+service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
+never route `http-io` to it. If the module has no outbound call, its `io:` is `none`.
+
 ## Ticket template (minimal, Qwen-sized)
 
 Reuse the `program-design` ticket template (`reference/ticket-template.md`) but **trim to this

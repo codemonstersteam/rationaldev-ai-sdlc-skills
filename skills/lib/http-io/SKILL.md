@@ -6,9 +6,11 @@ version: "1.0"
 
 # http-io — discipline for outbound HTTP to a metered service
 
-Applies to any I/O object hiding HTTP to a billed or rate-limited service (LLM,
-linter-as-a-service, embeddings, corporate API). Local I/O (filesystem, stdout/file
-sink) is **out of scope** — no provider to overload, no metered context.
+Applies to any **outbound** I/O object hiding HTTP to a billed or rate-limited service the
+service **calls out** to (LLM, linter-as-a-service, embeddings, corporate API). **The service's
+own inbound HTTP handler / router / ingress adapter is NOT http-io** — that is `io: none` (it
+parses the incoming request, it doesn't call out). Local I/O (filesystem, stdout/file sink) is
+also **out of scope** — no provider to overload, no metered context.
 
 > **Core lesson:** I/O-object defects are closed in **design and verify-before-code**,
 > not in coding. For LLM specifics — the [`llm-client`](../llm-client/SKILL.md) skill.

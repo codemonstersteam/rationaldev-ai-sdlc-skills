@@ -39,6 +39,13 @@ and Step 6). Fill it mechanically:
 A module with `io: none` MUST have `Dependencies: —` of any external client (else it's an
 un-isolated I/O — return to Step 3). A module with `io ≠ none` is an autonomous I/O object (Step 6).
 
+**`io: http` is OUTBOUND only.** `io: http` means an autonomous **`Client`** object the service
+**calls out** to (external REST / LLM / metered API — the `http-io` skill). The service's **own
+inbound HTTP handler / router / ingress adapter is `io: none`** — it parses the incoming request,
+it is not an I/O object and never tags as `io: http`. Same for `queue`: `io: queue` is the outbound
+`Publisher` / the consuming `Consumer` object, not "the service speaks HTTP". If a slice has no
+outbound call, **no module is `io: http`** even for an HTTP service.
+
 This is a field-by-field frozen template. No "conversational" signature description — Input and
 Dependencies always on separate lines. This insures against sliding back into a flat argument list.
 
