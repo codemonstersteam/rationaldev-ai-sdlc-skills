@@ -11,6 +11,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -31,10 +32,26 @@ var (
 	rePrm         = regexp.MustCompile(`"prompt_tokens"\s*:\s*(\d+)`)
 	reCacheRead   = regexp.MustCompile(`"cache_read_input_tokens"\s*:\s*(\d+)`)
 	reCacheCreate = regexp.MustCompile(`"cache_creation_input_tokens"\s*:\s*(\d+)`)
+	reModel       = regexp.MustCompile(`"model"\s*:\s*"([^"]+)"`) // модель из ТЕЛА ЗАПРОСА (по назначению)
 	logMu  sync.Mutex
 	model  string
 	logP   string
 )
+
+// ctxKey несёт модель запроса от входного хендлера к ModifyResponse (по-запросно, конкурентно-безопасно).
+type ctxKey int
+
+const modelKey ctxKey = 0
+
+func reqModelFromCtx(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if v, ok := r.Context().Value(modelKey).(string); ok {
+		return v
+	}
+	return ""
+}
 
 func maxMatch(re *regexp.Regexp, b []byte) int {
 	m := 0
@@ -49,9 +66,10 @@ func maxMatch(re *regexp.Regexp, b []byte) int {
 // teeBody scans the response stream (without buffering away from the client) and logs
 // usage once, on EOF/Close. Anthropic streams cumulative output_tokens → we keep the max.
 type teeBody struct {
-	rc   io.ReadCloser
-	buf  bytes.Buffer
-	once sync.Once
+	rc       io.ReadCloser
+	buf      bytes.Buffer
+	once     sync.Once
+	reqModel string // модель из тела запроса (что реально запросила роль)
 }
 
 func (t *teeBody) Read(p []byte) (int, error) {
@@ -89,7 +107,8 @@ func (t *teeBody) flush() {
 		}
 		rec := map[string]any{
 			"ts":                    time.Now().UTC().Format(time.RFC3339),
-			"model":                 model,
+			"model":                 model,       // метка прогона (env MODEL)
+			"req_model":             t.reqModel,  // модель из тела запроса — проверка «по назначению»
 			"prompt_tokens":         in,          // не-кэшированный input (совместимость)
 			"cache_read_tokens":     cacheRead,
 			"cache_creation_tokens": cacheCreate,
@@ -131,9 +150,24 @@ func main() {
 		r.Header.Del("Accept-Encoding") // identity → regex видит usage в теле
 	}
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		resp.Body = &teeBody{rc: resp.Body}
+		resp.Body = &teeBody{rc: resp.Body, reqModel: reqModelFromCtx(resp.Request)}
 		return nil
 	}
+	// Входной хендлер: считывает модель из тела запроса, кладёт в контекст, восстанавливает тело.
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rm := ""
+		if r.Body != nil {
+			if b, err := io.ReadAll(r.Body); err == nil {
+				_ = r.Body.Close()
+				if m := reModel.FindSubmatch(b); m != nil {
+					rm = string(m[1])
+				}
+				r.Body = io.NopCloser(bytes.NewReader(b))
+				r.ContentLength = int64(len(b))
+			}
+		}
+		proxy.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), modelKey, rm)))
+	})
 	log.Printf("tokenproxy :%s → %s  log=%s", port, upstream, logP)
-	log.Fatal(http.ListenAndServe(":"+port, proxy))
+	log.Fatal(http.ListenAndServe(":"+port, h))
 }
