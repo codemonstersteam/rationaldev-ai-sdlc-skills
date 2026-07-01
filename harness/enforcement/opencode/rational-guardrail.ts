@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { appendFile, mkdir, access } from "node:fs/promises"
+import { appendFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -70,6 +70,26 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
           ".agent/plan-reviewer/plan-review.md и апрув оператора " +
           "(.agent/gates/gate1.approved) перед делегированием implementer.",
         )
+      }
+    },
+
+    // Gate #1 акцепт БЕЗ touch: оператор пишет «акцепт» в чат → плагин ставит маркер.
+    // Это сообщение ОПЕРАТОРА (role=user), агент его подделать не может; сам маркер агенту
+    // по-прежнему запрещён (tool.execute.before выше). Реализует «флоу от команды оператора».
+    "chat.message": async (_input: any, output: any) => {
+      try {
+        const parts: any[] = output?.parts ?? []
+        const text = parts
+          .filter((p) => p?.type === "text")
+          .map((p) => String(p.text ?? ""))
+          .join(" ")
+          .toLowerCase()
+        if (/(^|[\s.,!])(акцепт|акцептую|approve|принял план|gate1[- ]?ok|go ahead)([\s.,!]|$)/.test(text)) {
+          await mkdir(join(agentDir, "gates"), { recursive: true })
+          await writeFile(gate1, new Date().toISOString() + "\toperator-approval-via-chat\n")
+        }
+      } catch {
+        // best-effort: сбой записи не валит сессию
       }
     },
 
