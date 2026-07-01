@@ -110,8 +110,8 @@ data branching.
 
 **4. The output matrix doesn't bloat the component tests.** Combinations `stdout|file × json|md`
 are checked by **units** (`resolveDestination`, `renderReport`); the component scenarios
-(`N = 1 + #extensions`, Step 8) include only the **write failure** mode. See `component-tests`
-"Boundary with the unit layer".
+(`N = 1 + Σ adapter branches`, Step 8) include only the **write failure** mode (an I/O-adapter
+branch). See `component-tests` "Formula" and "Boundary with the unit layer".
 
 #### Hard rule of invariant checking: subtype, not guard
 
@@ -230,8 +230,11 @@ The module tree designed above is the **C3 level** of the C4 model. Record C4 in
 | **C1** System Context | system ↔ actors ↔ external systems | platform landing (concept repo, `platform-landing`) |
 | **C2** Container | deployable units + libraries (honest reuse) | component design package (`c4.md`) |
 | **C3** Component | **this slice's module tree** (nodes = modules) | component design package (`c4.md`) |
-| **C4** "how it works" | system **Cockburn use case** (see Step 8, traceability) | `c4.md` / `architecture.md` |
+| **C4** "how it works" | system **Cockburn use case** (see Step 8, traceability) | `docs/design/<slice>/use-case.md` |
 
-Drawing the diagrams and the use case themselves is done by the `documentation` skill
-(Pass B3/B4) — design does **not** write docs past the skill (see Step 12, conformance-gate).
-C2+C3 are mandatory in the component repo; C1 — on the landing.
+**Ownership.** `program-design` produces the **module tree** (the C3 content) and records it in
+`docs/design/<slice>/module-tree.md` with the head-pipe pseudocode. The **C4 diagrams** are drawn
+by the `c4` skill into `docs/design/<slice>/c4.md`; the **Cockburn use case** by the
+`cockburn-use-case` skill into `docs/design/<slice>/use-case.md` (stage 2). `docs/architecture.md`
+holds only C1/C2 links (`documentation` skill). Design does **not** re-author these past the owning
+skill (see Step 12, conformance-gate). C2+C3 mandatory in the component repo; C1 — on the landing.

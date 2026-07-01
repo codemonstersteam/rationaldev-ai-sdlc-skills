@@ -17,8 +17,8 @@ N_unit_tests = 1 (happy path) + Σ (antecedent branches)
 
 **Branches on a `Request` field — here.** Pure choice functions (`resolveDestination`,
 `renderReport` — Step 3, single-request rule) are counted by the same formula: the matrix
-`stdout|file × json|md` is covered by **units**, **not** component scenarios (otherwise
-`N = 1 + #extensions` (Step 8.6) bloats).
+`stdout|file × json|md` is covered by **units**, **not** component scenarios (otherwise the
+component count `1 + Σ adapter branches` (Step 8.6) bloats with non-adapter cases).
 
 **Hard rule: the head module, the I/O modules and the ingress adapter are not unit-covered.**
 
@@ -118,18 +118,25 @@ to the slice and tests deterministically:
 
 - **1 vertical slice = 1 external input = 1 use case.**
 - **Main Success Scenario → 1 happy-path Gherkin scenario.**
-- **Each Extension `NNa` → exactly 1 failure scenario**, carrying an error code (from the
-  dictionary, Step 4) and the exit/outcome.
-- The formula matches `component-tests`: **`N_scenarios = 1 + #extensions`** (= `1 happy + Σ
-  failure_modes`).
+- **Each Extension `NNa` is one of two kinds** and routes to the layer that owns it:
+  - **I/O-adapter failure** (a distinguishable failure of an external dependency: DB / broker /
+    HTTP) → **1 component failure scenario**, carrying an error code (Step 4) and the outcome.
+  - **Input validation** (a bad `Request` field / a domain-constructor antecedent) → a **unit
+    boundary** (Step 8.1, D1.2), **not** a component scenario.
+- Component-scenario formula matches `component-tests`: **`N_scenarios = 1 + Σ (distinguishable
+  I/O-adapter branches)`** — counted by **adapters**, not by `#extensions`. Input-validation
+  extensions are covered by **units** (their boundaries) and never inflate the component count.
 - Each `Then` → a graph node (table 8.4).
 
 **Gate reconciliation (both ways):**
 
-1. Each use-case Extension has a component scenario.
-2. Each `.feature` failure scenario has a corresponding Extension.
-3. `#Extensions == #failure_scenarios == #error_codes` of the slice.
+1. Each **I/O-adapter** Extension has a component failure scenario, and each component failure
+   scenario has a corresponding I/O-adapter Extension.
+2. Each **input-validation** Extension has a unit boundary (Step 8.1) — every boundary covered.
+3. `#component_failure_scenarios == #distinguishable_I/O-adapter_branches == #consumer-visible_error_codes`
+   for those branches.
 
-**Anti-gaming:** you can't delete a scenario without deleting the corresponding Extension (and
-vice versa). A counter mismatch → **STOP**, return to Step 3 or the use case. This is a direct
-consumer of the error dictionary (Step 4) and the source for `component-tests`.
+**Anti-gaming:** you can't delete a component scenario without deleting the corresponding adapter
+branch/Extension (and vice versa); you can't move a boundary from a unit into a component scenario
+to "prove more". A counter mismatch → **STOP**, return to Step 3 or the use case. Source for
+`component-tests` (`1 + Σ adapter branches`) and consumer of the error dictionary (Step 4).

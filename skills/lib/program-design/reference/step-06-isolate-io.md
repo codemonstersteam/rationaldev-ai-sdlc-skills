@@ -31,13 +31,14 @@ distinguishable.
 Each I/O module is designed as an **autonomous object** encapsulating its dependency. The head
 module knows only the object's methods (API), not its inner dependencies.
 
-Object name by integration type:
+Object name by integration type (and the `io:` tag from Step 5 + the design sub-skill for it):
 
-| Integration | Object name | Dependency (hidden inside the object) |
-|---|---|---|
-| Database | `Store` | `*sql.DB` |
-| External HTTP API | `Client` | `*http.Client` + baseURL |
-| Message broker | `Publisher` / `Consumer` | broker connection |
+| Integration | Object name | `io:` | Design sub-skill | Dependency (hidden inside the object) |
+|---|---|---|---|---|
+| Database | `Store` | `db` | `db-io` | `*sql.DB` |
+| External HTTP API | `Client` | `http` | `http-io` | `*http.Client` + baseURL |
+| LLM / model endpoint | `Client` | `llm` | `http-io` + `llm-client` | `*http.Client` + baseURL |
+| Message broker / queue | `Publisher` / `Consumer` | `queue` | `queue-io` | broker connection |
 
 In the contract (Step 5), an I/O module's lines:
 - `Input (data):` — one domain message;
@@ -49,17 +50,29 @@ Violation sign during design review: a raw dependency (`*sql.DB`, `*http.Client`
 contract's `Dependencies:` line or in the head module's `Deps`. It means the I/O object wasn't
 introduced. Stop, return to Step 3.
 
-**Outbound HTTP to a rate-limited service** (external REST/LLM/any rate-limited endpoint) is
-designed by the `http-io` skill: two budgets (load/payload) computed BEFORE code, the contract
-frozen by a machine spec, from which the client, stub and fixtures are derived. A slice design
-card with such a call passes the `http-io` design checklist before code.
+**Design sub-skill by I/O type (deterministic, by the `io:` tag).** Once the object's `io:` is
+set (Step 5), design it with the matching sub-skill — do not improvise best practices:
+
+- `http` → `http-io` (two budgets load/payload BEFORE code; contract frozen by a machine spec →
+  client, stub, fixtures derived from it);
+- `llm` → `http-io` + `llm-client` (protocol, structured output, role fan-out);
+- `db` → `db-io` (transactions, isolation, timeout vs unavailable as distinguishable branches);
+- `queue` → `queue-io` (delivery semantics, idempotency key, DLQ, redelivery as branches).
+
+A slice design card with such a call passes that sub-skill's design checklist before code. The
+distinguishable failure branches the sub-skill enumerates are exactly the adapter branches the
+component-test formula counts (`1 + Σ adapter branches`).
 
 #### Empty-pipe rule of the I/O module
 
-An I/O module contains no business logic. Each object method is a pipe: take a domain message →
-call the external system → return the result or an error. No conditional data branching, no
-transformations. The only allowed branching is mapping the external system's error codes to
-domain errors (`SQLITE_BUSY → ErrDBLocked`).
+An I/O module is a **pure data pipe**: take a domain message → hand it to the external system →
+return the result or an error. **No transformations, no conditional data branching.** The only
+allowed branching is mapping the external system's error codes to domain errors
+(`SQLITE_BUSY → ErrDBLocked`). If a method reshapes/validates/computes over the payload, that logic
+belongs in a **logic module upstream**, not in the I/O module.
 
-I/O modules are **not unit-covered**: the success branch greens the happy-path component
-scenario, the failure branches green the failure scenarios.
+**Testing consequence (hard).** I/O modules are **not unit-tested** — there is nothing to test in a
+pipe. We unit-test the **logic module that feeds** the I/O module: it produces the exact payload
+(the contract) that enters the I/O module, and its unit tests assert that contract. We then **expect
+the I/O module to pass that payload to the integration unchanged.** The I/O success branch is proven
+by the slice's happy-path component scenario; its failure branches by the failure scenarios.

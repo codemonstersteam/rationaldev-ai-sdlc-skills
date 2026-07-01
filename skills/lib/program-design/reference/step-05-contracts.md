@@ -16,12 +16,28 @@ For each slice module — a **hard contract template**:
 - **Dependencies (deps):** `*sql.DB`, `broker.Client`, `clock.Clock`,
                             `*Logger`, config (`RPConfig`, `JWTConfig`).
                             If there are no deps — write `—`.
+- **io:** `none | http | llm | queue | db` — **mandatory on every module.**
 - **What it does:** one phrase.
 - **Antecedent:** conditions on the input.
 - **Consequent:**
   - Success: what it guarantees on output.
   - Failure: error classes (`ErrXxx`, `ErrYyy`).
 ```
+
+**The `io:` field is not a judgement — it is a fact of the module** and the sole routing key the
+implementation ticket writer uses to attach io sub-skills (see `docs/04_PLANNING_PIPELINE.md` §4,
+and Step 6). Fill it mechanically:
+
+| Module kind (Step 3 / Step 6) | `io:` |
+|-------------------------------|-------|
+| Ingress adapter, domain constructor, pure logic, head pipe | `none` |
+| `Store` object (DB) | `db` |
+| `Client` object — external HTTP API | `http` |
+| `Client` object — LLM / model endpoint | `llm` |
+| `Publisher` / `Consumer` object — broker/queue | `queue` |
+
+A module with `io: none` MUST have `Dependencies: —` of any external client (else it's an
+un-isolated I/O — return to Step 3). A module with `io ≠ none` is an autonomous I/O object (Step 6).
 
 This is a field-by-field frozen template. No "conversational" signature description — Input and
 Dependencies always on separate lines. This insures against sliding back into a flat argument list.
