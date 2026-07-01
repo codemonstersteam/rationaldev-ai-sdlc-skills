@@ -14,12 +14,13 @@
 
 Раскладка репозитория и форматы `CONTEXT.md`/ADR — [`../05_REPO_STRUCTURE.md`](../05_REPO_STRUCTURE.md).
 
-## Внешние образцы-репозитории
+## Шаблоны-репозитории (скопировал — работаешь)
 
-| Образец | URL | Что берём | Скилл |
-|---------|-----|-----------|-------|
-| passkey-demo-api | <https://github.com/ubik-life/passkey-demo-api> | шаблон компонентных тестов + скелет сервиса (RED-ready) | `component-test-scaffold`, `component-tests` |
-| pinout-openapi | <https://github.com/codemonstersteam/pinout-openapi> | образец `docs/design/<slice>/c4.md` + системный use case рядом | `c4`, `cockburn-use-case` |
+| Шаблон | URL | Что берём | Скилл |
+|--------|-----|-----------|-------|
+| **template-go-api** (генерик) | <https://github.com/codemonstersteam/template-go-api> | преднастроенный скелет сервиса: godog-раннер + Docker Compose + placeholder-501 + `/health` + базовые степы. **Копируешь целиком** и работаешь _(репо наполняется, см. backlog)_ | `component-test-scaffold` |
+| passkey-demo-api (образец) | <https://github.com/ubik-life/passkey-demo-api> | источник, из которого выведен `service-template` (с passkey-доменом — как пример, не для копирования) | `component-test-scaffold`, `component-tests` |
+| pinout-openapi (образец) | <https://github.com/codemonstersteam/pinout-openapi> | образец `docs/design/<slice>/c4.md` + системный use case рядом | `c4`, `cockburn-use-case` |
 
 > Внешние ссылки цитируются также в frontmatter/теле соответствующего скилла — этот файл держит
 > единый реестр, чтобы не искать по скиллам.

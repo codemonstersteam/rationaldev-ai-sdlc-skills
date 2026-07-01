@@ -38,8 +38,9 @@
 | 2 | Cockburn use case на сервис | fully-dressed use case | 🆕 `cockburn-use-case` | `src/<ctx>/docs/design/<slice>/use-case.md` |
 | 3 | OpenAPI спека | контракт sync HTTP | 🆕 `openapi-spec` | `src/<ctx>/api-specification/openapi.yaml` |
 | 4 | AsyncAPI спека | контракт async | 🆕 `asyncapi-spec` | `src/<ctx>/api-specification/asyncapi.yaml` |
-| 5 | Компонентные тесты по спеке | `.feature` по формуле, RED-ready | ♻️ `component-tests` | шаблон passkey |
-| 6 | Тесты собираются и RED | скелет сервиса, все тесты красные по бизнес-причине | 🆕 `component-test-scaffold` | — |
+| 4b | **Scaffold из стек-шаблона** | запускаемый placeholder-сервис (build, `/health`, 501) | 🆕 `service-scaffold` | клон `template-go-api` |
+| 5 | Компонентные тесты по спеке | `.feature` по формуле | ♻️ `component-tests` | `component-tests/features/` |
+| 6 | Тесты RED против скелета | все тесты красные по бизнес-причине | 🆕 `component-test-scaffold` | — |
 | 7 | README.md | документация сервиса | ♻️ `documentation` | корень репо |
 | 8 | STEP 1: дерево модулей + псевдокод головного | дерево + псевдокод → оператору (Gate #1) | ♻️ `program-design` | — |
 | 9 | Карта контекста слайса | CONTEXT-MAP/CONTEXT.md, ADR, дерево, контракты, C4 + use case | ➕ `domain-modeling`-структура + 🆕 `c4` | `src/<ctx>/...` |
@@ -68,6 +69,23 @@ io: none | http | llm | queue | db
 | `db`    | `program-design` + `db-io` |
 
 Имплементер (Qwen) **ничего не выбирает** — получает тикет с уже вложенными нужными скиллами.
+
+## 4a. Стек-шаблоны (скелет сервиса, этап 4b)
+
+Скелет сервиса не собирается с нуля — берётся **преднастроенный шаблон по стеку** (скопировал —
+работаешь). Разделение ролей на этапе 4b (`service-scaffold`):
+
+- **Планировщик** по контексту (стек сервиса) выбирает шаблон и **описывает тикет** (какой шаблон,
+  переименование, ожидаемые зависимости).
+- **Имплементер** по тикету **клонирует и донастраивает** шаблон → запускаемый placeholder-сервис.
+
+| Стек сервиса | Шаблон |
+|--------------|--------|
+| **Go API** | [`codemonstersteam/template-go-api`](https://github.com/codemonstersteam/template-go-api) |
+| прочие стеки | 🆕 добавляются по мере появления (реестр [`docs/templates/README.md`](templates/README.md)) |
+
+Оркестрация: делаешь Go API — планировщик кладёт тикет на `template-go-api`, имплементер клонирует;
+раннер руками не собирается. Нет шаблона под стек → STOP, спросить оператора.
 
 ## 5. Разделение уровней тестирования (жёстко)
 
