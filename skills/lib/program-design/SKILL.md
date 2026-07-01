@@ -119,7 +119,9 @@ The full text of each rule is in its step's file.
 ## Definition of Done of the skill
 
 - All 12 steps passed.
-- Folder `.agent/planner/design/<slug>/` created and filled.
+- Folder `.agent/planner/design/<slug>/` (working package) created and filled.
+- **Durable docs published** to `docs/design/<slice>/`: `module-tree.md`, `contracts.md` (this skill),
+  `c4.md` (`c4`), `use-case.md` (`cockburn-use-case`) — committed, reviewed at Gate #1 (Step 10 "Two locations").
 - `backlog.md` contains one ticket per slice.
 - **The handoff checklist in `backlog.md` is fully `[x]` (including the last line with the handle and the PR creation date).**
 - The design PR is open; operator review awaited. Merging the PR = approval = the implementer may start.

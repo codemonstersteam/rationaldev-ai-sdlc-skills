@@ -17,8 +17,10 @@ Before filling the checklist — mechanically run **all** the skill's hard rules
 2. **Consolidated checklist of hard rules** — run over all slices: single `Request` (Step 3);
    one data argument (Step 3); I/O isolation, no raw `*sql.DB`/`*http.Client` (Step 5/6); no
    test-only I/O method (Step 3); branch = logic, not a component scenario (Step 3/8.1); C4 by
-   levels (Step 3); error dictionary (Step 4); UC↔scenario traceability, `#extensions ==
-   #failure_scenarios` (Step 8.6); Gherkin-mapping (Step 8.4); contracts graph (Step 9).
+   levels (Step 3); error dictionary (Step 4); UC↔scenario traceability,
+   `#component_failure_scenarios == #distinguishable_I/O-adapter_branches`, input-validation
+   Extensions → units (Step 8.6); every module contract carries `io:` (Step 5); Gherkin-mapping
+   (Step 8.4); contracts graph (Step 9).
 3. **Asymmetry.** Conformance is checked by `plan-reviewer` against this skill as the reference
    standard — not just Step 12's self-fill.
 
