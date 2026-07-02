@@ -9,3 +9,4 @@ tokenproxy → :4000  upstream=https://openrouter.ai  log=/Users/mac/IdeaProject
 2026/07/02 20:07:02 http: proxy error: read tcp 10.8.1.1:57733->104.18.2.115:443: read: connection reset by peer
 2026/07/02 20:46:33 http: proxy error: context canceled
 2026/07/02 20:52:24 http: proxy error: write tcp [fd58:baa6:dead::1]:58681->[2606:4700::6812:373]:443: write: socket is not connected
+2026/07/02 21:49:17 http: proxy error: context canceled

@@ -28,7 +28,7 @@ permission:
     "find *": allow
     "test *": allow
     "diff *": allow
-    "*": ask
+    "*": allow
   edit:
     ".agent/**": allow
     "*": deny
