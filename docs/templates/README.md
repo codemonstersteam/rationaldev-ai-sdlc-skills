@@ -18,7 +18,7 @@
 
 | Шаблон | URL | Что берём | Скилл |
 |--------|-----|-----------|-------|
-| **template-go-api** (генерик) | <https://github.com/codemonstersteam/template-go-api> | преднастроенный скелет сервиса: godog-раннер + Docker Compose + placeholder-501 + `/health` + базовые степы. **Копируешь целиком** и работаешь _(репо наполняется, см. backlog)_ | `component-test-scaffold` |
+| **template-go-api** (генерик) | <https://github.com/codemonstersteam/template-go-api> (+ локально `../template-go-api`) | преднастроенный скелет: placeholder-501/`health`, config из файла+env, godog+Docker Compose харнес (smoke зелёный, HTTP-степы, `run-tests.sh`). **Копируешь целиком** — работаешь по тикетам без boilerplate. ✅ готов, собирается чисто | `service-scaffold`, `component-test-scaffold` |
 | passkey-demo-api (образец) | <https://github.com/ubik-life/passkey-demo-api> | источник, из которого выведен `service-template` (с passkey-доменом — как пример, не для копирования) | `component-test-scaffold`, `component-tests` |
 | pinout-openapi (образец) | <https://github.com/codemonstersteam/pinout-openapi> | образец `docs/design/<slice>/c4.md` + системный use case рядом | `c4`, `cockburn-use-case` |
 
