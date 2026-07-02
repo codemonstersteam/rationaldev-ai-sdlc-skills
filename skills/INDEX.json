@@ -231,37 +231,101 @@
     {
       "role": "planner",
       "skills": [
-        "requirements-intake",
-        "vertical-slices",
-        "cockburn-use-case",
-        "openapi-spec",
-        "asyncapi-spec",
-        "service-scaffold",
-        "program-design",
-        "c4",
-        "implementation-ticket-writer",
-        "architecture",
-        "documentation",
-        "http-io",
-        "llm-client",
-        "queue-io",
-        "db-io",
-        "db-schema",
         "memory",
-        "observability",
-        "platform-landing",
-        "security"
+        "platform-landing"
       ],
       "inputs": [
         "requirements"
       ],
       "outputs": [
         ".agent/planner/plan.md",
-        ".agent/planner/contracts",
-        ".agent/planner/network-topology.md",
-        ".agent/planner/rollout-plan.md",
         ".agent/planner/design",
         ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "intake",
+      "skills": [
+        "requirements-intake"
+      ],
+      "inputs": [
+        "requirements"
+      ],
+      "outputs": [
+        ".agent/planner/frd.md",
+        "api-specification",
+        "CONTEXT.md"
+      ]
+    },
+    {
+      "role": "slicer",
+      "skills": [
+        "vertical-slices"
+      ],
+      "inputs": [
+        ".agent/planner/frd.md"
+      ],
+      "outputs": [
+        ".agent/planner/slices.md"
+      ]
+    },
+    {
+      "role": "usecase",
+      "skills": [
+        "cockburn-use-case"
+      ],
+      "inputs": [
+        ".agent/planner/slices.md",
+        ".agent/planner/frd.md"
+      ],
+      "outputs": [
+        "docs/design"
+      ]
+    },
+    {
+      "role": "apidesigner",
+      "skills": [
+        "openapi-spec",
+        "asyncapi-spec"
+      ],
+      "inputs": [
+        "docs/design"
+      ],
+      "outputs": [
+        "api-specification"
+      ]
+    },
+    {
+      "role": "moduledesigner",
+      "skills": [
+        "program-design",
+        "c4",
+        "db-schema",
+        "security",
+        "observability"
+      ],
+      "inputs": [
+        "api-specification",
+        "docs/design"
+      ],
+      "outputs": [
+        "docs/design",
+        ".agent/planner/design",
+        ".agent/planner/network-topology.md",
+        ".agent/planner/rollout-plan.md"
+      ]
+    },
+    {
+      "role": "ticketer",
+      "skills": [
+        "implementation-ticket-writer"
+      ],
+      "inputs": [
+        "docs/design",
+        ".agent/planner/design"
+      ],
+      "outputs": [
+        ".agent/planner/tickets"
       ]
     },
     {
@@ -278,7 +342,8 @@
       "inputs": [
         ".agent/planner/plan.md",
         ".agent/planner/design",
-        ".agent/planner/contracts",
+        "docs/design",
+        "api-specification",
         ".agent/planner/network-topology.md",
         ".agent/planner/rollout-plan.md"
       ],

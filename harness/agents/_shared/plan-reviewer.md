@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 20
 description: "Ревьюер плана (критик): проверяет полноту и связность плана перед Gate #1. НЕ тот, кто писал план. Вызывать после planner. Keywords: ревью плана, проверка дизайна, вердикт, полнота."
 skills: [architecture, doc-quality-review, observability, program-design, c4, cockburn-use-case, security]
-inputs: [.agent/planner/plan.md, .agent/planner/design, .agent/planner/contracts, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
+inputs: [.agent/planner/plan.md, .agent/planner/design, docs/design, api-specification, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
 outputs: [.agent/plan-reviewer/plan-review.md, .agent/plan-reviewer/round, .agent/decisions.log]
 permission:
   read: allow

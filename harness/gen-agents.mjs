@@ -45,7 +45,7 @@ function resolveTemp(runner, role, tier) {
 }
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
-const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
+const ORDER = ["orchestrator", "planner", "intake", "slicer", "usecase", "apidesigner", "moduledesigner", "ticketer", "plan-reviewer", "implementer", "fixer", "release-health"]
 
 function loadRole(role) {
   const text = readFileSync(join(SHARED, `${role}.md`), "utf8")
