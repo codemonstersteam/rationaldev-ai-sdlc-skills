@@ -44,18 +44,11 @@
       "description": "Pragmatic, token-saving output style for executor roles (implementer, fixer). Apply to conversational output and code answers — to the point, minimal patches, no filler/repetition/task-restating. Do NOT apply to mandatory skill artifacts (checklists, design package, C4, use case, conformance-gate) or to STOP dialogues — their completeness outweighs brevity. Cutting checks for the sake of brevity is forbidden (anti-gaming). Tier-agnostic."
     },
     {
-      "name": "component-test-scaffold",
-      "path": "skills/lib/component-test-scaffold/SKILL.md",
-      "version": "1.0",
-      "status": "stable",
-      "description": "Make a slice's authored .feature scenarios EXECUTE and be all RED by business reason against the already-scaffolded service skeleton (service-scaffold, stage 4b, gave you the placeholder-501 service + godog/Docker-Compose runner). Drop in the scenarios, wire the slice's deps/stubs, run — every scenario RED because the placeholder returns 501, never red from setup/compile/wiring. Use at stage 6, after component-tests (stage 5) authored the scenarios. Do NOT clone/scaffold the skeleton (that is service-scaffold), author scenarios/formula (component-tests), or implement logic (program-implementation). Tier-agnostic: red-reason decision table, exact commands, STOP."
-    },
-    {
       "name": "component-tests",
       "path": "skills/lib/component-tests/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, decision tables, checklists, STOP rules."
+      "description": "Design AND realize a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Two halves — DESIGN (a planner derives the scenario set by formula, Cockburn 1:1, tags @wip) and REALIZE (an implementer drops the designed .feature into the scaffolded skeleton, wires this slice's compose deps/stubs, adds any missing step-definition, proves every scenario RED by business reason). Use when you need new .feature files, more fixtures, a coverage assessment, or to make designed scenarios RED-ready. Do NOT use for unit tests or cross-service contract tests; cloning the skeleton is service-scaffold. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, RED-reason decision table, checklists, STOP rules."
     },
     {
       "name": "contract-tests",
@@ -195,7 +188,7 @@
       "path": "skills/lib/service-scaffold/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-test-scaffold) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP."
+      "description": "Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-tests — realize half) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP."
     },
     {
       "name": "tmux-test-runner",
@@ -297,6 +290,7 @@
       "role": "wirth-moduledesigner",
       "skills": [
         "program-design",
+        "component-tests",
         "c4",
         "db-schema",
         "security",
@@ -389,7 +383,6 @@
         "code-style",
         "communication",
         "component-tests",
-        "component-test-scaffold",
         "service-scaffold",
         "documentation",
         "http-io",
@@ -414,7 +407,7 @@
     {
       "role": "wirth-tester",
       "skills": [
-        "component-test-scaffold"
+        "component-tests"
       ],
       "inputs": [
         "api-specification",

@@ -96,7 +96,7 @@ izi сам уровень не оценивает — суждение у `@wirt
 `blocked_by` содержит 01). Роутинг по `type`:
 - `scaffold`  → `@scaffolder` (Qwen): запускает `harness/scaffold.sh` (git-клон шаблона + rename + build),
   проверяет билд+компонентные, чинит если надо. **НЕ читает весь шаблон — дёшево** (не @hughes).
-- `component` → `@wirth-tester` (GLM): RED-компонентные тесты по контракту + сценариям `contracts.md`. Qwen с нуля не соберёт.
+- `component` → `@wirth-tester` (Qwen, скилл `component-tests`): механически раскладывает **уже спроектированные** сценарии (`contracts.md`) в исполнимые `.feature`+шаги+заглушки, метит `@wip`, доводит до RED.
 - `module`    → `@hughes` (Qwen): реализует модуль, RED → green; скилл по `io:` из заголовка.
 
 Передавай субагенту **только его тикет + пути из `inputs`** (не весь бэклог). Порядок — по `blocked_by`;

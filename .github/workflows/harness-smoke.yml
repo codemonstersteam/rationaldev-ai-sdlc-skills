@@ -30,6 +30,23 @@ jobs:
         shell: pwsh
         run: pwsh -File harness/smoke/run.ps1
 
+  harness-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: harness unit-tests (node --test)
+        run: node --test harness/test/*.test.mjs
+      - name: skill-registry invariants (gen-skill-index --check)
+        run: node harness/gen-skill-index.mjs --check
+      - name: no projection drift (генераторы идемпотентны — проекции закоммичены)
+        run: |
+          node harness/gen-agents.mjs
+          node harness/gen-skill-index.mjs
+          git diff --exit-code
+
   component-tests:
     runs-on: ubuntu-latest
     steps:

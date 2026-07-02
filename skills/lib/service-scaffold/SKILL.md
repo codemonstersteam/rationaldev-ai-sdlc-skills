@@ -1,6 +1,6 @@
 ---
 name: service-scaffold
-description: Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-test-scaffold) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP.
+description: Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-tests — realize half) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP.
 version: "1.0"
 status: "stable"
 ---
@@ -19,8 +19,8 @@ Two faces:
 - **Implementer** — clones the template and configures it per the ticket.
 
 This is stage 4b: after the frozen contract (stages 3–4), before component tests are authored
-(stage 5). It owns the **whole-repo copy**; `component-test-scaffold` (stage 6) assumes the skeleton
-already exists and only makes the authored tests RED.
+(stage 5). It owns the **whole-repo copy**; the `component-tests` realize half (stage 6) assumes the
+skeleton already exists and only makes the designed tests RED.
 
 ## Stack router — pick the template by stack (planner, from context)
 
@@ -42,7 +42,7 @@ DO (implementer):
 
 DON'T:
 - Rebuild the runner or compose by hand (copy the template).
-- Author `.feature` / make tests RED (that is `component-test-scaffold`).
+- Author `.feature` / make tests RED (that is `component-tests`).
 - Implement real module logic (that is `program-implementation`).
 - Add real dependency logic — only what the placeholder needs to build and stay `/health`-green.
 
@@ -50,7 +50,7 @@ DON'T:
 
 The whole repo: `component-tests/` harness (runner, base steps, compose, `scripts/run-tests.sh`,
 green smoke), `cmd/<svc>/main.go` placeholder (`501` except `/health`), `api-specification/`
-skeleton, `go.mod`/`Dockerfile`/compose. See `component-test-scaffold` for the layout.
+skeleton, `go.mod`/`Dockerfile`/compose. See `component-tests` for the layout.
 
 ## Procedure (@scaffolder — через скрипт, НЕ вручную)
 
@@ -88,5 +88,5 @@ point — TBD), not by the scaffold/implementer step.
 ## Foundations
 
 Preconfigured stack templates (registry: [`docs/templates/README.md`](../../../docs/templates/README.md)),
-`template-go-api` derived from the passkey-demo-api harness. Pairs with `component-test-scaffold`
-(RED-ready). Git branching/commit is out of scope here (module-development entry point — TBD).
+`template-go-api` derived from the passkey-demo-api harness. Pairs with `component-tests`
+(authoring + RED-ready). Git branching/commit is out of scope here (module-development entry point — TBD).

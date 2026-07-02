@@ -101,8 +101,8 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 
 1. **spec** — OpenAPI/AsyncAPI frozen (stages 3–4; usually already done in the design package);
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
-3. **component tests (RED)** — authored from the spec + use case, tagged `@wip`
-   (`component-tests` + `component-test-scaffold`) — **this ticket precedes every module ticket**;
+3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip`
+   (`component-tests`) — **this ticket precedes every module ticket**;
 4. **module tickets** — one per module, each carrying **its own unit tests by formula** (io-router applied);
 5. **docs** (README) + wiring;
 6. component tests turn **GREEN** as the slice assembles → **fixer** slice-acceptance removes `@wip`.

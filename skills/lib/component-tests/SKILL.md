@@ -1,6 +1,6 @@
 ---
 name: component-tests
-description: Generate, review and extend a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Use when you need new `.feature` files, more fixtures, or a coverage assessment against the contract and its failure modes. Do NOT use for unit tests or cross-service contract tests. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, decision tables, checklists, STOP rules.
+description: Design AND realize a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Two halves — DESIGN (a planner derives the scenario set by formula, Cockburn 1:1, tags @wip) and REALIZE (an implementer drops the designed .feature into the scaffolded skeleton, wires this slice's compose deps/stubs, adds any missing step-definition, proves every scenario RED by business reason). Use when you need new .feature files, more fixtures, a coverage assessment, or to make designed scenarios RED-ready. Do NOT use for unit tests or cross-service contract tests; cloning the skeleton is service-scaffold. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, RED-reason decision table, checklists, STOP rules.
 version: "1.0"
 ---
 
@@ -172,6 +172,42 @@ Scenario: 3a токен истёк возвращает 401
   fixer **removes `@wip`** and accepts the slice's work. Removing `@wip` **is** the acceptance act.
 - **Only the fixer removes `@wip`.** An implementer MUST NOT (anti-gaming — see
   `program-implementation`, and orchestration in [`docs/04_PLANNING_PIPELINE.md`](../../../docs/04_PLANNING_PIPELINE.md) §6).
+
+## Realize the designed scenarios — RED-ready against the skeleton (implementation)
+
+The formula/Cockburn-1:1/`@wip` half above is **design** (a GLM planning role). The **implementation**
+half — done by the component-test implementer in the **already-scaffolded** skeleton (`service-scaffold`
+cloned the template: placeholder-`501` service + godog/Docker-Compose runner, `/health` green) — makes
+the designed scenarios **execute and be all RED by a business reason**. You do **not** clone or author
+scenarios here: drop the designed `.feature` in, wire this slice's deps/stubs, prove the red is business.
+
+Procedure:
+1. **Drop in scenarios.** Put the slice's designed `.feature` into `component-tests/features/`; tag `@wip`.
+2. **Wire deps & stubs.** Each external dependency → its **compose service** (e.g. a DB image); each
+   external API → a **stub speaking the real protocol** (never an in-code mock), reached by service name.
+   Add services to the parametrized compose — don't rewire the runner.
+3. **Missing step-definition → ADD it** (mechanical glue: subprocess/exit-code, HTTP call, log match).
+   Reuse an existing phrasing when one fits; add a new step-def only to make a **designed** scenario
+   executable. Do **not** invent a new *scenario* inline — a new scenario is a design act (STOP, back to design).
+4. **Failure profiles.** Hard-to-reproduce adapter branch → overlay `docker-compose.<profile>.yml` +
+   `compose/envs/<profile>.env`, mirroring the template pattern.
+5. **Run** `./scripts/run-tests.sh healthy` (+ each failure profile). Every slice scenario RED.
+
+### RED-reason decision table (the crux)
+
+A scenario is **RED-ready** only when it fails for a *business* reason:
+
+| Symptom | Red reason | RED-ready? | Action |
+|---------|-----------|:---------:|--------|
+| Assertion fails: got `501`, expected real status | business — placeholder not implemented | ✅ yes | leave red; implementation fixes it |
+| `docker compose build` fails (compile) | setup | ❌ no | fix build (or back to `service-scaffold`) |
+| Runner can't reach SUT / dep (dns, port, healthcheck) | wiring | ❌ no | fix compose deps/stubs networking |
+| Step undefined / regex mismatch / panic | harness | ❌ no | reuse or **add** the step-def → then it's a business red |
+| `/health` not green → `up` aborts | skeleton broken | ❌ no | back to `service-scaffold` |
+| Scenario green | too early — nothing implemented | ❌ no | scenario is wrong — recheck |
+
+Only the **first row** is acceptable RED; every other red is a bug to fix, not the RED phase. `go test`
+from the host is **forbidden** — the runner runs **only** in Docker (same env in CI and locally).
 
 ## What NOT to do (MUST NOT)
 

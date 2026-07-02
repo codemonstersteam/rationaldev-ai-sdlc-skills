@@ -40,7 +40,7 @@
 | 4 | AsyncAPI спека | контракт async | 🆕 `asyncapi-spec` | `src/<ctx>/api-specification/asyncapi.yaml` |
 | 4b | **Scaffold из стек-шаблона** | запускаемый placeholder-сервис (build, `/health`, 501) | 🆕 `service-scaffold` | клон `template-go-api` |
 | 5 | Компонентные тесты по спеке | `.feature` по формуле | ♻️ `component-tests` | `component-tests/features/` |
-| 6 | Тесты RED против скелета | все тесты красные по бизнес-причине | 🆕 `component-test-scaffold` | — |
+| 6 | Тесты RED против скелета | все тесты красные по бизнес-причине | ♻️ `component-tests` (realize) | — |
 | 7 | README.md | документация сервиса | ♻️ `documentation` | корень репо |
 | 8 | STEP 1: дерево модулей + псевдокод головного | дерево + псевдокод → оператору (Gate #1) | ♻️ `program-design` | — |
 | 9 | Карта контекста слайса | CONTEXT-MAP/CONTEXT.md, ADR, дерево, контракты, C4 + use case | ➕ `domain-modeling`-структура + 🆕 `c4` | `src/<ctx>/...` |

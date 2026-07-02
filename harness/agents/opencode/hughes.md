@@ -42,8 +42,8 @@ permission:
   (`git-conventions` НЕ грузи — git-операций не делаешь.)
 - **io-под-скилл — ровно один, из поля `io:` тикета** (router планировщика, сам не выбираешь):
   `http-io`(+`llm-client`) / `queue-io` / `db-io`(+`db-schema`). **`io: none` → никакого io-скилла.**
-- **По типу тикета:** тесты → `component-tests`; scaffold-тикет → `service-scaffold` /
-  `component-test-scaffold`; docs-тикет → `documentation`, `md-formatting`. Не твой тип → не грузи.
+- **По типу тикета:** тесты → `component-tests`; scaffold-тикет → `service-scaffold`;
+  docs-тикет → `documentation`, `md-formatting`. Не твой тип → не грузи.
 
 ## Вход (иначе STOP)
 

@@ -7,7 +7,7 @@ mode: subagent
 temperature: 0.2
 steps: 50
 description: "Имплементатор (Hughes): пишет код строго по тикету в рабочее дерево (БЕЗ git-операций — веток/коммитов/PR не делает). После Gate #1 или сразу на тривиальной задаче. Keywords: реализация, код, TDD, модуль, имплементация."
-skills: [code-style, communication, component-tests, component-test-scaffold, service-scaffold, documentation, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
+skills: [code-style, communication, component-tests, service-scaffold, documentation, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
 inputs: [.agent/planner/plan.md, .agent/planner/design, gate1]
 outputs: [pr, .agent/decisions.log]
 permission:
@@ -47,8 +47,8 @@ permission:
   (`git-conventions` НЕ грузи — git-операций не делаешь.)
 - **io-под-скилл — ровно один, из поля `io:` тикета** (router планировщика, сам не выбираешь):
   `http-io`(+`llm-client`) / `queue-io` / `db-io`(+`db-schema`). **`io: none` → никакого io-скилла.**
-- **По типу тикета:** тесты → `component-tests`; scaffold-тикет → `service-scaffold` /
-  `component-test-scaffold`; docs-тикет → `documentation`, `md-formatting`. Не твой тип → не грузи.
+- **По типу тикета:** тесты → `component-tests`; scaffold-тикет → `service-scaffold`;
+  docs-тикет → `documentation`, `md-formatting`. Не твой тип → не грузи.
 
 ## Вход (иначе STOP)
 
