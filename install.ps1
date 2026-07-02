@@ -91,7 +91,7 @@ switch ($Runner) {
 if (-not $Global) {
   $hdir = Join-Path $Project 'harness'
   New-Item -ItemType Directory -Force -Path $hdir | Out-Null
-  foreach ($v in @('validate-frd.mjs', 'validate-contract-frozen.mjs', 'validate-tickets.mjs')) {
+  foreach ($v in @('validate-frd.mjs', 'validate-contract-frozen.mjs', 'validate-tickets.mjs', 'scaffold.sh')) {
     $lnk = Join-Path $hdir $v
     if (Test-Path $lnk) { Remove-Item -Force $lnk }
     New-Item -ItemType SymbolicLink -Path $lnk -Target (Join-Path $Bundle "harness/$v") | Out-Null

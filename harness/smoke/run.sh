@@ -26,7 +26,7 @@ node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness uni
 # --- Claude ---
 P="$TMP/claude"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" --no-input >/dev/null
-[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 14 ] || fail "claude: ролей не 14"; ok
+[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 15 ] || fail "claude: ролей не 15"; ok
 [ -f "$P/.claude/skills/memory/SKILL.md" ] || fail "claude: нет скилла memory"; ok
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
 # назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
@@ -35,13 +35,13 @@ grep -q '^model:' "$P/.claude/agents/wirth-planner.md" || fail "claude: моде
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"
 sh "$REPO/install.sh" opencode "$P" --no-input >/dev/null
-[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 14 ] || fail "opencode: агентов не 14"; ok
+[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 15 ] || fail "opencode: агентов не 15"; ok
 [ -e "$P/AGENTS.md" ] || fail "opencode: нет корневого AGENTS.md"; ok
 
 # --- Codex (сборка ролей в AGENTS.md) ---
 P="$TMP/codex"; mkdir -p "$P"
 sh "$REPO/install.sh" codex "$P" --no-input >/dev/null
-[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 14 ] || fail "codex: ролей не 14"; ok
+[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 15 ] || fail "codex: ролей не 15"; ok
 [ -f "$P/.agents/skills/memory/SKILL.md" ] || fail "codex: нет скилла memory"; ok
 grep -q "izi" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет izi"; ok
 grep -q "Hughes" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет блоков ролей"; ok

@@ -369,6 +369,21 @@
       ]
     },
     {
+      "role": "scaffolder",
+      "skills": [
+        "service-scaffold",
+        "component-tests"
+      ],
+      "inputs": [
+        ".agent/planner/tickets",
+        "api-specification"
+      ],
+      "outputs": [
+        "pr",
+        ".agent/decisions.log"
+      ]
+    },
+    {
       "role": "hughes",
       "skills": [
         "code-style",

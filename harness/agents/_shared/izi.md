@@ -128,7 +128,8 @@ izi сам уровень не оценивает — суждение у `@wirt
 Роутинг читаешь **из YAML-заголовка тикета** (его гарантировал `@mills`/`validate-tickets`): `type`,
 `blocked_by`, `inputs`. Ничего не вычисляешь. **`01-scaffold` — ПЕРВЫМ и сериализованно** (у всех остальных
 `blocked_by` содержит 01). Роутинг по `type`:
-- `scaffold`  → `@hughes` (Qwen): клон `template-go-api` → каркас + харнес компонентных тестов (механически).
+- `scaffold`  → `@scaffolder` (Qwen): запускает `harness/scaffold.sh` (git-клон шаблона + rename + build),
+  проверяет билд+компонентные, чинит если надо. **НЕ читает весь шаблон — дёшево** (не @hughes).
 - `component` → `@wirth-tester` (GLM): RED-компонентные тесты по контракту + сценариям `contracts.md`. Qwen с нуля не соберёт.
 - `module`    → `@hughes` (Qwen): реализует модуль, RED → green; скилл по `io:` из заголовка.
 
