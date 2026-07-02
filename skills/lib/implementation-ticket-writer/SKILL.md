@@ -48,10 +48,33 @@ gets no io sub-skill.
 service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
 never route `http-io` to it. If the module has no outbound call, its `io:` is `none`.
 
-## Ticket template (minimal, Qwen-sized)
+## Mandatory machine-readable header (MUST — the router's contract)
+
+Every ticket file `tickets/NN-*.md` **MUST start** with a strict YAML front-matter header so the
+orchestrator (`izi`) can route **mechanically** without reading the body. Use **flow arrays** `[a, b]`
+(the harness YAML parser does not read block `- ` lists). Missing/broken header = **blocker** at review
+(`harness/validate-tickets.mjs` enforces it deterministically before Gate #1):
+
+```yaml
+---
+id: 05
+type: module            # scaffold | component | module
+slice: slice-02-catalog
+blocked_by: [01, 04]    # ids of prerequisite tickets (may be [])
+inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
+io: none                # REQUIRED for type: module — none|http|llm|queue|db (router key)
+skills: [db-io, db-schema]
+---
+```
+
+Rules: exactly **one** `scaffold` ticket, and it is `id: 01` with `blocked_by: []` (blocks all others);
+every other ticket lists its real prerequisites in `blocked_by` and its real artifact paths in `inputs`
+(izi passes exactly these — it does not compute dependencies). `io:` is required only for `module`.
+
+## Ticket template (minimal, Qwen-sized) — body after the header
 
 Reuse the `program-design` ticket template (`reference/ticket-template.md`) but **trim to this
-module's rows**. Each ticket carries:
+module's rows**. Each ticket carries (below the header):
 
 ```
 ### TICKET S<n>.<m> — <slice>/<module>: <one-line what>
