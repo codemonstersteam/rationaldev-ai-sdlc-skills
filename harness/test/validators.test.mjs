@@ -1,7 +1,7 @@
 // Юнит-тесты чистых ядер валидаторов (io: none). Формула: 1 happy + по ветке-blocker.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { validateFrd, validateContractFrozen, validateTicketHeaders } from "../lib/validators.mjs"
+import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills } from "../lib/validators.mjs"
 
 // --- validateFrd ---
 const FRD_OK = `# svc — FRD
@@ -62,7 +62,7 @@ test("validateContractFrozen: AsyncAPI вариант", () => {
 
 // --- validateTicketHeaders (чисто, без fs) ---
 const T = (over = {}) => ({ name: over.name ?? "05-mod.md", data: over.data === null ? null : { id: "05", type: "module", slice: "s1", blocked_by: ["01"], inputs: ["x"], io: "none", skills: [], ...over.data } })
-const SCAFFOLD = { name: "01-scaffold.md", data: { id: "01", type: "scaffold", slice: "s1", blocked_by: [], inputs: [], skills: [] } }
+const SCAFFOLD = { name: "01-scaffold.md", data: { id: "01", type: "scaffold", slice: "s1", blocked_by: [], inputs: [], skills: ["service-scaffold"] } }
 
 test("validateTicketHeaders: scaffold + module → нет ошибок", () => {
   assert.deepEqual(validateTicketHeaders([SCAFFOLD, T()]), [])
@@ -84,6 +84,43 @@ test("validateTicketHeaders: два scaffold → ошибка", () => {
 })
 test("validateTicketHeaders: normId 05 == 5 (blocked_by резолвится)", () => {
   const child = T({ data: { blocked_by: ["1"] } })
-  const s = { name: "01.md", data: { id: "01", type: "scaffold", slice: "s", blocked_by: [], inputs: [], skills: [] } }
+  const s = { name: "01.md", data: { id: "01", type: "scaffold", slice: "s", blocked_by: [], inputs: [], skills: ["service-scaffold"] } }
   assert.deepEqual(validateTicketHeaders([s, child]), [])
+})
+
+// --- io-роутер: skills тикета = ровно нужный набор (имплементер не берёт лишнего) ---
+test("expectedTicketSkills: карта io-роутера", () => {
+  assert.deepEqual(expectedTicketSkills("scaffold"), ["service-scaffold"])
+  assert.deepEqual(expectedTicketSkills("component"), ["component-tests"])
+  assert.deepEqual(expectedTicketSkills("module", "none"), [])
+  assert.deepEqual(expectedTicketSkills("module", "http"), ["http-io"])
+  assert.deepEqual(expectedTicketSkills("module", "llm"), ["http-io", "llm-client"])
+  assert.deepEqual(expectedTicketSkills("module", "queue"), ["queue-io"])
+  assert.deepEqual(expectedTicketSkills("module", "db"), ["db-io", "db-schema"])
+  assert.equal(expectedTicketSkills("module", "bogus"), null)
+})
+test("validateTicketHeaders: module io:db с верными skills → нет ошибок", () => {
+  assert.deepEqual(validateTicketHeaders([SCAFFOLD, T({ data: { io: "db", skills: ["db-io", "db-schema"] } })]), [])
+})
+test("validateTicketHeaders: skills порядок не важен (множество)", () => {
+  assert.deepEqual(validateTicketHeaders([SCAFFOLD, T({ data: { io: "db", skills: ["db-schema", "db-io"] } })]), [])
+})
+test("validateTicketHeaders: недостающий скилл (io:db без db-schema) → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { io: "db", skills: ["db-io"] } })]).some((e) => /io-роутер/.test(e)))
+})
+test("validateTicketHeaders: лишний скилл → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { io: "http", skills: ["http-io", "db-io"] } })]).some((e) => /io-роутер/.test(e)))
+})
+test("validateTicketHeaders: io:none с непустыми skills → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { io: "none", skills: ["http-io"] } })]).some((e) => /io-роутер/.test(e)))
+})
+test("validateTicketHeaders: component без component-tests → ошибка", () => {
+  const comp = { name: "03-comp.md", data: { id: "03", type: "component", slice: "s1", blocked_by: ["01"], inputs: ["x"], skills: [] } }
+  assert.ok(validateTicketHeaders([SCAFFOLD, comp]).some((e) => /io-роутер/.test(e)))
+})
+test("validateTicketHeaders: scaffold с чужим skills → ошибка", () => {
+  assert.ok(validateTicketHeaders([{ ...SCAFFOLD, data: { ...SCAFFOLD.data, skills: ["component-tests"] } }]).some((e) => /io-роутер/.test(e)))
+})
+test("validateTicketHeaders: skills не список → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { skills: undefined } })]).some((e) => /skills должен быть/.test(e)))
 })

@@ -44,6 +44,13 @@ The `io:` field (set by `program-design` Step 5) is the sole routing key — no 
 The implementer subagent receives exactly these — it **selects nothing**. A module with `io: none`
 gets no io sub-skill.
 
+The ticket's machine-readable **`skills:` field carries exactly these io add-ons** (the core
+`program-implementation`/`code-style`/`communication`/`memory` is always loaded, so it is NOT listed).
+By ticket **type**: `scaffold` → `[service-scaffold]`; `component` → `[component-tests]`; `module` →
+the io-router row above (`none` → `[]`). `harness/validate-tickets.mjs` enforces `skills:` **exactly
+equals** the router output — neither missing nor extra — so the implementer receives precisely the
+skills it needs and nothing more. Over- or under-provisioning is a deterministic **blocker** before Gate #1.
+
 **`io: http`/`queue` are OUTBOUND only.** They tag an autonomous `Client`/`Publisher`/`Consumer` the
 service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
 never route `http-io` to it. If the module has no outbound call, its `io:` is `none`.
@@ -70,6 +77,8 @@ skills: [db-io, db-schema]
 Rules: exactly **one** `scaffold` ticket, and it is `id: 01` with `blocked_by: []` (blocks all others);
 every other ticket lists its real prerequisites in `blocked_by` and its real artifact paths in `inputs`
 (izi passes exactly these — it does not compute dependencies). `io:` is required only for `module`.
+`skills:` is **required on every ticket** and must **exactly equal** the io-router output for its
+`type`/`io` (validated deterministically) — this is how the implementer gets only the skills it needs.
 
 ## Ticket template (minimal, Qwen-sized) — body after the header
 
