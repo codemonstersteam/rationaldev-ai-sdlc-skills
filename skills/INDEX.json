@@ -229,6 +229,19 @@
       ]
     },
     {
+      "role": "wirth-triage",
+      "skills": [
+        "platform-landing"
+      ],
+      "inputs": [
+        "requirements"
+      ],
+      "outputs": [
+        ".agent/triage.md",
+        ".agent/decisions.log"
+      ]
+    },
+    {
       "role": "wirth-intake",
       "skills": [
         "requirements-intake"

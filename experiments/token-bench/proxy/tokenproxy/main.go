@@ -34,6 +34,8 @@ var (
 	rePrm         = regexp.MustCompile(`"prompt_tokens"\s*:\s*(\d+)`)
 	reCacheRead   = regexp.MustCompile(`"cache_read_input_tokens"\s*:\s*(\d+)`)
 	reCacheCreate = regexp.MustCompile(`"cache_creation_input_tokens"\s*:\s*(\d+)`)
+	reCachedOAI   = regexp.MustCompile(`"cached_tokens"\s*:\s*(\d+)`)     // OpenRouter/OpenAI-стиль (prompt_tokens_details)
+	reCostUSD     = regexp.MustCompile(`"cost"\s*:\s*([0-9.eE+-]+)`)      // реальная стоимость вызова от OpenRouter
 	reModel       = regexp.MustCompile(`"model"\s*:\s*"([^"]+)"`) // модель из ТЕЛА ЗАПРОСА (по назначению)
 	logMu  sync.Mutex
 	model  string
@@ -96,6 +98,16 @@ func maxMatch(re *regexp.Regexp, b []byte) int {
 	return m
 }
 
+func maxFloat(re *regexp.Regexp, b []byte) float64 {
+	m := 0.0
+	for _, g := range re.FindAllSubmatch(b, -1) {
+		if f, err := strconv.ParseFloat(string(g[1]), 64); err == nil && f > m {
+			m = f
+		}
+	}
+	return m
+}
+
 // teeBody scans the response stream (without buffering away from the client) and logs
 // usage once, on EOF/Close. Anthropic streams cumulative output_tokens → we keep the max.
 type teeBody struct {
@@ -135,7 +147,15 @@ func (t *teeBody) flush() {
 		}
 		cacheRead := maxMatch(reCacheRead, b)     // Anthropic: чтение из кэша
 		cacheCreate := maxMatch(reCacheCreate, b) // Anthropic: запись в кэш
-		inputTotal := in + cacheRead + cacheCreate
+		cachedOAI := maxMatch(reCachedOAI, b)     // OpenRouter/OpenAI: prompt_tokens_details.cached_tokens
+		if cachedOAI > cacheRead {
+			cacheRead = cachedOAI // OpenAI-стиль: cached_tokens — это чтение из кэша (входит в prompt_tokens)
+		}
+		costUSD := maxFloat(reCostUSD, b) // реальная стоимость вызова от OpenRouter (если отдана)
+		inputTotal := in + cacheCreate    // OpenAI: cached_tokens уже в prompt_tokens (in); Anthropic: cache_read отдельно
+		if reCacheRead.Match(b) {
+			inputTotal += cacheRead // Anthropic-стиль: cache_read НЕ входит в input_tokens
+		}
 		if out == 0 && inputTotal == 0 {
 			return // не запрос к модели (или нет usage) — не логируем
 		}
@@ -154,10 +174,11 @@ func (t *teeBody) flush() {
 			"model":                 model,       // метка прогона (env MODEL)
 			"req_model":             t.reqModel,  // модель из тела запроса — проверка «по назначению»
 			"prompt_tokens":         in,          // не-кэшированный input (совместимость)
-			"cache_read_tokens":     cacheRead,
+			"cache_read_tokens":     cacheRead,   // OpenAI cached_tokens ИЛИ Anthropic cache_read
 			"cache_creation_tokens": cacheCreate,
-			"input_tokens":          inputTotal,  // ПОЛНЫЙ input = base + cache_read + cache_creation
+			"input_tokens":          inputTotal,  // ПОЛНЫЙ input (OpenAI: prompt_tokens; Anthropic: base+cache)
 			"completion_tokens":     out,
+			"cost_usd":              costUSD,     // реальная стоимость вызова от OpenRouter (0 если не отдана)
 		}
 		line, _ := json.Marshal(rec)
 		logMu.Lock()
