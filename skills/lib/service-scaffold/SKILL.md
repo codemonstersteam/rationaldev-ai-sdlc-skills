@@ -63,7 +63,10 @@ skeleton, `go.mod`/`Dockerfile`/compose. See `component-test-scaffold` for the l
    (the actual spec from stages 3–4, replacing the template's placeholder spec).
 6. **Build & health.** `docker compose ... build` passes; bring it up; `/health` green;
    `smoke.feature` green (wiring intact).
-7. **Commit** as the scaffold ticket (Trunk-Based, one ticket = one PR — see `git-conventions`).
+
+**NO git.** Do **not** create/switch branches, commit, or open a PR. Leave the scaffold in the
+**working tree**. Branching/commits/acceptance are decided one level up (module-development entry
+point — TBD), not by the scaffold/implementer step.
 
 ## STOP
 
@@ -79,10 +82,10 @@ skeleton, `go.mod`/`Dockerfile`/compose. See `component-test-scaffold` for the l
 - Module/service renamed; ports/env configured; placeholder `501`-except-`/health` intact.
 - Frozen contract in `api-specification/`.
 - `docker compose build` passes; `/health` green; `smoke.feature` green.
-- Committed as the scaffold ticket (one PR).
+- Left in the **working tree** — no git branch/commit/PR (decided one level up, TBD).
 
 ## Foundations
 
 Preconfigured stack templates (registry: [`docs/templates/README.md`](../../../docs/templates/README.md)),
 `template-go-api` derived from the passkey-demo-api harness. Pairs with `component-test-scaffold`
-(RED-ready) and `git-conventions` (one ticket = one PR).
+(RED-ready). Git branching/commit is out of scope here (module-development entry point — TBD).

@@ -377,7 +377,6 @@
         "component-test-scaffold",
         "service-scaffold",
         "documentation",
-        "git-conventions",
         "http-io",
         "llm-client",
         "queue-io",
