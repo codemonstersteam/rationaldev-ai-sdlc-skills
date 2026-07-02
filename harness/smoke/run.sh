@@ -20,6 +20,9 @@ node "$REPO/harness/gen-agents.mjs" >/dev/null
 # реестр скиллов актуален + ссылки ролей (skills:) ведут на существующие stable-скиллы
 node "$REPO/harness/gen-skill-index.mjs" --check >/dev/null || fail "skill-index: устарел или битая ссылка роль→скилл"; ok
 
+# юнит-тесты чистых модулей харнеса (frontmatter, ядра валидаторов, resolveModel) — dogfood
+node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness unit-тесты (node --test) упали"; ok
+
 # --- Claude ---
 P="$TMP/claude"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" --no-input >/dev/null

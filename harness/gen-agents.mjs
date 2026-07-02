@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseFrontmatter } from "./frontmatter.mjs"
+import { resolveModel as resolveModelCore, resolveTemp as resolveTempCore } from "./lib/resolve-model.mjs"
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
@@ -22,27 +23,10 @@ const SHARED = join(ROOT, "agents", "_shared")
 const TIERS = ["large", "medium", "small"]
 const MODELS = JSON.parse(readFileSync(join(ROOT, "models.config.json"), "utf8"))
 
-function resolveModel(runner, role, tier) {
-  const cfg = MODELS[runner]
-  if (!cfg) return null
-  const byRole = cfg.roles && cfg.roles[role]
-  if (typeof byRole === "string" && byRole.trim()) return byRole.trim()
-  const byTier = cfg.tiers && cfg.tiers[tier]
-  if (typeof byTier === "string" && byTier.trim()) return byTier.trim()
-  return null
-}
-
-// Температура — из конфига per-runner (roles[<роль>] > temperature[<тир>]); пусто → дефолт
-// роли из _shared frontmatter. Не хардкод: значения живут в models.config.json.
-function resolveTemp(runner, role, tier) {
-  const cfg = MODELS[runner]
-  if (!cfg || !cfg.temperature) return null
-  const byRole = cfg.temperature.roles && cfg.temperature.roles[role]
-  if (typeof byRole === "number") return byRole
-  const byTier = cfg.temperature[tier]
-  if (typeof byTier === "number") return byTier
-  return null
-}
+// Резолвинг вынесен в чистое ядро harness/lib/resolve-model.mjs (юнит-тестируемо, config параметром).
+// Здесь — тонкие обёртки, замыкающие MODELS (call sites не меняются).
+const resolveModel = (runner, role, tier) => resolveModelCore(MODELS, runner, role, tier)
+const resolveTemp = (runner, role, tier) => resolveTempCore(MODELS, runner, role, tier)
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
 const ORDER = ["izi", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner", "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills", "hughes", "wirth-tester", "linger", "michtom"]
