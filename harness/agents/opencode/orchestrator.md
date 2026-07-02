@@ -4,7 +4,7 @@ version: "1.0"
 mode: primary
 temperature: 0.7
 steps: 40
-model: openrouter/z-ai/glm-5.2
+model: openrouter/qwen/qwen3.6-27b
 permission:
   task: allow
   read: allow

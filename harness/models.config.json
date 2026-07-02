@@ -20,7 +20,11 @@
     "temperature": {
       "large": 0.7
     },
-    "roles": {}
+    "//roles": "Пер-ролевое переопределение модели важнее тира. Диспетчеры (orchestrator/planner) — на Qwen: они только роутят/делегируют частыми короткими турнами, GLM там медленный (reasoning → idle-timeout 504). Дизайн-этапы (intake/usecase/apidesigner/moduledesigner/ticketer) остаются large=GLM (качество).",
+    "roles": {
+      "orchestrator": "openrouter/qwen/qwen3.6-27b",
+      "planner": "openrouter/qwen/qwen3.6-27b"
+    }
   },
   "codex": {
     "//": "У Codex нет файловых субагентов — модель назначается в его собственном конфиге, не отсюда. Секция оставлена для симметрии.",
