@@ -52,17 +52,18 @@ The whole repo: `component-tests/` harness (runner, base steps, compose, `script
 green smoke), `cmd/<svc>/main.go` placeholder (`501` except `/health`), `api-specification/`
 skeleton, `go.mod`/`Dockerfile`/compose. See `component-test-scaffold` for the layout.
 
-## Procedure (implementer, per the ticket)
+## Procedure (@scaffolder — через скрипт, НЕ вручную)
 
-1. **Confirm the ticket.** Template URL + rename params present; the frozen contract exists; else STOP.
-2. **Clone wholesale.** Copy the template repo into the service repo. Do not touch runner internals.
-3. **Rename.** Set the Go module path and service name; rename `cmd/<svc>/`.
-4. **Configure.** Ports, env (`compose/envs/healthy.env`), service name in compose. Placeholder stays
-   `501` everywhere except `/health` (200).
-5. **Contract skeleton.** Put the frozen `api-specification/openapi.yaml` / `asyncapi.yaml` in place
-   (the actual spec from stages 3–4, replacing the template's placeholder spec).
-6. **Build & health.** `docker compose ... build` passes; bring it up; `/health` green;
-   `smoke.feature` green (wiring intact).
+**Всю механику делает `harness/scaffold.sh <slug>` — не повторяй её руками, доверяй скрипту:**
+1. `git archive` клонирует содержимое git-шаблона в проект (без `.git` шаблона; `.git`/origin проекта нетронуты).
+2. Сохраняет уже замороженный `api-specification/` (не перезаписывает).
+3. Переименовывает **go-module** (`template-go-api` → `<slug>`) во всех `.go`/`go.mod`.
+   **`cmd/app` НЕ переименовывается** — остаётся как в шаблоне (собирается; Dockerfile/compose ссылаются на него — консистентно).
+4. `go build ./...` — билд-проверка.
+
+Роль @scaffolder: **запустить скрипт → если exit 0, проверить компонентный health** (`docker compose build`,
+`/health`=200, `smoke.feature`; плейсхолдер `501` на прочих эндпоинтах — норма) → зелено готово / красно чинить.
+**Не** изучать структуру шаблона, **не** переименовывать `cmd`, **не** править Dockerfile/compose руками.
 
 **NO git.** Do **not** create/switch branches, commit, or open a PR. Leave the scaffold in the
 **working tree**. Branching/commits/acceptance are decided one level up (module-development entry

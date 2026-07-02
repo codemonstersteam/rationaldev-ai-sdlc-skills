@@ -29,7 +29,7 @@ try {
   let input = {}
   try { input = JSON.parse(raw) } catch { process.exit(0) } // не наш формат → не мешаем
   const role = pickRole(input)
-  if (role !== "hughes" && role !== "wirth-tester") process.exit(0)
+  if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") process.exit(0)
 
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const review = join(root, ".agent", "plan-reviewer", "plan-review.md")

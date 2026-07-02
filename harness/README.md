@@ -1,5 +1,19 @@
 # harness/ — проекции ролей под раннеры
 
+## Quickstart (opencode)
+
+```sh
+# 1) установить харнес в проект (создаёт .opencode/agent + plugins; enforcement по умолчанию)
+sh install.sh opencode /path/to/project      # или --global на все проекты; --soft отключить enforcement
+# 2) запустить точку входа
+cd /path/to/project && opencode --agent izi
+# 3) дать задачу: «Прочитай ./TASK.md и веди задачу»
+```
+
+Точка входа — **`izi`** (оркестратор-роутер). Голый проект без `.opencode/` харнес не подхватит
+автоматически — сперва `install.sh`. Модели ролей — в `models.config.json`.
+
+
 > Концептуальный обзор «как устроен и работает харнес» (C4, маршрутизация, роли, скиллы) —
 > [`docs/harness/`](../docs/harness/README.md).
 
