@@ -2,7 +2,7 @@
 description: "Этап 1: FRD → атомарные вертикальные слайсы (1 external input = 1 slice, acceptance, Blocked by). Keywords: слайсы, декомпозиция, vertical slice."
 version: "1.0"
 mode: subagent
-temperature: 0.7
+temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2
 permission:

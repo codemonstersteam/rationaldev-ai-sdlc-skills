@@ -2,7 +2,7 @@
 description: "Дирижёр-роутер: точка входа, классифицирует уровень задачи, делегирует роли, держит human-gates. Keywords: оркестрация, роутинг, делегирование, gate, уровень задачи, SDLC."
 version: "1.0"
 mode: primary
-temperature: 0.7
+temperature: 0.2
 steps: 40
 model: openrouter/qwen/qwen3.6-27b
 permission:

@@ -2,7 +2,7 @@
 description: "Этап 3-4: use case → замороженный контракт api-specification/{openapi,asyncapi}.yaml. Keywords: OpenAPI, AsyncAPI, контракт, спека."
 version: "1.0"
 mode: subagent
-temperature: 0.7
+temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2
 permission:

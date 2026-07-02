@@ -16,10 +16,6 @@
       "medium": "openrouter/qwen/qwen3.6-27b",
       "small": "openrouter/qwen/qwen3.6-27b"
     },
-    "//temperature": "Температура per-tier (не хардкод). GLM 5.2 калиброван ~1.0 (Z.ai/OpenRouter) — large=0.7 (компромисс планирование/стабильность). Пусто у тира → дефолт роли из _shared. Можно roles:{<роль>:<t>}.",
-    "temperature": {
-      "large": 0.7
-    },
     "//roles": "Пер-ролевое переопределение модели важнее тира. Диспетчеры (orchestrator/planner) — на Qwen: они только роутят/делегируют частыми короткими турнами, GLM там медленный (reasoning → idle-timeout 504). Дизайн-этапы (intake/usecase/apidesigner/moduledesigner/ticketer) остаются large=GLM (качество).",
     "roles": {
       "orchestrator": "openrouter/qwen/qwen3.6-27b",

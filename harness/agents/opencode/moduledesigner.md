@@ -2,7 +2,7 @@
 description: "Этап 8-10: контракт → дерево модулей + псевдокод + контракты модулей с io: + C4 + формула юнит-тестов. Keywords: проектирование, модули, дерево, C4, io."
 version: "1.0"
 mode: subagent
-temperature: 0.7
+temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2
 permission:
