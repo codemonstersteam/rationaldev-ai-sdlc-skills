@@ -12,7 +12,7 @@
   "opencode": {
     "//": "Имена в формате провайдера OpenCode. Прогон token-bench идёт через OpenRouter за прокси (experiments/token-bench). large = GLM 5.2 (планирование/дизайн/ревью: orchestrator/planner/plan-reviewer/fixer), medium = Qwen3.6-27b (release-health: канарейка+здоровье), small = Qwen3.6-27b (реализация: implementer).",
     "tiers": {
-      "large": "openrouter/z-ai/glm-5.2",
+      "large": "openrouter/z-ai/glm-5-turbo",
       "medium": "openrouter/qwen/qwen3.6-27b",
       "small": "openrouter/qwen/qwen3.6-27b"
     },

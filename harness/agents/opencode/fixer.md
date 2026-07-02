@@ -4,7 +4,7 @@ version: "1.0"
 mode: subagent
 temperature: 0.1
 steps: 40
-model: openrouter/z-ai/glm-5.2
+model: openrouter/z-ai/glm-5-turbo
 permission:
   read: allow
   grep: allow
