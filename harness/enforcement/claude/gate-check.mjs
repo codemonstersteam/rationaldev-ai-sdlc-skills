@@ -28,7 +28,8 @@ try {
   const raw = await readStdin()
   let input = {}
   try { input = JSON.parse(raw) } catch { process.exit(0) } // не наш формат → не мешаем
-  if (pickRole(input) !== "implementer") process.exit(0)
+  const role = pickRole(input)
+  if (role !== "hughes" && role !== "wirth-tester") process.exit(0)
 
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const review = join(root, ".agent", "plan-reviewer", "plan-review.md")
@@ -36,7 +37,7 @@ try {
   if (!existsSync(review) || !existsSync(gate1)) {
     process.stderr.write(
       "[rational-guardrail] Gate #1 не пройден: нужны .agent/plan-reviewer/plan-review.md и " +
-      ".agent/gates/gate1.approved перед делегированием implementer.\n",
+      ".agent/gates/gate1.approved перед делегированием реализации (hughes/wirth-tester).\n",
     )
     process.exit(2)
   }

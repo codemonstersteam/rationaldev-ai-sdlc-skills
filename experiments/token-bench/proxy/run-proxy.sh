@@ -10,6 +10,7 @@ set -a
 set +a
 # абсолютный путь лога (bench.sh ждёт его же)
 case "${PROXY_LOG:-usage.jsonl}" in /*) : ;; *) PROXY_LOG="$HERE/${PROXY_LOG:-usage.jsonl}" ;; esac
-export PROXY_LOG
-echo "tokenproxy → :$PORT  upstream=$UPSTREAM_URL  log=$PROXY_LOG"
+case "${FLOW_LOG:-flow.jsonl}" in /*) : ;; *) FLOW_LOG="$HERE/${FLOW_LOG:-flow.jsonl}" ;; esac
+export PROXY_LOG FLOW_LOG
+echo "tokenproxy → :$PORT  upstream=$UPSTREAM_URL  log=$PROXY_LOG  flow=$FLOW_LOG"
 exec "$HERE/bin/tokenproxy"

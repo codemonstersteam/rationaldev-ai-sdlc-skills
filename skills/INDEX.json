@@ -214,7 +214,7 @@
   ],
   "roles": [
     {
-      "role": "orchestrator",
+      "role": "izi",
       "skills": [
         "memory",
         "platform-landing"
@@ -229,22 +229,7 @@
       ]
     },
     {
-      "role": "planner",
-      "skills": [
-        "memory",
-        "platform-landing"
-      ],
-      "inputs": [
-        "requirements"
-      ],
-      "outputs": [
-        ".agent/planner/plan.md",
-        ".agent/planner/design",
-        ".agent/decisions.log"
-      ]
-    },
-    {
-      "role": "intake",
+      "role": "wirth-intake",
       "skills": [
         "requirements-intake"
       ],
@@ -258,7 +243,7 @@
       ]
     },
     {
-      "role": "slicer",
+      "role": "wirth-slicer",
       "skills": [
         "vertical-slices"
       ],
@@ -270,7 +255,7 @@
       ]
     },
     {
-      "role": "usecase",
+      "role": "wirth-usecase",
       "skills": [
         "cockburn-use-case"
       ],
@@ -283,7 +268,7 @@
       ]
     },
     {
-      "role": "apidesigner",
+      "role": "wirth-apidesigner",
       "skills": [
         "openapi-spec",
         "asyncapi-spec"
@@ -296,7 +281,7 @@
       ]
     },
     {
-      "role": "moduledesigner",
+      "role": "wirth-moduledesigner",
       "skills": [
         "program-design",
         "c4",
@@ -316,7 +301,7 @@
       ]
     },
     {
-      "role": "ticketer",
+      "role": "wirth-ticketer",
       "skills": [
         "implementation-ticket-writer"
       ],
@@ -329,7 +314,24 @@
       ]
     },
     {
-      "role": "plan-reviewer",
+      "role": "wirth-planner",
+      "skills": [
+        "memory"
+      ],
+      "inputs": [
+        ".agent/planner/frd.md",
+        ".agent/planner/slices.md",
+        "docs/design",
+        "api-specification",
+        ".agent/planner/tickets"
+      ],
+      "outputs": [
+        ".agent/planner/plan.md",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "mills",
       "skills": [
         "architecture",
         "doc-quality-review",
@@ -354,7 +356,7 @@
       ]
     },
     {
-      "role": "implementer",
+      "role": "hughes",
       "skills": [
         "code-style",
         "communication",
@@ -383,7 +385,22 @@
       ]
     },
     {
-      "role": "fixer",
+      "role": "wirth-tester",
+      "skills": [
+        "component-test-scaffold"
+      ],
+      "inputs": [
+        "api-specification",
+        "docs/design",
+        ".agent/planner/tickets"
+      ],
+      "outputs": [
+        "component-tests",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "linger",
       "skills": [
         "code-style",
         "communication",
@@ -396,7 +413,8 @@
       "inputs": [
         "pr",
         "ci-signals",
-        ".agent/planner/plan.md"
+        ".agent/planner/plan.md",
+        ".agent/plan-reviewer/plan-review.md"
       ],
       "outputs": [
         "review-verdict",
@@ -404,7 +422,7 @@
       ]
     },
     {
-      "role": "release-health",
+      "role": "michtom",
       "skills": [
         "observability",
         "security"

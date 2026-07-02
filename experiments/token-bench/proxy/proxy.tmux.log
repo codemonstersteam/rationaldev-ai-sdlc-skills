@@ -1,2 +1,2 @@
-tokenproxy → :4000  upstream=https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl
-2026/07/02 06:46:02 tokenproxy :4000 → https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl
+tokenproxy → :4000  upstream=https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl  flow=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/flow.jsonl
+2026/07/02 10:50:44 tokenproxy :4000 → https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl

@@ -1,70 +1,75 @@
-# Граф работы харнеса rationaldev
+# Граф работы харнеса rationaldev (v2 — плоская диспетчеризация)
 
-Полный поток: оркестрация → планирование (диспетчер + этап-роли) → Gate #1 → per-ticket реализация
-→ фиксер → релиз. Модели: **GLM 5.2** (large — планирование/дизайн/ревью), **Qwen3.6-27b**
-(small/medium — реализация/health). Каждая этап-роль грузит **только свой скилл** (малый контекст).
+`izi` (оркестратор, Qwen) — **чисто механический роутер**: делегирует каждый кусок отдельным
+субагентом **напрямую (depth 1)**, читает однострочные статусы, держит гейты. Всё планирование и
+проектирование тикетов — **Wirth на GLM**; реализация — **Hughes на Qwen**; ревью — **Mills**,
+фикс — **Linger** (GLM); релиз-здоровье — **Michtom** (Qwen). Никакой вложенности subagent→subagent.
 
 ```mermaid
 flowchart TD
-  OP([Оператор · Witt]):::human
+  OP([Оператор]):::h -->|BRD / TASK.md| IZI
 
-  ORCH["orchestrator · GLM<br/>роутер: уровень задачи, гейты<br/>skills: memory, platform-landing"]:::glm
+  IZI["izi · Qwen<br/>механический роутер (ноль интеллекта)<br/>делегирует куски depth-1, читает статусы, гейты"]:::q
 
-  subgraph PLAN["ПЛАНИРОВАНИЕ — planner-диспетчер · GLM (skills: memory)"]
+  subgraph PLAN["ПЛАНИРОВАНИЕ · Wirth · GLM (каждый — свежий субагент)"]
     direction TB
-    INT["intake · GLM<br/>requirements-intake → frd.md"]:::glm
-    SL["slicer · GLM<br/>vertical-slices → slices.md"]:::glm
-    subgraph PS["на КАЖДЫЙ слайс"]
-      direction TB
-      UC["usecase · GLM<br/>cockburn-use-case → use-case.md"]:::glm
-      API["apidesigner · GLM<br/>openapi/asyncapi-spec → контракт (frozen)"]:::glm
-      MD["moduledesigner · GLM<br/>program-design+c4+db-schema<br/>→ дерево/контракты(io:)/c4 + NFR"]:::glm
-    end
-    TK["ticketer · GLM<br/>implementation-ticket-writer → tickets/NN<br/>порядок: scaffold → компонентные(RED) → модули"]:::glm
+    INT["@wirth-intake → frd.md<br/>(+ годно/STOP)"]:::g
+    SL["@wirth-slicer → slices.md<br/>(возвращает список срезов)"]:::g
+    UC["@wirth-usecase → use-case.md<br/>(ЦИКЛ по срезам)"]:::g
+    API["@wirth-apidesigner → openapi.yaml<br/>ОДИН РАЗ · один контракт · FREEZE"]:::g
+    MD["@wirth-moduledesigner → module-tree/contracts(io:)/c4<br/>(ЦИКЛ по срезам)"]:::g
+    TK["@wirth-ticketer → tickets/NN<br/>ОДИН РАЗ · scaffold первый → component RED → module → infra"]:::g
+    PLN["@wirth-planner → plan.md<br/>индекс путей + сводка (не проектирует)"]:::g
   end
 
-  PR["plan-reviewer · GLM<br/>conformance-review (не тот, кто писал)"]:::glm
+  MILLS["@mills · GLM<br/>ОДИН проход: верхнеуровневая консистентность<br/>OK | blocker | escalate"]:::g
+  LFIX["@linger · GLM<br/>локальный фикс по blocker<br/>(io → сверка контракта с вызывающим)"]:::g
 
-  subgraph IMPL["РЕАЛИЗАЦИЯ — per-ticket (N имплементеров)"]
+  subgraph IMPL["РЕАЛИЗАЦИЯ · роутинг по МЕТКЕ тикета · step-cap K=2"]
     direction TB
-    IM["implementer · Qwen ×N<br/>1 тикет = 1 субагент = только его скиллы<br/>тесты → модуль → зелёное"]:::qwen
+    SC["scaffold → @hughes · Qwen<br/>клон template-go-api (+ харнес тестов)"]:::q
+    CT["component → @wirth-tester · GLM<br/>RED-компонентные по контракту+сценариям"]:::g
+    MOD["module → @hughes · Qwen<br/>RED → green; скилл по io:"]:::q
   end
 
-  FX["fixer · GLM(ревью)/Qwen(фикс)<br/>build→unit→component; slice-acceptance: @wip↓"]:::glm
-  RH["release-health · Qwen<br/>канарейка 1→5→25→100% + 4 сигнала"]:::qwen
+  LING["@linger · GLM<br/>сборка→юнит→компонентные; снять @wip"]:::g
+  MICH["@michtom · Qwen<br/>канарейка 1→5→25→100% + 4 сигнала"]:::q
+  GR{{"rational-guardrail (--hard)<br/>блок hughes/wirth-tester без Gate #1 · маркер только оператор · decisions.log"}}:::guard
 
-  GR{{"rational-guardrail (--hard)<br/>Gate#1 жёстко · decisions.log · маркер только оператор"}}:::guard
-
-  OP -->|BRD / TASK.md| ORCH
-  ORCH -->|task, depth≤2| INT
-  INT --> SL --> UC --> API --> MD --> TK --> PR
-  PR --> G1{{"Gate #1 — акцепт плана"}}:::gate
+  IZI --> INT --> SL --> UC --> API --> MD --> TK --> PLN --> MILLS
+  MILLS -->|blocker| LFIX -->|перезапуск| MILLS
+  MILLS -->|OK / escalate| G1{{"Gate #1 — акцепт плана"}}:::gate
   OP -. пишет «акцепт» .-> G1
   GR -. форсит .-> G1
-  G1 -->|разблок @implementer| IM
-  IM --> FX
-  FX --> G2{{"Gate #2 — мерж"}}:::gate
+  G1 -->|разблок реализации| SC
+  SC --> CT --> MOD --> LING --> G2{{"Gate #2 — мерж"}}:::gate
   OP -. мерж .-> G2
-  G2 --> RH --> G3{{"Gate #3 — приёмка после канарейки"}}:::gate
+  G2 --> MICH --> G3{{"Gate #3 — приёмка после канарейки"}}:::gate
   OP -. приёмка .-> G3
 
-  classDef glm fill:#e3f0ff,stroke:#2b6cb0,color:#12345a;
-  classDef qwen fill:#eafbea,stroke:#2f855a,color:#153f22;
-  classDef human fill:#fff4d6,stroke:#b7791f,color:#5a3d00;
+  classDef q fill:#eafbea,stroke:#2f855a,color:#153f22;
+  classDef g fill:#e3f0ff,stroke:#2b6cb0,color:#12345a;
+  classDef h fill:#fff4d6,stroke:#b7791f,color:#5a3d00;
   classDef gate fill:#ffe3e3,stroke:#c53030,color:#5a1212;
   classDef guard fill:#efe3ff,stroke:#6b46c1,color:#2d1a5a;
 ```
 
 ## Легенда
-- 🔵 **GLM 5.2** — планирование/дизайн/ревью (large, temp 0.7 из `models.config.json`).
-- 🟢 **Qwen3.6-27b** — реализация тикетов, канареечный health (small/medium).
-- 🟡 **Оператор (Witt)** — только 3 human-gate; «акцепт» на Gate #1 (touch-free через плагин).
-- 🔴 **Gate #1/2/3** — акцепт плана / мерж / приёмка после канарейки.
-- 🟣 **rational-guardrail** — плагин `--hard`: жёстко блокирует implementer без Gate #1, пишет `decisions.log`, маркер `gate1.approved` ставит только оператор (агент не может).
+- 🟩 **izi (Qwen)** — механический роутер: фикс. последовательность + чтение однострочных статусов
+  + метки типов. Артефакты не читает, вердикты не сводит, уровень не оценивает.
+- 🟦 **Wirth (GLM)** — всё планирование/проектирование/компонентные тесты (`@wirth-*`).
+- 🟦 **Mills (GLM)** — верхнеуровневое ревью консистентности; 🟦 **Linger (GLM)** — локальный фикс.
+- 🟩 **Hughes (Qwen)** — реализация scaffold/module; 🟩 **Michtom (Qwen)** — канареечный health.
+- 🟨 **Оператор** — только 3 human-gate; «акцепт» на Gate #1 (touch-free через плагин).
+- 🟪 **rational-guardrail** (`--hard`) — блок `hughes`/`wirth-tester` без Gate #1; маркер `gate1.approved` ставит только оператор.
 
-## Ключевые принципы на графе
-- **Диспетчеризация:** planner не делает этапы сам — делегирует их субагентам (свежий малый контекст, свой скилл).
-- **io-router:** тип I/O модуля (`io: none|http|llm|queue|db`) → набор скиллов в тикет; имплементер не выбирает.
-- **Contract-first порядок:** спеки → компонентные тесты (RED) → модули (юнит-тесты) → GREEN.
-- **Скелет из шаблона:** `service-scaffold` клонирует `template-go-api` (не жжём токены на boilerplate).
+## Ключевые принципы
+- **Плоскость (depth 1):** izi делегирует субагентов напрямую; они дальше НЕ делегируют
+  (вложенность subagent→subagent opencode не поддерживает — ask второго уровня не всплывает).
+- **Один контракт на сервис:** `@wirth-apidesigner` вызывается ОДИН раз (не per-slice) → freeze до дизайна модулей.
+- **Два прохода планирования:** дизайн срезов → нарезка тикетов (`@wirth-ticketer`, над всем планом).
+- **Ревью верхнеуровневое:** Mills судит план как целое, не открывая каждый тикет; детали ловят этапы + компонентные + Linger.
+- **Локальный фикс:** Linger чинит там, где проблема, сверяя контракт с вызывающим модулем — не переписывает план.
+- **Без луупов:** `steps`-cap + счётчик попыток (K=2) + жёсткий блок guardrail → escalate оператору вместо кручения.
+- **Скелет из шаблона:** scaffold-тикет (первый, сериализованно) клонирует `template-go-api`.
 ```

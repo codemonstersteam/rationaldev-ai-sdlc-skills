@@ -63,12 +63,13 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
       if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
-      if (role !== "implementer") return
+      // Реализация (hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
+      if (role !== "hughes" && role !== "wirth-tester") return
       if (!(await exists(review)) || !(await exists(gate1))) {
         throw new Error(
           "[rational-guardrail] Gate #1 не пройден: требуется " +
           ".agent/plan-reviewer/plan-review.md и апрув оператора " +
-          "(.agent/gates/gate1.approved) перед делегированием implementer.",
+          "(.agent/gates/gate1.approved) перед делегированием реализации (hughes/wirth-tester).",
         )
       }
     },
