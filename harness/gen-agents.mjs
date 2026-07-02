@@ -32,6 +32,18 @@ function resolveModel(runner, role, tier) {
   return null
 }
 
+// Температура — из конфига per-runner (roles[<роль>] > temperature[<тир>]); пусто → дефолт
+// роли из _shared frontmatter. Не хардкод: значения живут в models.config.json.
+function resolveTemp(runner, role, tier) {
+  const cfg = MODELS[runner]
+  if (!cfg || !cfg.temperature) return null
+  const byRole = cfg.temperature.roles && cfg.temperature.roles[role]
+  if (typeof byRole === "number") return byRole
+  const byTier = cfg.temperature[tier]
+  if (typeof byTier === "number") return byTier
+  return null
+}
+
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
 const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
 
@@ -65,9 +77,10 @@ function claudeFile(role, m, body, model) {
   return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\n${modelLine}---\n\n${body}`
 }
 
-function opencodeFile(role, m, body, model) {
+function opencodeFile(role, m, body, model, temp) {
   const modelLine = model ? `model: ${model}\n` : ""
-  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
+  const temperature = typeof temp === "number" ? temp : m.temperature
+  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
 }
 
 function codexFile(role, m, body, _model) {
@@ -103,7 +116,7 @@ for (const { role, data, body } of roles) {
   for (const [runner, render] of [["claude", claudeFile], ["opencode", opencodeFile], ["codex", codexFile]]) {
     const dir = join(ROOT, "agents", runner)
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, `${role}.md`), render(role, data, body, resolveModel(runner, role, data.tier)))
+    writeFileSync(join(dir, `${role}.md`), render(role, data, body, resolveModel(runner, role, data.tier), resolveTemp(runner, role, data.tier)))
     n++
   }
   // 4-я проекция: человекочитаемый контракт роли в ../skills/roles/<role>/<role>.md

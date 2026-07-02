@@ -2,7 +2,7 @@
 description: "Планировщик (Wirth): проектирует вертикальные срезы, контракты модулей, карту режимов отказа. Вызывать на модульных задачах ПЕРЕД реализацией. Keywords: план, дизайн, контракт, OpenAPI, срезы, архитектура."
 version: "1.0"
 mode: subagent
-temperature: 0.3
+temperature: 0.7
 steps: 30
 model: openrouter/z-ai/glm-5.2
 permission:

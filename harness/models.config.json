@@ -16,6 +16,10 @@
       "medium": "openrouter/qwen/qwen3.6-27b",
       "small": "openrouter/qwen/qwen3.6-27b"
     },
+    "//temperature": "Температура per-tier (не хардкод). GLM 5.2 калиброван ~1.0 (Z.ai/OpenRouter) — large=0.7 (компромисс планирование/стабильность). Пусто у тира → дефолт роли из _shared. Можно roles:{<роль>:<t>}.",
+    "temperature": {
+      "large": 0.7
+    },
     "roles": {}
   },
   "codex": {

@@ -21,7 +21,6 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -133,44 +132,11 @@ func env(k, d string) string {
 	return d
 }
 
-// forceTemp переопределяет temperature в теле запроса для моделей, чьё имя содержит
-// forceTempSub (напр. "glm"). Нужно, т.к. GLM 5.2 калиброван под temperature ~1.0
-// (Z.ai/OpenRouter), а роли шлют 0.2–0.3 — слишком низко для reasoning-модели.
-// Тюн — только на уровне прокси (env), общий frontmatter ролей не трогаем.
-var (
-	forceTemp    string // env FORCE_TEMP (напр. "0.7"); пусто → выключено
-	forceTempSub string // env FORCE_TEMP_MODEL (дефолт "glm")
-)
-
-func withForcedTemp(b []byte, reqModel string) []byte {
-	if forceTemp == "" || !strings.Contains(strings.ToLower(reqModel), forceTempSub) {
-		return b
-	}
-	t, err := strconv.ParseFloat(forceTemp, 64)
-	if err != nil {
-		return b
-	}
-	var m map[string]any
-	if json.Unmarshal(b, &m) != nil {
-		return b
-	}
-	if _, ok := m["model"]; !ok {
-		return b
-	}
-	m["temperature"] = t
-	if nb, err := json.Marshal(m); err == nil {
-		return nb
-	}
-	return b
-}
-
 func main() {
 	port := env("PORT", "4000")
 	upstream := env("UPSTREAM_URL", "https://api.anthropic.com")
 	logP = env("PROXY_LOG", "usage.jsonl")
 	model = env("MODEL", "")
-	forceTemp = env("FORCE_TEMP", "")
-	forceTempSub = strings.ToLower(env("FORCE_TEMP_MODEL", "glm"))
 
 	target, err := url.Parse(upstream)
 	if err != nil {
@@ -196,7 +162,6 @@ func main() {
 				if m := reModel.FindSubmatch(b); m != nil {
 					rm = string(m[1])
 				}
-				b = withForcedTemp(b, rm) // тюн temperature для GLM (env FORCE_TEMP)
 				r.Body = io.NopCloser(bytes.NewReader(b))
 				r.ContentLength = int64(len(b))
 			}
