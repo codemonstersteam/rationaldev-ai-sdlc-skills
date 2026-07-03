@@ -60,6 +60,13 @@ DON'T:
 
 - **One trigger.** The use case has exactly one trigger = the slice's one external input
   (1 slice = 1 `Request`). More than one → the slice is too coarse, go back to `vertical-slices`.
+- **A failure/framework/boot is NOT a use case — it is an Extension.** One external request = ONE
+  use case; its error outcomes (4xx/5xx, store failure, bad input) are **Extensions** of it, never
+  separate use cases. **Anti-examples (all WRONG as top-level UCs):** "Bad request / invalid sort"
+  (input-validation → Extension), "Method not allowed (405)" / "Unknown route (404)" (HTTP framework,
+  not a user goal), "Internal error (500)" (generic Extension), "Startup with invalid config" (boot
+  precondition → Extension `0a`, not a use case). Rule of thumb: **`#use cases ≈ #endpoints/user-goals`,
+  NOT `#outcomes`.** The deterministic gate `validate-frd.mjs` flags such pseudo-UCs.
 - **Level = user-goal.** Write at sea level. Push implementation into no step; steps are
   actor↔system intentions, not code.
 - **Glossary terms only.** Every noun uses the canonical `CONTEXT.md` term (no synonyms).

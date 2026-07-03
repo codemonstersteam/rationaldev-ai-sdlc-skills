@@ -124,3 +124,31 @@ test("validateTicketHeaders: scaffold с чужим skills → ошибка", ()
 test("validateTicketHeaders: skills не список → ошибка", () => {
   assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { skills: undefined } })]).some((e) => /skills должен быть/.test(e)))
 })
+
+// --- harden-decomposition: validateFrdUseCases / validateSlices ---
+import { validateFrdUseCases, validateSlices, countOpenapiOperations } from "../lib/validators.mjs"
+
+test("validateFrdUseCases: чистый FRD (list + store-failure) → нет псевдо-UC", () => {
+  const frd = "### UC1 — List services\n### UC2 — Data store missing/empty/malformed\n"
+  assert.deepEqual(validateFrdUseCases(frd), [])
+})
+test("validateFrdUseCases: framework/boot UC → флаг", () => {
+  const frd = "### UC1 — List services\n### UC4 — Method not allowed / unknown route\n### UC6 — Service startup with invalid config\n"
+  const e = validateFrdUseCases(frd)
+  assert.equal(e.length, 2)
+  assert.ok(e.some((x) => /Method not allowed/.test(x)))
+})
+test("countOpenapiOperations: считает метод-ключи под paths", () => {
+  assert.equal(countOpenapiOperations("paths:\n  /a:\n    get:\n    post:\n"), 2)
+})
+test("validateSlices: 1 срез / 1 op → OK", () => {
+  const s = "## Slice inventory\n## Slice 01: list-services\n"
+  assert.deepEqual(validateSlices(s, "paths:\n  /services:\n    get:\n"), [])
+})
+test("validateSlices: псевдо-срезы (scaffold/method/route/config) → флаг", () => {
+  const s = "## Slice 01: service-scaffold\n## Slice 02: config-fail-fast\n## Slice 03: list-services\n## Slice 04: method-not-allowed\n## Slice 05: unknown-route\n"
+  const e = validateSlices(s, "paths:\n  /services:\n    get:\n")
+  assert.ok(e.some((x) => /service-scaffold/.test(x)))
+  assert.ok(e.some((x) => /method-not-allowed/.test(x)))
+  assert.ok(e.length >= 4)
+})

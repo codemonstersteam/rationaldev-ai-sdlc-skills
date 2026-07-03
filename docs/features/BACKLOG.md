@@ -17,6 +17,7 @@
 | **#42** | **Trajectory / eval-слой (LLM-as-judge поверх `run-summary`)** | 🔴 P0 (флагман 2) | ✅ **закрыт по ядру** — детекторы+судья+RUNBOOK/CI; хвост (live-прогон) общий с #40/#43 | [eval-trajectory-layer.md](./eval-trajectory-layer.md) |
 | #43 | Preload ядер скиллов в system + prompt-кэш | 🟡 P1 | ⏸ заведён, вторичный/кэш-зависимый; блокирован своей Фазой 0 | [skill-preload-cache.md](./skill-preload-cache.md) |
 | #41 | Хуки-напоминания (`category-skill-reminder`) | 🟡 P1 | ⏳ не начат; сцеплен с #43 | — |
+| — | **harden-decomposition** (детекторы против переусложнения срезов) | 🔴 P0 | ✅ **реализован** (найден на live-прогоне) — `validate-frd`/`validate-slices` + правила + mills-гейт | [harden-decomposition.md](./harden-decomposition.md) |
 
 ## Что дальше (порядок)
 

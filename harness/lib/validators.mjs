@@ -106,3 +106,55 @@ export function validateTicketHeaders(tickets) {
   if (scaffold.length !== 1) errors.push(`ожидался ровно ОДИН scaffold-тикет, найдено ${scaffold.length}`)
   return errors
 }
+
+// --- Против переусложнения декомпозиции (harden-decomposition) ---------------
+// Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
+// тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
+// use case, отказы = Extensions; по vertical-slices: 1 срез = 1 внешний вход (endpoint).
+const PSEUDO_UC = /method[\s-]?not[\s-]?allowed|unknown[\s-]?route|route[\s-]?not[\s-]?found|internal[\s-]?error|start\s?up|fail[\s-]?fast|invalid config|config.*(fail|invalid)|bad request|invalid.*(sort|input|param)/i
+const PSEUDO_SLICE = /scaffold|method[\s-]?not[\s-]?allowed|unknown[\s-]?route|not[\s-]?found|fail[\s-]?fast|config|internal[\s-]?error|\b40[45]\b/i
+
+// #operations контракта = HTTP-метод-ключи под paths: (грубо, но детерминированно).
+export function countOpenapiOperations(openapiText) {
+  const t = String(openapiText).replace(/\r\n/g, "\n")
+  const after = t.split(/^paths:[ \t]*$/m)[1]
+  if (!after) return 0
+  const block = after.split(/\n(?=\S)/)[0] // до следующего top-level ключа
+  return (block.match(/^[ \t]+(get|post|put|delete|patch|head|options):/gim) || []).length
+}
+
+// UC в FRD, которые суть framework/boot/generic-error → должны быть Extensions, не top-level UC.
+export function validateFrdUseCases(frdText) {
+  const errors = []
+  for (const m of String(frdText).matchAll(/^#{2,4}\s+UC[\s-]?\d+\s*[:—-]?\s*(.+)$/gim)) {
+    const title = (m[1] || "").trim()
+    if (PSEUDO_UC.test(title)) {
+      errors.push(`UC «${title}» — framework/boot/generic-error, не user-goal use case; ` +
+        `сделай Extension'ом (Кокборн: один внешний запрос = один UC, отказы = Extensions)`)
+    }
+  }
+  return errors
+}
+
+// Срезов не больше, чем operations контракта; и никаких псевдо-срезов.
+export function validateSlices(slicesText, openapiText) {
+  const errors = []
+  const ops = countOpenapiOperations(openapiText || "")
+  // срезы: заголовки "## Slice <NN>" (с номером — не путать с "## Slice inventory")
+  // либо уникальные имена slice-<name>
+  let n = (slicesText.match(/^##\s+Slice[\s-]?\d/gim) || []).length
+  if (!n) n = new Set([...slicesText.matchAll(/\bslice-[a-z0-9-]+/gi)].map((x) => x[0].toLowerCase())).size
+  if (ops > 0 && n > ops) {
+    errors.push(`срезов ${n} > operations контракта ${ops} — переусложнение ` +
+      `(1 внешний вход = 1 срез; отказы/framework/boot — Extensions, не срезы). Слить лишние.`)
+  }
+  // псевдо-срезы по заголовку и по имени папки
+  for (const m of slicesText.matchAll(/^##\s+Slice\s+\S+\s*[:—-]?\s*(.+)$/gim)) {
+    const name = (m[1] || "").trim()
+    if (PSEUDO_SLICE.test(name)) errors.push(`псевдо-срез «${name}» — framework/boot/тип-тикета, не внешний вход контракта`)
+  }
+  for (const m of slicesText.matchAll(/\bslice-[a-z0-9-]+/gi)) {
+    if (PSEUDO_SLICE.test(m[0])) errors.push(`псевдо-срез «${m[0]}» — не отдельный внешний вход`)
+  }
+  return [...new Set(errors)]
+}

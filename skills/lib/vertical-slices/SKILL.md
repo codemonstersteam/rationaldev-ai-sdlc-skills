@@ -37,6 +37,14 @@ DON'T:
 - **One external input = one slice = one `Request`.** A slice corresponds to exactly one entry
   point (one HTTP operation / one consumed message). A flag/option is a field of that input, not
   a new slice. (Same invariant program-design enforces at Step 3 — keep them aligned.)
+- **NOT a slice (hard list).** These are outcomes/framework/boot/ticket-types of the SAME request —
+  never their own slice: **error outcomes** (4xx/5xx), **method-not-allowed** (405), **unknown-route**
+  (404), **config/startup/fail-fast** (boot), **internal-error** (500), and **scaffold** (that is a
+  ticket *type*, not a slice). **Anti-example (WRONG):** `slice-service-scaffold`, `slice-method-not-allowed`,
+  `slice-unknown-route`, `slice-config-fail-fast`. Rule: **`#slices == #distinct endpoints`.** One
+  endpoint → exactly one slice; the rest are Extensions/framework/boot. The deterministic gate
+  `validate-slices.mjs` (`#slices ≤ #operations` + pseudo-slice names) rejects over-decomposition —
+  **prose "these are distinct inputs" does NOT override it.**
 - **Demoable alone.** A finished slice is verifiable on its own (its component tests can go green
   independently).
 - **No orphan value.** Every slice delivers a narrow but complete path a user/consumer can exercise.

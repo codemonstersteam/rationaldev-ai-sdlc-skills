@@ -57,10 +57,15 @@ permission:
 - **НФТ/SLI не упущены**; границы модулей удержаны;
 - **пакет согласован** — все ссылки в PLAN.md разрешаются, нет висячих артефактов.
 - **входные артефакты корректны (antecedent на границах)** — детерминированные валидаторы, ненулевой exit = **blocker**:
-  - `node harness/validate-frd.mjs` — FRD полон (акторы, use-cases с Extensions, контракт-черновик, карта отказов);
+  - `node harness/validate-frd.mjs` — FRD полон И без псевдо-UC (framework/boot/generic-error = Extensions, не UC);
+  - `node harness/validate-slices.mjs` — **срезы атомарны, нет переусложнения** (1 внешний вход = 1 срез;
+    scaffold/метод/роут/config/4xx — НЕ срезы). Ненулевой exit = **blocker → @linger переработает декомпозицию**;
   - `node harness/validate-contract-frozen.mjs` — контракт полон и заморожен (`x-frozen`, paths/responses/schemas);
   - `node harness/validate-tickets.mjs` — заголовки тикетов машиночитаемы (`type`/`blocked_by`/`inputs`,
     ссылки целы, scaffold один) — иначе izi не сроутит механически.
+
+> **Не доверяй прозе-обоснованию слайсера** (напр. «405/404 — distinct inputs»): переусложнение
+> ловится ТОЛЬКО детерминированным `validate-slices` + правилом «1 endpoint = 1 срез», не на глаз.
 
 ## Замечания — по тяжести
 Каждое замечание классифицируй:
