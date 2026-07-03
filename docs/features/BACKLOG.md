@@ -14,15 +14,15 @@
 |---|-------|-----------|--------|--------|
 | #40 | Progressive disclosure скиллов (тела по требованию) | 🔴 P0 (флагман 1) | ✅ **закрыт** по осн. критерию — встраивание −34.6% | [progressive-disclosure-skills.md](./progressive-disclosure-skills.md) |
 | #39 | `expectedTicketSkills` — валидатор `skills:` тикета | 🔴 P0 | ✅ по сути готов (`harness/lib/validators.mjs:13`) | — |
-| **#42** | **Trajectory / eval-слой (LLM-as-judge поверх `run-summary`)** | 🔴 **P0 (флагман 2)** | 🚧 **в работе** | [eval-trajectory-layer.md](./eval-trajectory-layer.md) |
+| **#42** | **Trajectory / eval-слой (LLM-as-judge поверх `run-summary`)** | 🔴 P0 (флагман 2) | ✅ **закрыт по ядру** — детекторы+судья+RUNBOOK/CI; хвост (live-прогон) общий с #40/#43 | [eval-trajectory-layer.md](./eval-trajectory-layer.md) |
 | #43 | Preload ядер скиллов в system + prompt-кэш | 🟡 P1 | ⏸ заведён, вторичный/кэш-зависимый; блокирован своей Фазой 0 | [skill-preload-cache.md](./skill-preload-cache.md) |
 | #41 | Хуки-напоминания (`category-skill-reminder`) | 🟡 P1 | ⏳ не начат; сцеплен с #43 | — |
 
 ## Что дальше (порядок)
 
-1. **#42 eval-слой** (сейчас) — второй флагман; заодно закрывает отложенный критерий #40
-   «без потери качества артефактов» (нужна рубрика прошёл/эффективно/безопасно, не только токены).
-2. **#43 preload+кэш** — после Фазы 0 (проверить `cache_control`-брейкпоинт opencode); только GLM-роли.
+1. **Live sandbox-прогон** — общий хвост #40/#42/#43: закрывает (а) полное «успех»-измерение eval по
+   снапшоту `.agent/**`, (б) before/after качества дробления #40, (в) Фазу 0 #43 (кэш-брейкпоинт).
+2. **#43 preload+кэш** — после live-прогона (проверить `cache_control`); только GLM-роли.
 3. **#41 хуки** — вместе с #43 (подстраховка слабой модели).
 4. Доменные скиллы P0 из [`SKILLS-BACKLOG.md`](../../SKILLS-BACKLOG.md) — задачи доменных команд.
 

@@ -55,6 +55,29 @@ jq -s '{calls:length, out:(map(.completion_tokens)|add), in:(map(.input_tokens)|
 Стоимость `$` бери из TUI/`/cost` (включает input+кэш — честный сигнал). Время — из таймстемпов
 `ts` в логе прокси (span − максимальный разрыв = активное, без простоя на пополнение кредитов).
 
+### 4b. Eval-вердикт траектории (ОБЯЗАТЕЛЬНО, #42)
+Кто/где сломался и почему — не только метрики. Вход — `flow.jsonl` (+`usage.jsonl`) прогона в
+`experiments/token-bench/proxy/` (или свой `<logdir>`):
+```sh
+LOG=experiments/token-bench/proxy
+node experiments/token-bench/runners/run-summary.mjs         "$LOG"   # скиллы/токены/MUST (как раньше)
+node experiments/token-bench/runners/eval-run.mjs            "$LOG"   # ГЕЙТ: exit≠0 на safety-нарушении
+node experiments/token-bench/runners/skill-embedding-cost.mjs "$LOG"  # встраивание скиллов (#40)
+```
+`eval-run` — детерминированный (эффективность: турны/кривые tool-calls/токены; безопасность: правки
+тестов-CI/касание gate1/самосертификация по args; успех: возвратная строка). **`exit 1` = safety-провал**
+прогона — разбирать до сохранения.
+
+Субъективный вердикт (LLM-судья по якорной рубрике) — при наличии эндпоинта крупной модели:
+```sh
+export EVAL_JUDGE_URL=… EVAL_JUDGE_MODEL=z-ai/glm-5.2 EVAL_JUDGE_KEY=…
+node experiments/token-bench/runners/eval-judge.mjs "$LOG"            # eff/succ/safe 1..5 + verdict
+# без эндпоинта: `--payload` (дайджесты) или `--rubric` → скорми внешнему судье/агенту
+```
+Разбор вердиктов — как в `eval-verdicts-baseline.md` (пример: scaffolder выжигает лимит шагов, PR нет).
+> Полный «успех» (наличие `outputs` по контракту роли) — на снапшоте `.agent/**` прогона; из
+> `flow.jsonl` он частичный (по `final_output`).
+
 ## 5. Сохранить результат (ВНЕ гита)
 Сырые прогоны, реализации харнесов, `usage.jsonl`, секреты — **не коммитить**. Складывай рядом
 с репо: `../token-bench-results/<dd-mm-yyyy>/test<N>/<arm>/` — реализация + `usage.jsonl` +
