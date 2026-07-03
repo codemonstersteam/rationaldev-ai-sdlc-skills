@@ -158,6 +158,15 @@ Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate
 You MUST pass a subagent **only its ticket + the paths in `inputs`** (not the whole backlog). Order by
 `blocked_by`; independent tickets (no shared `blocked_by`) → in parallel. **Fallback:** a ticket without a
 valid header → do NOT guess, return it to `@wirth-ticketer` (STOP/escalate).
+
+**Durable progress — skip done tickets on retry (idempotency).** You **MUST** keep an append-only ledger
+`.agent/planner/done.log`. **Before delegating a ticket you MUST `grep` it there** — if its `ticket-<id>` is
+present, the ticket is already `green` from a prior pass (before a failure): **skip it, do NOT re-delegate**.
+**On an implementer's `green` you MUST append** `ticket-<id> <slice> green` to the ledger (durable — survives
+a dropout, unlike your in-context memory). So when you restart the implementation stage after a network
+dropout, you re-delegate **only** tickets absent from the ledger — completed ones short-circuit for free (no
+re-work, no overwrite). `escalate`/`FAIL` tickets are NOT appended (only `green`).
+
 **Fuse:** the implementer returns `green | FAIL: <reason>`.
 - On **`FAIL`** → delegate **`@linger`** (the fixer) with the ticket + the FAIL reason: it classifies
   (implementation defect → fix locally **and re-verify**; template/plan defect → `escalate`) and returns
