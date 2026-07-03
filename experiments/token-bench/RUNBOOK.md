@@ -79,10 +79,27 @@ node experiments/token-bench/runners/eval-judge.mjs "$LOG"            # eff/succ
 > `flow.jsonl` он частичный (по `final_output`).
 
 ## 5. Сохранить результат (ВНЕ гита)
-Сырые прогоны, реализации харнесов, `usage.jsonl`, секреты — **не коммитить**. Складывай рядом
-с репо: `../token-bench-results/<dd-mm-yyyy>/test<N>/<arm>/` — реализация + `usage.jsonl` +
-`metrics.md` (check.sh, токены in/out/cache, $, время, модели). Сводку-анализ можно занести в
-`README.md` (как test0).
+Сырые прогоны, реализации сервисов, `usage.jsonl`/`flow.jsonl`, секреты — **не коммитить**. Складывай
+рядом с репо в **`../test-harnes-data/<dd-mm-yyyy>/<N>-harnes/`** (N — номер теста). **Бинари не хранить.**
+
+Раскладка:
+```
+<N>-harnes/
+├── project/       — исходники сервиса (cmd, internal, component-tests, api-specification,
+│                    docs/design+tickets, Dockerfile, docker-compose.yml, README, config)
+│                    БЕЗ бинарей/.git/.opencode/.agent
+├── agent-trace/   — decisions.log, planner (frd/slices/PLAN/done.log), plan-reviewer (вердикт mills)
+├── proxy/         — flow.jsonl + usage.jsonl (полные логи прогона)
+├── analysis.md    — метрики (чистое время/деньги/токены/вызовы) + разбивка планирование vs реализация
+│                    + декомпозиция + валидированные фиксы + найденные проблемы + качество
+└── models.md      — роль→модель + наблюдения
+```
+Копирование проекта без бинарей — `rsync` с whitelist расширений (excludes ПЕРЕД include):
+`rsync -am --exclude='.git/**' --exclude='.opencode/**' --exclude='.agent/**' --exclude='harness/**'
+--include='*/' --include='*.go' --include='*.yaml' --include='*.yml' --include='*.md' --include='Dockerfile*'
+--include='*.feature' --include='*.sh' --include='go.mod' --include='go.sum' --exclude='*' <sb>/ <dest>/project/`.
+Метрики/разбивку по фазам считать из `usage.jsonl` (сплит по маркеру `.agent/gates/gate1.approved`).
+Пример готового архива: `../test-harnes-data/03-07-2026/1-harnes/`.
 
 ## 6. Новый прогон / доработанная задача
 - Правь `spec/task.md` (это BRD; FRD генерит сам харнес скиллом `requirements-intake`).
