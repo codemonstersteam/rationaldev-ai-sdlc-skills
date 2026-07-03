@@ -8,7 +8,7 @@ temperature: 0.2
 steps: 50
 description: "Имплементатор (Hughes): пишет код строго по тикету в рабочее дерево (БЕЗ git-операций — веток/коммитов/PR не делает). После Gate #1 или сразу на тривиальной задаче. Keywords: реализация, код, TDD, модуль, имплементация."
 skills: [code-style, communication, component-tests, service-scaffold, documentation, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
-inputs: [.agent/planner/plan.md, .agent/planner/design, gate1]
+inputs: [docs/design, .agent/planner/design, gate1]
 outputs: [pr, .agent/decisions.log]
 permission:
   read: allow
@@ -52,7 +52,7 @@ permission:
 
 ## Вход (иначе STOP)
 
-**ОДИН тикет** `.agent/planner/tickets/NN-*.md` (не весь бэклог и не вся спека) + названные в нём
+**ОДИН тикет** `docs/design/slice-<name>/tickets/ticket-N.md` (не весь бэклог и не вся спека) + названные в нём
 зависимости (артефакты уже готовых тикетов). Тикет самодостаточен и влезает в контекст — работай
 строго по нему, быстро и точно. План заморожен после Gate #1; нет тикета / хендофф не зааппрувлен → STOP.
 

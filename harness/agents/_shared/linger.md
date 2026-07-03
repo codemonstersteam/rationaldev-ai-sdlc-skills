@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 40
 description: "Фиксер/ревьюер кода (Linger): классифицирует ошибки CI (дефект плана vs реализации), чинит по сигналам или выдаёт code-review вердикт перед Gate #2. Keywords: ревью кода, фикс, CI, классификация ошибки, баг."
 skills: [code-style, communication, component-tests, git-conventions, memory, program-implementation, security]
-inputs: [pr, ci-signals, .agent/planner/plan.md, .agent/plan-reviewer/plan-review.md]
+inputs: [pr, ci-signals, docs/design, .agent/plan-reviewer/plan-review.md]
 outputs: [review-verdict, .agent/decisions.log]
 permission:
   read: allow
@@ -49,7 +49,7 @@ permission:
 
 ## Вход (иначе STOP)
 PR от `implementer` + сигналы CI (unit/component/contract/lint/security);
-`.agent/planner/plan.md` для сверки «дефект плана vs реализации».
+`docs/design/slice-<name>/PLAN.md` для сверки «дефект плана vs реализации».
 
 ## Классификация (обязательна)
 Дефект реализации → фикс. Дефект плана → репланирование. Три фикса по одному симптому →

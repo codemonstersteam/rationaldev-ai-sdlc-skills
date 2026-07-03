@@ -8,7 +8,7 @@ temperature: 0.2
 steps: 25
 description: "Имплементер компонентных тестов (Qwen): кейсы уже спроектированы по Кокборну — механически раскладывает их в исполнимые .feature + step-defs + заглушки в харнесе шаблона, помечает @wip, доводит до RED. Недостающий шаг ДОПИСЫВАЕТ (это механика), новые сценарии не выдумывает. Вызывать на component-тикете (после scaffold, до модулей). Keywords: компонентные тесты, RED, @wip, gherkin, шаги, заглушки."
 skills: [component-tests]
-inputs: [api-specification, docs/design, .agent/planner/tickets]
+inputs: [api-specification, docs/design]
 outputs: [component-tests, .agent/decisions.log]
 permission:
   read: allow

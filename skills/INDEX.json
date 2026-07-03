@@ -317,7 +317,7 @@
         ".agent/planner/design"
       ],
       "outputs": [
-        ".agent/planner/tickets"
+        "docs/design"
       ]
     },
     {
@@ -329,11 +329,10 @@
         ".agent/planner/frd.md",
         ".agent/planner/slices.md",
         "docs/design",
-        "api-specification",
-        ".agent/planner/tickets"
+        "api-specification"
       ],
       "outputs": [
-        ".agent/planner/plan.md",
+        "docs/design",
         ".agent/decisions.log"
       ]
     },
@@ -349,7 +348,6 @@
         "security"
       ],
       "inputs": [
-        ".agent/planner/plan.md",
         ".agent/planner/design",
         "docs/design",
         "api-specification",
@@ -369,7 +367,7 @@
         "component-tests"
       ],
       "inputs": [
-        ".agent/planner/tickets",
+        "docs/design",
         "api-specification"
       ],
       "outputs": [
@@ -395,7 +393,7 @@
         "program-implementation"
       ],
       "inputs": [
-        ".agent/planner/plan.md",
+        "docs/design",
         ".agent/planner/design",
         "gate1"
       ],
@@ -411,8 +409,7 @@
       ],
       "inputs": [
         "api-specification",
-        "docs/design",
-        ".agent/planner/tickets"
+        "docs/design"
       ],
       "outputs": [
         "component-tests",
@@ -433,7 +430,7 @@
       "inputs": [
         "pr",
         "ci-signals",
-        ".agent/planner/plan.md",
+        "docs/design",
         ".agent/plan-reviewer/plan-review.md"
       ],
       "outputs": [

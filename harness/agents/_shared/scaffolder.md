@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 25
 description: "Скафолдер (Qwen): на scaffold-тикете запускает детерминированный harness/scaffold.sh (git-клон шаблона + rename + build), проверяет билд и компонентные тесты; зелено → далее, красно → чинит → далее. НЕ читает весь шаблон (экономит токены). Keywords: scaffold, шаблон, каркас, сборка, health."
 skills: [service-scaffold, component-tests]
-inputs: [.agent/planner/tickets, api-specification]
+inputs: [docs/design, api-specification]
 outputs: [pr, .agent/decisions.log]
 permission:
   read: allow

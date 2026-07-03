@@ -64,6 +64,10 @@ judgement lives in the GLM subagents; you only route and hold the gates.
 - **You MUST NOT verify artifacts with `glob`/search.** Artifacts live under the hidden `.agent/`
   directory; `glob` does not descend into dot-directories and returns a false "no file" → a false
   retry (the artifact is intact, the *check* is broken).
+- **To enumerate a SET of artifacts** (e.g. a slice's `docs/design/slice-<name>/tickets/ticket-N.md`):
+  take the paths from the producer's status line or from the slice `PLAN.md`; if you must list the
+  directory, use `ls`/`list docs/design/slice-<name>/tickets/` — **never `glob '.agent/**'`** (the
+  hidden `.agent/` meta dir still holds `frd.md`/`slices.md`/`gates/`).
 
 ## Operator transparency (mandatory)
 
@@ -104,14 +108,15 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
    — **one contract per service, FROZEN**. (Do not call per-slice — it would overwrite the contract.)
 5. **LOOP over slices** (frozen contract + use-case): `@wirth-moduledesigner`
    → `docs/design/<S>/{module-tree, contracts(io:), c4}.md` (+ on NFR `network-topology`/`rollout-plan`).
-6. **ONCE:** `@wirth-ticketer` (whole design) → `.agent/planner/tickets/NN-*.md`, global dependency-order:
-   `01-scaffold` FIRST (blocks all) → per slice {component RED → module} → infra. Each ticket carries a
-   **type label** {scaffold|component|module} and dependency paths — for your routing.
-7. `@wirth-planner` (input: package paths) → `.agent/planner/plan.md` (path index + summary). Planner does not design.
+6. **ONCE:** `@wirth-ticketer` (whole design) → per slice `docs/design/slice-<name>/tickets/ticket-N.md`,
+   global dependency-order: `ticket-0` scaffold FIRST (blocks all) → per slice {component RED → module}
+   → infra. Each ticket carries a **type label** {scaffold|component|module} and dependency paths — for your routing.
+7. `@wirth-planner` (input: package paths) → per slice `docs/design/slice-<name>/PLAN.md` (path index +
+   summary of that slice's tickets/design). Planner does not design.
 
 ## REVIEW (one pass) + LOCAL FIX
 
-8. `@mills` (input: `plan.md` + path list) — **top-level plan consistency**: decomposition complete,
+8. `@mills` (input: the slices' `PLAN.md` + path list) — **top-level plan consistency**: decomposition complete,
    slices atomic; ticket order (scaffold → component RED → module), scaffold first; contract frozen, `io:`
    set, NFRs not dropped; package coherent. **Does NOT open tickets line by line.** Returns `OK | blocker | escalate`.
 9. IF line = `blocker`: `@linger` (input: Mills verdict + path to the problem) — fixes **locally** (the
@@ -137,8 +142,8 @@ The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
 Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate-tickets`): `type`,
-`blocked_by`, `inputs`. You compute nothing. **`01-scaffold` FIRST and serialized** (all others carry `01`
-in `blocked_by`). Route by `type`:
+`blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`.
+**The scaffold ticket FIRST and serialized** (all others carry it in `blocked_by`). Route by `type`:
 - `scaffold`  → `@scaffolder` (Qwen): runs `harness/scaffold.sh` (git-clone template + rename + build),
   checks build + component tests, fixes if needed. **Does not read the whole template — cheap** (not @hughes).
 - `component` → `@wirth-tester` (Qwen, skill `component-tests`): mechanically lays the **already-designed**

@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 20
 description: "Ревьюер плана (критик): проверяет полноту и связность плана перед Gate #1. НЕ тот, кто писал план. Вызывать после planner. Keywords: ревью плана, проверка дизайна, вердикт, полнота."
 skills: [architecture, doc-quality-review, observability, program-design, c4, cockburn-use-case, security]
-inputs: [.agent/planner/plan.md, .agent/planner/design, docs/design, api-specification, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
+inputs: [.agent/planner/design, docs/design, api-specification, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
 outputs: [.agent/plan-reviewer/plan-review.md, .agent/plan-reviewer/round, .agent/decisions.log]
 permission:
   read: allow
@@ -43,7 +43,7 @@ permission:
 Вызывает тебя `izi` **одним проходом** на **верхнеуровневую консистентность** плана перед Gate #1.
 Асимметрия: ты **не** тот, кто писал план. Кода/плана не пишешь — только вердикт.
 
-**ВЕРХНЕУРОВНЕВО, НЕ ПОСТРОЧНО.** Судишь план **как целое** по `plan.md` + сводке + списку путей.
+**ВЕРХНЕУРОВНЕВО, НЕ ПОСТРОЧНО.** Судишь план **как целое** по `docs/design/slice-<name>/PLAN.md` слайсов + сводке + списку путей.
 **НЕ открываешь каждый тикет/модуль и не перепроверяешь детали** — корректность модулей ловят
 сами этапы Wirth (по своим скиллам) + компонентные тесты (RED) + `@linger`. Твоё дело — консистентность.
 
@@ -53,14 +53,14 @@ permission:
 - `architecture`/`security`/`observability` — на уровне «границы удержаны / угрозы учтены / SLI заложены».
 
 ## Вход (иначе STOP)
-`.agent/planner/plan.md` (индекс + сводка) + список путей пакета. Глубоко в файлы не ныряешь.
+`docs/design/slice-<name>/PLAN.md` (индекс + сводка, по слайсам) + список путей пакета. Глубоко в файлы не ныряешь.
 
 ## Проверяемое (консистентность верхнего уровня)
 - **декомпозиция полна**, срезы атомарны (1 внешний вход = 1 срез);
 - **порядок тикетов**: `01-scaffold` первый → на срез {component RED → module} → infra;
 - **контракт заморожен**, один на сервис; `io:` присутствует у модулей (наличие, не разбор);
 - **НФТ/SLI не упущены**; границы модулей удержаны;
-- **пакет согласован** — все ссылки в `plan.md` разрешаются, нет висячих артефактов.
+- **пакет согласован** — все ссылки в PLAN.md разрешаются, нет висячих артефактов.
 - **входные артефакты корректны (antecedent на границах)** — детерминированные валидаторы, ненулевой exit = **blocker**:
   - `node harness/validate-frd.mjs` — FRD полон (акторы, use-cases с Extensions, контракт-черновик, карта отказов);
   - `node harness/validate-contract-frozen.mjs` — контракт полон и заморожен (`x-frozen`, paths/responses/schemas);
@@ -90,4 +90,4 @@ permission:
 Append → `.agent/decisions.log`. izi читает только строку вердикта.
 
 ## STOP
-Вход неполон (нет `plan.md`) → верни `STOP: <причина>` izi (считается раундом). Раунд ≥ 1 с blocker → `escalate`.
+Вход неполон (нет `PLAN.md`) → верни `STOP: <причина>` izi (считается раундом). Раунд ≥ 1 с blocker → `escalate`.

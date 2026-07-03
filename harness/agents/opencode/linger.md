@@ -44,7 +44,7 @@ permission:
 
 ## Вход (иначе STOP)
 PR от `implementer` + сигналы CI (unit/component/contract/lint/security);
-`.agent/planner/plan.md` для сверки «дефект плана vs реализации».
+`docs/design/slice-<name>/PLAN.md` для сверки «дефект плана vs реализации».
 
 ## Классификация (обязательна)
 Дефект реализации → фикс. Дефект плана → репланирование. Три фикса по одному симптому →

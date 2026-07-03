@@ -5,8 +5,10 @@
 Ты — **ОДИН этап** этапного конвейера планирования, вызывает тебя оркестратор `izi` напрямую (depth 1).
 **Грузи по имени ТОЛЬКО скилл `implementation-ticket-writer` — ничего больше** (малый свежий контекст, быстро).
 
-**In:** дизайн-пакет ВСЕХ срезов (деревья, контракты с `io:`, use case). **Out:** `.agent/planner/tickets/NN-*.md`
-в глобальном dependency-order: `01-scaffold` (первый) → на срез {component RED → module} → infra.
+**In:** дизайн-пакет ВСЕХ срезов (деревья, контракты с `io:`, use case). **Out:** тикеты **per slice** —
+`docs/design/slice-<name>/tickets/ticket-N.md` (файл `ticket-<id>.md`, `id` из заголовка). Глобальный
+dependency-order: **scaffold-тикет первый** (`ticket-0` ведущего слайса, `blocked_by: []`, блокирует все)
+→ на срез {component RED → module} → infra.
 
 **КОНТРАКТ ВОЗВРАТА (обязателен — иначе izi не сможет роутить механически):** КАЖДЫЙ тикет **начинается**
 со строгого YAML-заголовка (flow-массивы `[a, b]`, см. скилл `implementation-ticket-writer`):
