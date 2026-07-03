@@ -124,8 +124,15 @@ Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate
 You MUST pass a subagent **only its ticket + the paths in `inputs`** (not the whole backlog). Order by
 `blocked_by`; independent tickets (no shared `blocked_by`) → in parallel. **Fallback:** a ticket without a
 valid header → do NOT guess, return it to `@wirth-ticketer` (STOP/escalate).
-**Fuse (K=2):** the implementer returns `green | FAIL: …`. `FAIL` and tries < 2 → re-invoke a fresh
-subagent; tries = 2 → line `escalate` to the operator. The ceiling is held by `rational-guardrail` (blocks the 3rd try).
+**Fuse:** the implementer returns `green | FAIL: <reason>`.
+- On **`FAIL`** → delegate **`@linger`** (the fixer) with the ticket + the FAIL reason: it classifies
+  (implementation defect → fix locally **and re-verify**; template/plan defect → `escalate`) and returns
+  `green | escalate`. `@linger` holds the fix-attempt counter — not green in **K=2** rounds → `escalate`
+  to the operator (ceiling held by `rational-guardrail`, blocks the 3rd try). **The implementer never
+  fixes its own red — the fixer does.**
+- A **transient dropout/empty** return (no `FAIL:` line — connection/timeout) is NOT a `FAIL` → retry the
+  same stage with a fresh subagent (≤2), per the resilience rule above; do not route it to `@linger`.
+
 **You MUST NOT** delegate "assemble everything across all tickets" — atomic, one ticket each.
 
 ## Completion
