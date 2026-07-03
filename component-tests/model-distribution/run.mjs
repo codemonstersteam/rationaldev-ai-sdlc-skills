@@ -27,12 +27,12 @@ const tierOf = (role) => read(join(SHARED, `${role}.md`)).match(/^tier:\s*(\S+)/
 const fails = []
 const check = (cond, msg) => { if (!cond) fails.push(msg) }
 
-const ROLES = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
+const ROLES = ["izi", "wirth-planner", "mills", "hughes", "linger", "michtom"]
 const backup = readFileSync(CONFIG, "utf8")
 try {
-  // Разные модели на каждый тир + пер-ролевой оверрайд для implementer.
+  // Разные модели на каждый тир + пер-ролевой оверрайд для hughes.
   const cfg = JSON.parse(backup)
-  cfg.claude = { tiers: { large: "L-MODEL", medium: "M-MODEL", small: "S-MODEL" }, roles: { implementer: "OVR-MODEL" } }
+  cfg.claude = { tiers: { large: "L-MODEL", medium: "M-MODEL", small: "S-MODEL" }, roles: { hughes: "OVR-MODEL" } }
   cfg.opencode = { tiers: { large: "", medium: "", small: "" }, roles: {} }
   writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + "\n")
   gen()
@@ -41,7 +41,7 @@ try {
   for (const role of ROLES) {
     const tier = tierOf(role)
     // оверрайд роли важнее тира
-    const want = role === "implementer" ? "OVR-MODEL" : byTier[tier]
+    const want = role === "hughes" ? "OVR-MODEL" : byTier[tier]
     check(modelOf("claude", role) === want,
       `claude/${role}: тир=${tier} → ожидал model=${want}, получил ${modelOf("claude", role)}`)
   }
@@ -49,9 +49,9 @@ try {
   const distinct = new Set(ROLES.map((r) => modelOf("claude", r)))
   check(distinct.size >= 3, `ожидалось ≥3 различных моделей по ролям, получено ${distinct.size}`)
   // Оверрайд действительно перебил тир small (implementer ≠ S-MODEL).
-  check(modelOf("claude", "implementer") === "OVR-MODEL", "пер-ролевой оверрайд implementer не применился")
+  check(modelOf("claude", "hughes") === "OVR-MODEL", "пер-ролевой оверрайд hughes не применился")
   // Наследование: пустые тиры opencode → строки model: нет (роль берёт модель пользователя).
-  check(modelOf("opencode", "planner") === null, "opencode/planner: при пустом тире model: быть не должно")
+  check(modelOf("opencode", "wirth-planner") === null, "opencode/wirth-planner: при пустом тире model: быть не должно")
 } finally {
   writeFileSync(CONFIG, backup) // вернуть исходный конфиг
   gen()                          // и перегенерировать проекции под него

@@ -31,7 +31,8 @@ No new external Go dependencies. (or: new go.mod entries: <list>)
   **<N> new tests**: <Module1>(<n1>) + <Module2>(<n2>) + … (from the Step 8.1 table).
   <Head, adapter, I/O objects> are not unit-covered.
 - [ ] component tests green — `<run command>`.
-  `@wip` removed from `<name>.feature`; scenarios: "<name1>", "<name2>", … (from Step 8.3).
+  scenarios listed: "<name1>", "<name2>", … (from Step 8.3). `@wip` stays — it is removed by the
+  **fixer** at slice-acceptance (not by this ticket).
   Previously green scenarios S1–S<m> still pass.
 - [ ] `backlog.md` updated per each confirmed item
 - [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block
@@ -81,8 +82,8 @@ same layout holds for an HTTP endpoint):
   + `<buildX>`(3) + `<mergeX>`(3) + `New<Report>`(1)
   + `<buildOutcome>`(2). Head, adapter, `<NoopDep>` are not unit-covered.
 - [ ] component tests green — `./component-tests/scripts/run-tests.sh healthy`.
-  `@wip` removed from `<name>.feature`; scenarios: "<happy → pass>",
-  "<bad input → fail>", "<no resource → not_found>".
+  scenarios: "<happy → pass>", "<bad input → fail>", "<no resource → not_found>".
+  `@wip` stays — removed by the **fixer** at slice-acceptance, not this ticket.
   Previously green scenarios S1–S<m> still pass.
 - [ ] `backlog.md` updated per each confirmed item
 - [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block

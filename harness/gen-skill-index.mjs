@@ -36,7 +36,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url))
 const LIB = join(ROOT, "..", "skills", "lib")
 const SHARED = join(ROOT, "agents", "_shared")
 const INDEX = join(ROOT, "..", "skills", "INDEX.json")
-const ROLES = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
+const ROLES = ["izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner", "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills", "scaffolder", "hughes", "wirth-tester", "linger", "michtom"]
 const CHECK = process.argv.includes("--check")
 
 const errors = []

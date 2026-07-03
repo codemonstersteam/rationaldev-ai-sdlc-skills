@@ -16,24 +16,24 @@ async function run() {
 
   // A. Gate #1 блокирует implementer без апрува
   await assert.rejects(
-    () => hooks["tool.execute.before"](task("implementer"), { args: { subagent: "implementer" } }),
+    () => hooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
     /Gate #1/,
   ); pass++
 
   // B. Прочие роли проходят свободно
-  await hooks["tool.execute.before"](task("planner"), { args: { subagent: "planner" } }); pass++
+  await hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }); pass++
 
   // C. После апрува implementer проходит
   await mkdir(join(dir, ".agent", "plan-reviewer"), { recursive: true })
   await writeFile(join(dir, ".agent", "plan-reviewer", "plan-review.md"), "OK")
   await mkdir(join(dir, ".agent", "gates"), { recursive: true })
   await writeFile(join(dir, ".agent", "gates", "gate1.approved"), "")
-  await hooks["tool.execute.before"](task("implementer"), { args: { subagent: "implementer" } }); pass++
+  await hooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
 
   // D. decisions.log пишется на делегирование
-  await hooks["tool.execute.after"](task("planner"), { title: "design slice 01" })
+  await hooks["tool.execute.after"](task("wirth-planner"), { title: "design slice 01" })
   const log = await readFile(join(dir, ".agent", "decisions.log"), "utf8")
-  assert.match(log, /role=planner/); assert.match(log, /via=opencode-plugin/); pass++
+  assert.match(log, /role=wirth-planner/); assert.match(log, /via=opencode-plugin/); pass++
 
   // E. Не-task инструменты игнорируются
   const before = (await readFile(join(dir, ".agent", "decisions.log"), "utf8")).length
@@ -47,9 +47,9 @@ async function run() {
   process.chdir(cwdTmp)
   try {
     const h2: any = await RationalGuardrail({ directory: "/", worktree: "/" } as any)
-    await h2["tool.execute.after"](task("planner"), { title: "root-fallback" })
+    await h2["tool.execute.after"](task("wirth-planner"), { title: "root-fallback" })
     const l2 = await readFile(join(cwdTmp, ".agent", "decisions.log"), "utf8")
-    assert.match(l2, /role=planner/, "при directory='/' лог должен писаться в cwd, не в /")
+    assert.match(l2, /role=wirth-planner/, "при directory='/' лог должен писаться в cwd, не в /")
     pass++
   } finally {
     process.chdir(origCwd)
@@ -58,7 +58,7 @@ async function run() {
 
   // G. Регресс: аудит best-effort — недоступный для записи корень НЕ валит делегирование.
   const h3: any = await RationalGuardrail({ directory: "/dev/null/nope", worktree: undefined } as any)
-  await h3["tool.execute.after"](task("planner"), { title: "best-effort" })
+  await h3["tool.execute.after"](task("wirth-planner"), { title: "best-effort" })
   pass++
 
   await rm(dir, { recursive: true, force: true })

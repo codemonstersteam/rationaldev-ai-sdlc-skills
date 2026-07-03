@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseFrontmatter } from "./frontmatter.mjs"
+import { resolveModel as resolveModelCore, resolveTemp as resolveTempCore } from "./lib/resolve-model.mjs"
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
@@ -22,18 +23,13 @@ const SHARED = join(ROOT, "agents", "_shared")
 const TIERS = ["large", "medium", "small"]
 const MODELS = JSON.parse(readFileSync(join(ROOT, "models.config.json"), "utf8"))
 
-function resolveModel(runner, role, tier) {
-  const cfg = MODELS[runner]
-  if (!cfg) return null
-  const byRole = cfg.roles && cfg.roles[role]
-  if (typeof byRole === "string" && byRole.trim()) return byRole.trim()
-  const byTier = cfg.tiers && cfg.tiers[tier]
-  if (typeof byTier === "string" && byTier.trim()) return byTier.trim()
-  return null
-}
+// Резолвинг вынесен в чистое ядро harness/lib/resolve-model.mjs (юнит-тестируемо, config параметром).
+// Здесь — тонкие обёртки, замыкающие MODELS (call sites не меняются).
+const resolveModel = (runner, role, tier) => resolveModelCore(MODELS, runner, role, tier)
+const resolveTemp = (runner, role, tier) => resolveTempCore(MODELS, runner, role, tier)
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
-const ORDER = ["orchestrator", "planner", "plan-reviewer", "implementer", "fixer", "release-health"]
+const ORDER = ["izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner", "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills", "scaffolder", "hughes", "wirth-tester", "linger", "michtom"]
 
 function loadRole(role) {
   const text = readFileSync(join(SHARED, `${role}.md`), "utf8")
@@ -65,9 +61,10 @@ function claudeFile(role, m, body, model) {
   return `---\nname: ${role}\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\n${modelLine}---\n\n${body}`
 }
 
-function opencodeFile(role, m, body, model) {
+function opencodeFile(role, m, body, model, temp) {
   const modelLine = model ? `model: ${model}\n` : ""
-  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${m.temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
+  const temperature = typeof temp === "number" ? temp : m.temperature
+  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
 }
 
 function codexFile(role, m, body, _model) {
@@ -103,7 +100,7 @@ for (const { role, data, body } of roles) {
   for (const [runner, render] of [["claude", claudeFile], ["opencode", opencodeFile], ["codex", codexFile]]) {
     const dir = join(ROOT, "agents", runner)
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, `${role}.md`), render(role, data, body, resolveModel(runner, role, data.tier)))
+    writeFileSync(join(dir, `${role}.md`), render(role, data, body, resolveModel(runner, role, data.tier), resolveTemp(runner, role, data.tier)))
     n++
   }
   // 4-я проекция: человекочитаемый контракт роли в ../skills/roles/<role>/<role>.md

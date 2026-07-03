@@ -1,0 +1,12 @@
+tokenproxy → :4000  upstream=https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl  flow=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/flow.jsonl
+2026/07/02 15:58:10 tokenproxy :4000 → https://openrouter.ai  log=/Users/mac/IdeaProjects/codemonstersdev/rationaldev-ai-sdlc-skills/experiments/token-bench/proxy/usage.jsonl
+2026/07/02 17:26:41 httputil: ReverseProxy read error during body copy: read tcp 10.8.1.1:56603->104.18.3.115:443: read: connection reset by peer
+2026/07/02 17:39:06 httputil: ReverseProxy read error during body copy: read tcp 10.8.1.1:56982->104.18.2.115:443: read: connection reset by peer
+2026/07/02 17:39:06 httputil: ReverseProxy read error during body copy: read tcp 10.8.1.1:56982->104.18.2.115:443: read: connection reset by peer
+2026/07/02 17:39:06 http: proxy error: read tcp 10.8.1.1:56982->104.18.2.115:443: read: connection reset by peer
+2026/07/02 18:11:16 httputil: ReverseProxy read error during body copy: read tcp 10.8.1.1:57190->104.18.3.115:443: read: connection reset by peer
+2026/07/02 19:35:16 http: proxy error: read tcp 10.8.1.1:57414->104.18.2.115:443: read: connection reset by peer
+2026/07/02 20:07:02 http: proxy error: read tcp 10.8.1.1:57733->104.18.2.115:443: read: connection reset by peer
+2026/07/02 20:46:33 http: proxy error: context canceled
+2026/07/02 20:52:24 http: proxy error: write tcp [fd58:baa6:dead::1]:58681->[2606:4700::6812:373]:443: write: socket is not connected
+2026/07/02 21:49:17 http: proxy error: context canceled

@@ -1,0 +1,26 @@
+# Реестр шаблонов
+
+Единая точка: какие шаблоны и образцы использовать на этапах конвейера
+([`../04_PLANNING_PIPELINE.md`](../04_PLANNING_PIPELINE.md)).
+
+## Локальные шаблоны (в этом каталоге)
+
+| Шаблон | Файл | Для чего | Этап |
+|--------|------|----------|------|
+| ADR | [`adr.md`](adr.md) | запись архитектурного решения (`docs/adr/NNNN-*.md`) | 8–9 |
+| Devlog | [`devlog.md`](devlog.md) | запись хода работ (`devlog/NN-*.md`) | все |
+| Спека фичи | [`feature-spec.md`](feature-spec.md) | кросс-сервисная фича, spec (skill `platform-landing`) | — |
+| План фичи | [`feature-plan.md`](feature-plan.md) | кросс-сервисная фича, план + прогресс | — |
+
+Раскладка репозитория и форматы `CONTEXT.md`/ADR — [`../05_REPO_STRUCTURE.md`](../05_REPO_STRUCTURE.md).
+
+## Шаблоны-репозитории (скопировал — работаешь)
+
+| Шаблон | URL | Что берём | Скилл |
+|--------|-----|-----------|-------|
+| **template-go-api** (генерик) | <https://github.com/codemonstersteam/template-go-api> (+ локально `../template-go-api`) | преднастроенный скелет: placeholder-501/`health`, config из файла+env, godog+Docker Compose харнес (smoke зелёный, HTTP-степы, `run-tests.sh`). **Копируешь целиком** — работаешь по тикетам без boilerplate. ✅ готов, собирается чисто | `service-scaffold`, `component-tests` |
+| passkey-demo-api (образец) | <https://github.com/ubik-life/passkey-demo-api> | источник, из которого выведен `service-template` (с passkey-доменом — как пример, не для копирования) | `component-tests` |
+| pinout-openapi (образец) | <https://github.com/codemonstersteam/pinout-openapi> | образец `docs/design/<slice>/c4.md` + системный use case рядом | `c4`, `cockburn-use-case` |
+
+> Внешние ссылки цитируются также в frontmatter/теле соответствующего скилла — этот файл держит
+> единый реестр, чтобы не искать по скиллам.

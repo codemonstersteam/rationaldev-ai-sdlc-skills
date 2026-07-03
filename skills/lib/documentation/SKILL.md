@@ -48,10 +48,10 @@ Take a piece of content. Find its row. Put it exactly there. Nowhere else.
 | Stack (component → technology) | `README.md` |
 | Run and check commands | `README.md` |
 | Machine API contract (schemas, endpoints) | `api-specification/` (OpenAPI/AsyncAPI) |
-| Module tree (who calls whom) | `docs/architecture.md` |
-| Flowchart of the main entry point | `docs/architecture.md` |
-| C4 diagrams in Mermaid (C1 context / C2 container / C3 component) | `docs/architecture.md` (C1 — on the platform landing, concept repo) |
-| Cockburn system use case ("how the program works", C4 level) | `docs/architecture.md` |
+| Module tree (who calls whom) + head-module pseudocode | `docs/design/<slice>/module-tree.md` (authored by `program-design`); `architecture.md` links it |
+| C4 **C1/C2** (context / container) | `docs/architecture.md` (C1 — on the platform landing, concept repo) |
+| C4 **C3** (component = slice module tree) | `docs/design/<slice>/c4.md` (authored by `c4`) |
+| Cockburn system use case (per slice) | `docs/design/<slice>/use-case.md` (authored by `cockburn-use-case`) |
 | Why a technology/pattern/structure was chosen | `docs/adr/` (+ a line in `CLAUDE.md`) |
 | Contribution rules | `CONTRIBUTING.md` |
 | Task queue, statuses | `backlog.md` |
@@ -139,18 +139,26 @@ Do not copy into the README — place links in the order context is built up:
 ```
 README.md (what it is, how to run)
   → component-tests/ (how it works from outside)
-    → docs/architecture.md (how the program is built inside)
-      → docs/adr/ (why it was done this way)
-        → CONTRIBUTING.md (how to change it correctly)
+    → docs/design/<slice>/ (use case, C4 C3, module tree — how each slice is designed)
+      → docs/architecture.md (service-level C2 container + links)
+        → docs/adr/ (why it was done this way)
+          → CONTRIBUTING.md (how to change it correctly)
 ```
-(Check: architecture and ADR are links, not body text in the README.)
+(Check: design, architecture and ADR are links, not body text in the README.)
 
 ---
 
 ## 4. Procedure B — docs/architecture.md
 
 Serves the author, the consumer-extending-it, and the AI agent (section 6).
-Exactly two mandatory sections. Do both.
+
+> **Ownership (pipeline reconciliation).** The **per-slice** design artifacts — module tree,
+> head-module flowchart/pseudocode, C4 **C3**, and the Cockburn system use case — are **authored per
+> slice by the dedicated skills** (`program-design`, `c4`, `cockburn-use-case`) into
+> `docs/design/<slice>/` (see [`docs/05_REPO_STRUCTURE.md`](../../../docs/05_REPO_STRUCTURE.md)).
+> Here `docs/architecture.md` holds only the **service-level C2 container** view and **links** each
+> slice's design — do NOT re-author it. The B-passes below are the authoring templates those skills
+> reuse; on any conflict, the dedicated skill and `docs/design/<slice>/` win.
 
 **Pass B1 — Module hierarchy diagram.**
 Tree from the top module down. Template:

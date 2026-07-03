@@ -22,8 +22,21 @@ The planner's final artifact — the folder `.agent/planner/design/<slug>/`:
 │                          #   the slices' input types
 ├── contracts-graph.md     # module call graph + consistency reconciliation
 │                          #   (see Step 9)
-├── c4.md                  # C4: C2 (container) + C3 (module tree) in
-│                          #   Mermaid + system Cockburn use case
-│                          #   (Step 3 "C4 by levels", Step 8.6); C1 — on the landing
 └── backlog.md             # tickets for the implementer (see below)
 ```
+
+#### Two locations — working package vs published durable docs
+
+- **`.agent/planner/design/<slug>/`** (above) = the planner's **working package** — slice cards,
+  messages, contracts-graph, infrastructure, backlog, devlog, handoff. Ephemeral; drives review and
+  handoff.
+- **`docs/design/<slice>/`** (committed to the service repo) = the **published durable design**,
+  authored by the owning skills and reviewed at Gate #1:
+  - `module-tree.md` — module tree + head-pipe pseudocode (this skill, Step 3);
+  - `c4.md` — C2 + C3 in Mermaid (`c4` skill, stage 9);
+  - `use-case.md` — fully-dressed Cockburn use case (`cockburn-use-case` skill, stage 2);
+  - `contracts.md` — module contracts + compatibility (this skill, Steps 5/9).
+
+The working slice card **links** these published docs — it does not duplicate them. See
+[`docs/05_REPO_STRUCTURE.md`](../../../docs/05_REPO_STRUCTURE.md) and
+[`docs/04_PLANNING_PIPELINE.md`](../../../docs/04_PLANNING_PIPELINE.md).

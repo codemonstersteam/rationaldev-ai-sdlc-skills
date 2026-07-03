@@ -95,9 +95,18 @@ The full text of each rule is in its step's file.
   `Dependencies:` or in the head's `Deps` — only autonomous
   `Store`/`Client`/`Publisher`/`Consumer`/`FileStore`.
 - **Head/I/O/adapter are not unit-covered (Step 8.1).** Unit tests only for constructors and
-  pure logic functions, by the formula `1 happy + Σ antecedent branches`.
-- **UC↔scenario traceability (Step 8.6).** `#Extensions == #failure_scenarios == #error_codes`
-  of the slice.
+  pure logic functions, by the formula `1 happy + Σ antecedent branches`. **Every boundary /
+  equivalence class / decision-table case is a unit** — never a component scenario (test-level
+  split, `docs/04_PLANNING_PIPELINE.md` §5).
+- **Mandatory `io:` field (Step 5).** Every module contract carries `io: none|http|llm|queue|db`
+  — the sole routing key for io sub-skills at ticket-writing (Step 11 / §4). `io: none` ⇒ no
+  external client in `Dependencies:`.
+- **Component count by adapters (Step 8.6).** `#component_failure_scenarios ==
+  #distinguishable_I/O-adapter_branches == #consumer-visible_error_codes`; input-validation
+  Extensions map to unit boundaries, not component scenarios. Source for `component-tests`.
+- **Design artifacts + Gate #1 (Step 3).** Module tree + head-pipe pseudocode →
+  `docs/design/<slice>/module-tree.md`, shown to the operator at **Gate #1** (part of plan
+  acceptance). C4 → `c4` skill; use case → `cockburn-use-case`; not re-authored here.
 - **Contracts graph consistent (Step 9).** Consequent A ⊆ antecedent B; the types on the
   arrows exist.
 - **C4 by levels (Step 3).** C2+C3 in the component (C3 = the module tree), C1 — on the landing.
@@ -110,7 +119,9 @@ The full text of each rule is in its step's file.
 ## Definition of Done of the skill
 
 - All 12 steps passed.
-- Folder `.agent/planner/design/<slug>/` created and filled.
+- Folder `.agent/planner/design/<slug>/` (working package) created and filled.
+- **Durable docs published** to `docs/design/<slice>/`: `module-tree.md`, `contracts.md` (this skill),
+  `c4.md` (`c4`), `use-case.md` (`cockburn-use-case`) — committed, reviewed at Gate #1 (Step 10 "Two locations").
 - `backlog.md` contains one ticket per slice.
 - **The handoff checklist in `backlog.md` is fully `[x]` (including the last line with the handle and the PR creation date).**
 - The design PR is open; operator review awaited. Merging the PR = approval = the implementer may start.

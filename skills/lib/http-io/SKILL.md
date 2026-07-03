@@ -6,12 +6,27 @@ version: "1.0"
 
 # http-io — discipline for outbound HTTP to a metered service
 
-Applies to any I/O object hiding HTTP to a billed or rate-limited service (LLM,
-linter-as-a-service, embeddings, corporate API). Local I/O (filesystem, stdout/file
-sink) is **out of scope** — no provider to overload, no metered context.
+Applies to any **outbound** I/O object hiding HTTP to a billed or rate-limited service the
+service **calls out** to (LLM, linter-as-a-service, embeddings, corporate API). **The service's
+own inbound HTTP handler / router / ingress adapter is NOT http-io** — that is `io: none` (it
+parses the incoming request, it doesn't call out). Local I/O (filesystem, stdout/file sink) is
+also **out of scope** — no provider to overload, no metered context.
 
 > **Core lesson:** I/O-object defects are closed in **design and verify-before-code**,
 > not in coding. For LLM specifics — the [`llm-client`](../llm-client/SKILL.md) skill.
+
+## The I/O object is a pure pipe (no transformations, not unit-tested)
+
+The HTTP object only **carries data**: take the domain payload → send it to the provider →
+return the response or a mapped error. **No transformations, no data branching** (the only
+allowed branch is provider error → domain error). Anything that reshapes/validates/computes over
+the payload is a **logic module upstream**, not this object.
+
+**Therefore this object is NOT unit-tested.** We unit-test the **logic module that feeds** it —
+its unit tests assert the exact payload (the contract) that enters the HTTP object — and we
+**expect the object to send that payload to the provider unchanged.** The object's success/failure
+is proven by the slice's component scenarios (and the budgets below, carried as test assertions).
+See `program-design` Step 6 (empty-pipe rule) and Step 8.1.
 
 ## Two budgets — design parameters, not defaults
 

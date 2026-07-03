@@ -1,21 +1,33 @@
 {
   "//": "Назначение моделей ролям харнеса. Это ЕДИНСТВЕННАЯ точка правды по моделям — код генератора имён моделей не содержит. Резолвинг для роли: roles[<роль>] важнее tiers[<тир>]; пусто/нет ключа → модель не задаётся в проекции (раннер берёт модель пользователя по умолчанию). Тир роли (large/medium/small) задан в harness/agents/_shared/<роль>.md (frontmatter `tier`). Имена моделей произвольны и зависят от раннера/провайдера — харнес к Anthropic не привязан. После правки: node harness/gen-agents.mjs (перегенерация проекций), затем переустанови (install.sh / install.ps1).",
-
   "claude": {
     "//": "Дефолт — раскладка на 3 модели по тирам. Замени имена на свои (любой провайдер). Пер-ролевое переопределение клади в roles, напр. \"planner\": \"opus\".",
-    "tiers": { "large": "opus", "medium": "sonnet", "small": "haiku" },
+    "tiers": {
+      "large": "opus",
+      "medium": "sonnet",
+      "small": "haiku"
+    },
     "roles": {}
   },
-
   "opencode": {
-    "//": "Имена в формате провайдера OpenCode, напр. \"anthropic/claude-opus-4-8\" или \"openai/gpt-5\". Пусто → роль наследует модель пользователя OpenCode.",
-    "tiers": { "large": "", "medium": "", "small": "" },
-    "roles": {}
+    "//": "Имена в формате провайдера OpenCode. Прогон token-bench идёт через OpenRouter за прокси (experiments/token-bench). large = GLM 5.2 (планирование/дизайн/ревью: orchestrator/planner/plan-reviewer/fixer), medium = Qwen3.6-27b (release-health: канарейка+здоровье), small = Qwen3.6-27b (реализация: implementer).",
+    "tiers": {
+      "large": "openrouter/z-ai/glm-5.2",
+      "medium": "openrouter/qwen/qwen3.6-27b",
+      "small": "openrouter/qwen/qwen3.6-27b"
+    },
+    "//roles": "Оркестратор (Витт) = Qwen: только роутит/делегирует куски плана короткими турнами. Всё планирование и проектирование тикетов (Wirth) = large=GLM 5.2: этапы intake/slicer/usecase/apidesigner/moduledesigner/ticketer + сборка индекса planner. GLM гонять МИМО Novita (прокси GLM_IGNORE_PROVIDERS=Novita) — Novita рвёт длинный tool-call. glm-5-turbo НЕ использовать (куцый ответ, виснет).",
+    "roles": {
+      "izi": "openrouter/qwen/qwen3.6-27b"
+    }
   },
-
   "codex": {
     "//": "У Codex нет файловых субагентов — модель назначается в его собственном конфиге, не отсюда. Секция оставлена для симметрии.",
-    "tiers": { "large": "", "medium": "", "small": "" },
+    "tiers": {
+      "large": "",
+      "medium": "",
+      "small": ""
+    },
     "roles": {}
   }
 }

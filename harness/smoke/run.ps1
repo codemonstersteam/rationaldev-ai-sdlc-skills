@@ -20,20 +20,20 @@ if ($LASTEXITCODE -ne 0) { Fail "skill-index устарел" }; Ok
 # --- Claude: раскладка ---
 $P = Join-Path $Tmp 'claude'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" claude -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 6) { Fail "claude: ролей не 6" }; Ok
+if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 15) { Fail "claude: ролей не 15" }; Ok
 if (-not (Test-Path "$P/.claude/skills/memory/SKILL.md")) { Fail "claude: нет скилла memory" }; Ok
 if (-not (Test-Path "$P/CLAUDE.md")) { Fail "claude: нет CLAUDE.md" }; Ok
 
 # --- OpenCode / Codex: раскладка ---
 $P = Join-Path $Tmp 'opencode'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" opencode -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 6) { Fail "opencode: агентов не 6" }; Ok
+if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 15) { Fail "opencode: агентов не 15" }; Ok
 if (-not (Test-Path "$P/AGENTS.md")) { Fail "opencode: нет AGENTS.md" }; Ok
 
 $P = Join-Path $Tmp 'codex'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 6) { Fail "codex: ролей не 6" }; Ok
-if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Orchestrator' -Quiet)) { Fail "codex: нет orchestrator" }; Ok
+if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 15) { Fail "codex: ролей не 15" }; Ok
+if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Hughes' -Quiet)) { Fail "codex: в AGENTS.md нет блоков ролей" }; Ok
 
 # --- Недеструктивность: существующий AGENTS.md ---
 $P = Join-Path $Tmp 'existing'; New-Item -ItemType Directory -Force -Path $P | Out-Null
@@ -52,21 +52,21 @@ if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'gate-check.mj
 $GC = "$Repo/harness/enforcement/claude/gate-check.mjs"
 $LD = "$Repo/harness/enforcement/claude/log-decision.mjs"
 
-# gate-check: implementer без апрува → блок (exit 2)
+# gate-check: hughes без апрува → блок (exit 2)
 $D = Join-Path $Tmp 'gate-block'; New-Item -ItemType Directory -Force -Path $D | Out-Null
 Push-Location $D
-'{"tool_input":{"subagent_type":"implementer"}}' | node $GC 2>$null
-if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "gate не заблокировал implementer без апрува" }; Ok
+'{"tool_input":{"subagent_type":"hughes"}}' | node $GC 2>$null
+if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "gate не заблокировал hughes без апрува" }; Ok
 Pop-Location
 
-# gate-check: implementer с апрувом → проход (exit 0)
+# gate-check: hughes с апрувом → проход (exit 0)
 $D = Join-Path $Tmp 'gate-pass'
 New-Item -ItemType Directory -Force -Path "$D/.agent/plan-reviewer" | Out-Null
 New-Item -ItemType Directory -Force -Path "$D/.agent/gates" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/plan-reviewer/plan-review.md" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/gates/gate1.approved" | Out-Null
 Push-Location $D
-'{"tool_input":{"subagent_type":"implementer"}}' | node $GC
+'{"tool_input":{"subagent_type":"hughes"}}' | node $GC
 if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "gate заблокировал при апруве" }; Ok
 Pop-Location
 

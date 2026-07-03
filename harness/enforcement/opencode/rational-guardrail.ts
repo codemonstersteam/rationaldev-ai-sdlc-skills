@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { appendFile, mkdir, access } from "node:fs/promises"
+import { appendFile, writeFile, mkdir, access } from "node:fs/promises"
 import { join } from "node:path"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -31,18 +31,66 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
     try { await access(p); return true } catch { return false }
   }
 
+  // Строка, по которой ловим попытку агента создать/тронуть маркер Gate #1.
+  const GATE_MARK = ".agent/gates/gate1.approved"
+
   return {
     // Gate #1: жёсткий стоп на делегировании implementer до апрува плана.
     "tool.execute.before": async (input: any, output: any) => {
-      if (input?.tool !== "task") return
+      const tool = input?.tool
+      const args = output?.args ?? input?.args ?? {}
+
+      // (0) Маркер Gate #1 ставит ТОЛЬКО оператор вне сессии. Агент не может его
+      // создавать/трогать — иначе human-gate обходится самоакцептом (найдено на dry-run).
+      if (tool === "bash") {
+        const cmd = String((args as any).command ?? "")
+        if (cmd.includes(GATE_MARK)) {
+          throw new Error(
+            "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") ставит ТОЛЬКО оператор " +
+            "вне сессии. Агенту создавать/трогать его запрещено — на Gate #1 задай question и жди.",
+          )
+        }
+      }
+      if (tool === "write" || tool === "edit") {
+        const p = String((args as any).filePath ?? (args as any).path ?? "")
+        if (p.includes(GATE_MARK)) {
+          throw new Error(
+            "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") нельзя ставить через write/edit " +
+            "агента — только оператор вне сессии.",
+          )
+        }
+      }
+
+      if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
-      if (role !== "implementer") return
+      // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
+      if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") return
       if (!(await exists(review)) || !(await exists(gate1))) {
         throw new Error(
           "[rational-guardrail] Gate #1 не пройден: требуется " +
           ".agent/plan-reviewer/plan-review.md и апрув оператора " +
-          "(.agent/gates/gate1.approved) перед делегированием implementer.",
+          "(.agent/gates/gate1.approved) перед делегированием реализации (hughes/wirth-tester).",
         )
+      }
+    },
+
+    // Gate #1 акцепт БЕЗ touch: оператор пишет «акцепт» в чат → плагин ставит маркер.
+    // Это сообщение ОПЕРАТОРА (role=user), агент его подделать не может; сам маркер агенту
+    // по-прежнему запрещён (tool.execute.before выше). Реализует «флоу от команды оператора».
+    "chat.message": async (_input: any, output: any) => {
+      try {
+        const parts: any[] = output?.parts ?? []
+        const text = parts
+          .filter((p) => p?.type === "text")
+          .map((p) => String(p.text ?? ""))
+          .join(" ")
+          .toLowerCase()
+        if (/(^|[\s.,!])(акцепт|акцептую|approve|принял план|gate1[- ]?ok|go ahead)([\s.,!]|$)/.test(text)) {
+          await mkdir(join(agentDir, "gates"), { recursive: true })
+          await writeFile(gate1, new Date().toISOString() + "\toperator-approval-via-chat\n")
+        }
+      } catch {
+        // best-effort: сбой записи не валит сессию
       }
     },
 

@@ -18,14 +18,15 @@ BUNDLE="$(cd "$(dirname "$0")" && pwd)"
 LIB="$BUNDLE/skills/lib"
 
 RUNNER="${1:-}"
-[ -n "$RUNNER" ] || { echo "usage: ./install.sh <claude|codex|opencode> [--global | <dir>] [--hard] [--no-input]"; exit 1; }
+[ -n "$RUNNER" ] || { echo "usage: ./install.sh <claude|codex|opencode> [--global | <dir>] [--soft] [--no-input]  (enforcement вкл по умолчанию; --soft отключает)"; exit 1; }
 shift
 
-SCOPE="project"; PROJ="$(pwd)"; HARD="no"; NOINPUT="no"
+SCOPE="project"; PROJ="$(pwd)"; HARD="yes"; NOINPUT="no"   # enforcement ВСЕГДА вкл по умолчанию (--soft отключает)
 for arg in "$@"; do
   case "$arg" in
     --global)   SCOPE="global" ;;
     --hard)     HARD="yes" ;;
+    --soft)     HARD="no" ;;
     --no-input) NOINPUT="yes" ;;
     *)          PROJ="$arg" ;;
   esac
@@ -100,6 +101,17 @@ case "$RUNNER" in
   *) echo "unknown runner: $RUNNER (claude|codex|opencode)"; exit 1 ;;
 esac
 
+# --- валидаторы харнеса в проект ---
+# Роли (wirth-slicer/moduledesigner) и mills зовут `node harness/validate-*.mjs` из cwd проекта
+# как antecedent-проверку/blocker. Симлинкуем в $PROJ/harness/; их ./lib и ./frontmatter
+# резолвятся Node по realpath из бандла (симлинков хватает). Только project-scope (нужен cwd проекта).
+if [ "$SCOPE" != global ]; then
+  mkdir -p "$PROJ/harness"
+  for v in validate-frd.mjs validate-contract-frozen.mjs validate-tickets.mjs scaffold.sh; do
+    ln -sfn "$BUNDLE/harness/$v" "$PROJ/harness/$v"
+  done
+fi
+
 place_instruction "$INSTR_SRC" "$INSTR_DST"
 
 # --- enforcement (--hard) ---
@@ -151,4 +163,4 @@ echo "  models:       $MODELS_MSG"
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
 echo
-echo "Точка входа — роль 'orchestrator'. Дальше: запусти $RUNNER в проекте."
+echo "Точка входа — роль 'izi' (запусти: $RUNNER --agent izi)."

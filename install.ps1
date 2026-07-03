@@ -16,7 +16,8 @@ param(
   [Parameter(Mandatory = $true)][ValidateSet('claude', 'codex', 'opencode')][string]$Runner,
   [switch]$Global,
   [string]$Project = (Get-Location).Path,
-  [switch]$Hard,
+  [switch]$Hard,   # оставлен для совместимости (enforcement и так вкл по умолчанию)
+  [switch]$Soft,   # отключить enforcement
   [switch]$NoInput
 )
 $ErrorActionPreference = 'Stop'
@@ -86,11 +87,22 @@ switch ($Runner) {
   }
 }
 
+# --- валидаторы харнеса в проект (роли/mills зовут `node harness/validate-*.mjs` из cwd проекта) ---
+if (-not $Global) {
+  $hdir = Join-Path $Project 'harness'
+  New-Item -ItemType Directory -Force -Path $hdir | Out-Null
+  foreach ($v in @('validate-frd.mjs', 'validate-contract-frozen.mjs', 'validate-tickets.mjs', 'scaffold.sh')) {
+    $lnk = Join-Path $hdir $v
+    if (Test-Path $lnk) { Remove-Item -Force $lnk }
+    New-Item -ItemType SymbolicLink -Path $lnk -Target (Join-Path $Bundle "harness/$v") | Out-Null
+  }
+}
+
 $instrNote = Place-Instruction $instrSrc $instrDst
 
 # --- enforcement (-Hard) ---
 $hardMsg = 'off (enforcement инструкцией)'
-if ($Hard) {
+if (-not $Soft) {
   $adapter = Join-Path $Bundle "harness/enforcement/$Runner"
   switch ($Runner) {
     'opencode' {
@@ -140,4 +152,4 @@ Write-Host "  models:       $modelsMsg"
 Write-Host "  instructions: $instrNote"
 Write-Host "  hard mode:    $hardMsg"
 Write-Host ''
-Write-Host "Точка входа — роль 'orchestrator'. Дальше: запусти $Runner в проекте."
+Write-Host "Точка входа — роль 'izi' (запусти: $Runner --agent izi)."

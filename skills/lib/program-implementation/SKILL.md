@@ -9,9 +9,8 @@ version: "1.0"
 The implementer's skill. **In:** the design package `.agent/planner/design/<slug>/` from
 the planner. **Out:** the program merged into main, slice by slice.
 
-> Roles are work modes, not necessarily different models — one model can play both in
-> sequence. What matters is the artifact handoff (an approved design package), not a
-> model switch. Method: TBD, **one ticket = one slice = one branch = one PR**.
+> Roles are work modes, not model switches — what matters is the artifact handoff (an approved
+> design package). Method: TBD, **one ticket = one module/slice = one branch = one PR**.
 
 ## Scope
 
@@ -156,9 +155,11 @@ go test ./...                                                                   
 ./component-tests/scripts/run-tests.sh healthy                                        # 4. component
 ```
 
-**Green before review:** gofmt empty, vet clean, unit all green, component green for the
-**current and all prior** slices. Red is allowed only for not-yet-implemented slices
-(expected 404 on unwired routes); a red scenario of an implemented slice → stop.
+**Green before review:** gofmt empty, vet clean, unit all green. Component: **prior accepted**
+slices stay green; the current slice's `@wip` scenarios go green only when the slice is fully
+assembled — mid-slice they legitimately stay red and **keep the `@wip` tag**. The implementer
+**MUST NOT** remove `@wip` — that is the **fixer's slice-acceptance** (build→unit→component,
+pipeline §6). A red scenario in a prior accepted slice → stop.
 
 - Unit red: bug in the module → fix code (not the contract); bug in the test → fix the test;
   contract contradicts callers → stop, report (Step 2).
@@ -214,9 +215,8 @@ grep -rn "^type.*struct{}" internal/slice/*/*_test.go | grep -iv "testclock\|tes
 grep -n "func(" internal/slice/*/register.go
 ```
 
-**Trap:** head tests against real in-memory SQLite feel "honest" (not a mock!) but still
-break the rule — the head is never unit-tested, regardless of real vs fake deps; the
-component scenario already covers that path through the real input.
+**Trap:** a head test against real in-memory SQLite still breaks the rule — the head is never
+unit-tested; its path is covered by the component scenario, not a unit.
 
 #### 7.2. Commit message — atomic, Conventional Commits (AGENTS.md §12)
 
@@ -297,3 +297,4 @@ ticket (a `backlog.md` ticket whose dependencies are done → new branch off fre
 - All `backlog.md` tickets `[x]`; main green.
 - All Gherkin component scenarios green.
 - `.agent/planner/design/<slug>/devlog.md` filled per ticket.
+- **Slice-acceptance is the fixer's:** each slice's component suite green and `@wip` removed — not a per-ticket implementer act.

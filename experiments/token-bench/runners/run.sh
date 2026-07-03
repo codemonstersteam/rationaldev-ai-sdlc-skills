@@ -11,7 +11,14 @@ ARM="${1:?usage: run.sh <opencode|omo> <sandbox>}"
 SB="${2:?usage: run.sh <arm> <sandbox>}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BUNDLE="$(cd "$HERE/../../.." && pwd)"   # корень репо rationaldev
-L="${TIER_LARGE:-anthropic/claude-opus-4-8}"; M="${TIER_MEDIUM:-anthropic/claude-sonnet-4-6}"; S="${TIER_SMALL:-anthropic/claude-haiku-4-5}"
+# Модели по тирам — из конфига харнеса (harness/models.config.json opencode-секция), НЕ хардкод.
+# env TIER_* переопределяет; пусто в конфиге → падаем с явной ошибкой (модель не задана).
+CFG="$BUNDLE/harness/models.config.json"
+L="${TIER_LARGE:-$(jq -r '.opencode.tiers.large // ""' "$CFG")}"
+M="${TIER_MEDIUM:-$(jq -r '.opencode.tiers.medium // ""' "$CFG")}"
+S="${TIER_SMALL:-$(jq -r '.opencode.tiers.small // ""' "$CFG")}"
+[ -n "$L" ] && [ -n "$M" ] && [ -n "$S" ] || { echo "модели не заданы в $CFG (opencode.tiers)"; exit 1; }
+echo "модели по тирам: large=$L medium=$M small=$S"
 MAX="${MAX_SECONDS:-1800}"; SES="${SES:-bench-$ARM}"
 command -v tmux >/dev/null || { echo "нужен tmux"; exit 1; }
 
