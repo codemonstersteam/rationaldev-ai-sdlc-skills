@@ -34,6 +34,18 @@ scaffolded template's convention (README / `scripts/`) and put the **actual** ru
 scenarios tagged `@wip`"* (RED-ready). Removing `@wip` is the **fixer's** slice-acceptance act, not
 this ticket's (`component-tests`, `program-implementation`).
 
+**Integration / final ticket special rule (closes the service DoD).** The LAST ticket — the one
+`blocked_by` all others that **assembles the service** (entrypoint wiring + docs + deployment) — is NOT
+just another module. It **MUST** carry a **DoD-closure checklist**: read the project's Definition-of-Done
+(from the FRD / `TASK.md`) and map **every** DoD item → a concrete **deliverable + its exact path**, as an
+acceptance checkbox. You **MUST NOT** rely on the implementer to discover DoD gaps (a missed root artifact
+becomes a mid-implementation surprise → wasted fixer round).
+- **Template-agnostic:** take the items from THIS project's DoD — do **not** hardcode a list.
+- **Watch the location trap:** deployment artifacts (root `Dockerfile`, root `docker-compose.yml`) are
+  **distinct** from the component-test harness (which lives under `component-tests/`); state the **exact
+  target path** for each so the implementer does not confuse them.
+- Every DoD item → its own `[ ]` acceptance line with the path; the ticket is done only when all are checked.
+
 ## Foundations
 
 Second-planner / context-minimization for weak models (Qwen3.6-27b). Consumes `program-design`
