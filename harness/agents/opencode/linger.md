@@ -1,7 +1,7 @@
 ---
 description: "Фиксер/ревьюер кода (Linger): классифицирует ошибки CI (дефект плана vs реализации), чинит по сигналам или выдаёт code-review вердикт перед Gate #2. Keywords: ревью кода, фикс, CI, классификация ошибки, баг."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.1
 steps: 40
 model: openrouter/z-ai/glm-5.2

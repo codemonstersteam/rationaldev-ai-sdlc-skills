@@ -1,7 +1,7 @@
 ---
 description: "Имплементатор (Hughes): пишет код строго по тикету в рабочее дерево (БЕЗ git-операций — веток/коммитов/PR не делает). После Gate #1 или сразу на тривиальной задаче. Keywords: реализация, код, TDD, модуль, имплементация."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.2
 steps: 50
 model: openrouter/qwen/qwen3.6-27b

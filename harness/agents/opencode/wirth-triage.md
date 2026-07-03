@@ -1,7 +1,7 @@
 ---
 description: "Триаж (Wirth, GLM): анализирует BRD/ТЗ и классифицирует уровень задачи — trivial | modular | epic. izi роутит по этому вердикту (сам не классифицирует). Вызывать ПЕРВЫМ, до планирования. Keywords: триаж, уровень задачи, классификация, эпик, модульный, декомпозиция."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.2
 steps: 10
 model: openrouter/z-ai/glm-5.2

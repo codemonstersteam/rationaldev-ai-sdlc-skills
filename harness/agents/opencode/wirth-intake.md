@@ -1,7 +1,7 @@
 ---
 description: "Этап 0: BRD → FRD (акторы, use cases по Кокберну, глоссарий, контракт-черновик, карта отказов). Keywords: требования, FRD, intake, Кокберн."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2

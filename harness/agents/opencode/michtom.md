@@ -1,7 +1,7 @@
 ---
 description: "Релиз и здоровье (Michtom): канареечный выкат за фиче-тогглом + оценка golden signals, вердикт GREEN/YELLOW/RED, решение об откате. Keywords: релиз, деплой, канарейка, rollout, health, SLO, откат."
 version: "2.0"
-mode: subagent
+mode: all
 temperature: 0.1
 steps: 25
 model: openrouter/qwen/qwen3.6-27b

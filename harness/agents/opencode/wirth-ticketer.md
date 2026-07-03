@@ -1,7 +1,7 @@
 ---
 description: "Этап 11: дизайн-пакет → атомарные тикеты под Qwen (мин. контекст, io-router). Порядок: scaffold → компонентные(RED) → модули. Keywords: тикеты, нарезка, per-ticket."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2

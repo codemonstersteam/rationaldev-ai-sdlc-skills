@@ -1,7 +1,7 @@
 ---
 description: "Сборщик индекса плана (Wirth): из готового дизайн-пакета собирает .agent/planner/plan.md — индекс путей + сводку для Gate #1. НЕ проектирует и НЕ делегирует. Вызывать последним этапом планирования, после ticketer. Keywords: план, индекс, plan.md, сводка, Gate #1."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.2
 steps: 15
 model: openrouter/z-ai/glm-5.2

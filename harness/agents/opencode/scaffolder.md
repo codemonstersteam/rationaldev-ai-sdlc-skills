@@ -1,7 +1,7 @@
 ---
 description: "Скафолдер (Qwen): на scaffold-тикете запускает детерминированный harness/scaffold.sh (git-клон шаблона + rename + build), проверяет билд и компонентные тесты; зелено → далее, красно → чинит → далее. НЕ читает весь шаблон (экономит токены). Keywords: scaffold, шаблон, каркас, сборка, health."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.1
 steps: 25
 model: openrouter/qwen/qwen3.6-27b

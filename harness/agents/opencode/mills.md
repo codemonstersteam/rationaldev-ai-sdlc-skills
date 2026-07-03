@@ -1,7 +1,7 @@
 ---
 description: "Ревьюер плана (критик): проверяет полноту и связность плана перед Gate #1. НЕ тот, кто писал план. Вызывать после planner. Keywords: ревью плана, проверка дизайна, вердикт, полнота."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.1
 steps: 20
 model: openrouter/z-ai/glm-5.2

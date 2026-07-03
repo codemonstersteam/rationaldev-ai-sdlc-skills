@@ -1,7 +1,7 @@
 ---
 description: "Этап 2: слайс → fully-dressed Cockburn use case в docs/design/<slice>/use-case.md. Keywords: use case, Кокберн, сценарий, extensions."
 version: "1.0"
-mode: subagent
+mode: all
 temperature: 0.3
 steps: 20
 model: openrouter/z-ai/glm-5.2
