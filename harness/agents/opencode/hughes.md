@@ -44,6 +44,14 @@ skills = faster, sharper). You **MUST NOT** load io sub-skills or type skills th
 names (artifacts of already-done tickets). The ticket is self-contained — work strictly to it, fast and precise.
 The plan is frozen after Gate #1; no ticket / handoff not approved → STOP.
 
+## Read ONLY the ticket + its inputs — do NOT explore
+You **MUST** read exactly: the ticket, the paths in its `inputs` (e.g. `contracts.md`, `module-tree.md`,
+and any already-done module the ticket lists), and the file(s) you are writing. The ticket + its inputs are
+self-contained by design — a module's signature you depend on is in `contracts.md`/`module-tree.md`, not to
+be discovered from source. You **MUST NOT**: read the FRD/plan/other slices, `glob` the codebase
+(`**/*.go`), or walk directories to "understand the project". Go straight from ticket → implement. Reading
+the whole tree = wasted tokens and the wrong level (that's the planner's job, already done).
+
 ## Output
 Code **in the working tree** (no git); new feature behind an OFF toggle; coverage by the pyramid levels.
 Append → `.agent/decisions.log`.
