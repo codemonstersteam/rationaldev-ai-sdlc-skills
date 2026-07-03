@@ -18,6 +18,7 @@
 | #43 | Preload ядер скиллов в system + prompt-кэш | 🟡 P1 | ⏸ заведён, вторичный/кэш-зависимый; блокирован своей Фазой 0 | [skill-preload-cache.md](./skill-preload-cache.md) |
 | #41 | Хуки-напоминания (`category-skill-reminder`) | 🟡 P1 | ⏳ не начат; сцеплен с #43 | — |
 | — | **harden-decomposition** (детекторы против переусложнения срезов) | 🔴 P0 | ✅ **реализован** (найден на live-прогоне) — `validate-frd`/`validate-slices` + правила + mills-гейт | [harden-decomposition.md](./harden-decomposition.md) |
+| — | **planning-cost-model-tiering** (Qwen для лёгких Wirth-ролей, GLM для дизайна) | 🟡 P1 | ⏳ идея (планирование $1.12, 50/60 на GLM); валидаторы снижают риск слабой модели | [planning-cost-model-tiering.md](./planning-cost-model-tiering.md) |
 
 ## Что дальше (порядок)
 
