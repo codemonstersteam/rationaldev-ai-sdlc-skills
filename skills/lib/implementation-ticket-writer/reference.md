@@ -20,8 +20,15 @@ module's rows**. Each ticket carries (below the header):
 **Dependencies:** <which earlier tickets' types/objects it imports>
 **Subagent instruction:** write the unit tests → implement the module → run tests →
   green? mark this ticket done in the plan. Do not touch other modules.
+**Verify:** <unit-test command> for this module; component/smoke (if required) — <the component-test run
+  command AS PROVIDED BY THE SCAFFOLDED TEMPLATE, e.g. from its README/scripts> (do NOT hand-probe Docker).
 **Acceptance:** unit tests green; the linked component scenario(s) move toward green.
 ```
+
+**The ticket MUST tell the implementer WHERE and HOW to run tests** (the `Verify` line) — the implementer
+must not have to discover the harness. Do **NOT hardcode a path here** (it is template-specific): read the
+scaffolded template's convention (README / `scripts/`) and put the **actual** run command into the ticket's
+`Verify` line for this project.
 
 **Component-test ticket (stage 5) special rule:** its acceptance MUST include *"all slice component
 scenarios tagged `@wip`"* (RED-ready). Removing `@wip` is the **fixer's** slice-acceptance act, not
