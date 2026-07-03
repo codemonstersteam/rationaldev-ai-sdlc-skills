@@ -363,8 +363,7 @@
     {
       "role": "scaffolder",
       "skills": [
-        "service-scaffold",
-        "component-tests"
+        "service-scaffold"
       ],
       "inputs": [
         "docs/design",
