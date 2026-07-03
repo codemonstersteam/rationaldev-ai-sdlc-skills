@@ -7,16 +7,15 @@ status: "stable"
 
 # implementation-ticket-writer — cut Qwen-sized implementation tickets
 
-## Purpose
+**In:** the operator-approved (`Gate #1`) design package from `program-design` — slices, module
+trees, contracts with `io:`, unit-test formulas, Gherkin-mapping. **Out:** an implementation backlog
+where **each ticket is self-contained and fits Qwen3.6-27b** — one ticket = one slice/module = one
+implementer subagent. This is the **second planner** (`docs/04_PLANNING_PIPELINE.md` §7): the first
+planner *designs*; this pass *packages* the design into minimal-context tickets. It writes tickets —
+it does **not** design or implement.
 
-**In:** the operator-approved design package (`program-design`: slices, module trees, contracts
-with the `io:` field, unit-test formulas, Gherkin-mapping) after **Gate #1**. **Out:** an
-implementation backlog where **each ticket is self-contained and fits Qwen3.6-27b** — one ticket =
-one slice/module = one implementer subagent.
-
-This is the **second planner** (`docs/04_PLANNING_PIPELINE.md` §7): the first planner *designs*;
-this pass *packages* the design into minimal-context tickets so a weak model succeeds without
-re-reading the whole package. It writes tickets — it does **not** design or implement.
+> Companion (read on demand): [`reference.md`](./reference.md) — the annotated ticket-body template,
+> the component-test `@wip` special rule, foundations. Read when you fill a ticket body.
 
 ## Minimal-context principle (the whole point)
 
@@ -24,10 +23,8 @@ A ticket must carry **only what its module needs**, not the full design package.
 holds: the module contract (Input/Deps/`io:`/antecedent/consequent), the exact unit-test list (by
 formula), the component scenario(s) it must green, the io sub-skill(s) for its `io:`, and its
 dependencies — nothing else. If a ticket needs the whole package to be understood, it is too big —
-split it (one module / one slice).
-
-Do **not** inline entire specs; **link** them and quote only the module's own rows. The test of a
-good ticket: an implementer subagent with no other context can complete it.
+split it (one module / one slice). Do **not** inline entire specs; **link** them and quote only the
+module's own rows. Test of a good ticket: an implementer subagent with no other context can complete it.
 
 ## io-router — attach skills by the module's `io:` (deterministic)
 
@@ -48,8 +45,7 @@ The ticket's machine-readable **`skills:` field carries exactly these io add-ons
 `program-implementation`/`code-style`/`communication`/`memory` is always loaded, so it is NOT listed).
 By ticket **type**: `scaffold` → `[service-scaffold]`; `component` → `[component-tests]`; `module` →
 the io-router row above (`none` → `[]`). `harness/validate-tickets.mjs` enforces `skills:` **exactly
-equals** the router output — neither missing nor extra — so the implementer receives precisely the
-skills it needs and nothing more. Over- or under-provisioning is a deterministic **blocker** before Gate #1.
+equals** the router output — neither missing nor extra. Over- or under-provisioning is a deterministic **blocker** before Gate #1.
 
 **`io: http`/`queue` are OUTBOUND only.** They tag an autonomous `Client`/`Publisher`/`Consumer` the
 service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
@@ -78,70 +74,38 @@ Rules: exactly **one** `scaffold` ticket, and it is `id: 01` with `blocked_by: [
 every other ticket lists its real prerequisites in `blocked_by` and its real artifact paths in `inputs`
 (izi passes exactly these — it does not compute dependencies). `io:` is required only for `module`.
 `skills:` is **required on every ticket** and must **exactly equal** the io-router output for its
-`type`/`io` (validated deterministically) — this is how the implementer gets only the skills it needs.
-
-## Ticket template (minimal, Qwen-sized) — body after the header
-
-Reuse the `program-design` ticket template (`reference/ticket-template.md`) but **trim to this
-module's rows**. Each ticket carries (below the header):
-
-```
-### TICKET S<n>.<m> — <slice>/<module>: <one-line what>
-
-**io:** <none|http|llm|queue|db>   →  skills: <from the router>
-**Context (only this module):**
-- contract: <Input / Deps / antecedent / consequent> (from the design card)
-- unit tests: <N by formula> — <list the pure logic/constructors; I/O & head NOT unit-covered>
-- component scenario(s) to green: <names> (verbatim from the .feature)
-**Dependencies:** <which earlier tickets' types/objects it imports>
-**Subagent instruction:** write the unit tests → implement the module → run tests →
-  green? mark this ticket done in the plan. Do not touch other modules.
-**Acceptance:** unit tests green; the linked component scenario(s) move toward green.
-```
-
-**Component-test ticket (stage 5) special rule:** its acceptance MUST include *"all slice component
-scenarios tagged `@wip`"* (RED-ready). Removing `@wip` is the **fixer's** slice-acceptance act, not
-this ticket's (`component-tests`, `program-implementation`).
+`type`/`io`. The ticket **body** below the header follows the template in [`reference.md`](./reference.md).
 
 ## Ordering & granularity
 
-**Canonical order (contract-first — MUST hold):** the component tests come from the **specification**,
+**Canonical order (contract-first — MUST hold):** component tests come from the **specification**,
 BEFORE the modules and their unit tests. Order the backlog exactly:
 
 1. **spec** — OpenAPI/AsyncAPI frozen (stages 3–4; usually already done in the design package);
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
-3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip`
-   (`component-tests`) — **this ticket precedes every module ticket**;
+3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip` (`component-tests`) — **precedes every module ticket**;
 4. **module tickets** — one per module, each carrying **its own unit tests by formula** (io-router applied);
 5. **docs** (README) + wiring;
-6. component tests turn **GREEN** as the slice assembles → **fixer** slice-acceptance removes `@wip`.
+6. component tests turn **GREEN** as the slice assembles → **fixer** removes `@wip`.
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
-executable spec the modules are built *against* (RED → GREEN), not a check written after unit tests.
+executable spec modules are built *against* (RED → GREEN), not a check written after unit tests.
 
-- **Dependency order** within modules (a module before its consumers); record `Blocked by`.
+- **Dependency order** within modules (a module before its consumers); record `blocked_by`.
 - **One ticket = one subagent = one module** (or one small slice). If two modules always change
   together, they may share a ticket; otherwise split.
-- Unit tests live **inside each module ticket** (per formula); component tests are their own earlier
-  ticket. Never fold "write unit tests" before "write component tests" in the backlog order.
+- Unit tests live **inside each module ticket** (per formula); component tests are their own earlier ticket.
 
 ## STOP
 
 - The design package is not operator-approved (Gate #1 not passed) → STOP.
 - A module has no `io:` field → STOP, back to `program-design` Step 5 (can't route).
-- A ticket won't fit Qwen3.6-27b even after splitting to one module → STOP, report (the module is
-  too big — a design smell, back to `program-design`).
+- A ticket won't fit Qwen3.6-27b even after splitting to one module → STOP, report (module too big — a design smell, back to `program-design`).
 - Asked to design or to implement here → STOP (wrong role).
 
 ## Definition of Done
 
-- One ticket per module/slice, dependency-ordered, each self-contained and Qwen-sized.
-- Every ticket has `io:` + the router-attached skills; the implementer selects nothing.
-- Component-test ticket carries the `@wip` acceptance; module tickets carry unit-by-formula.
-- The backlog assembles the whole service; hand off to `program-implementation`.
-
-## Foundations
-
-Second-planner / context-minimization for weak models (Qwen3.6-27b). Consumes `program-design`
-(design package + `io:` field), routes io sub-skills (`http-io`/`llm-client`/`queue-io`/`db-io`/
-`db-schema`), hands off to `program-implementation`. Router source: `docs/04_PLANNING_PIPELINE.md` §4.
+One ticket per module/slice, dependency-ordered, each self-contained and Qwen-sized; every ticket has
+`io:` + the router-attached skills (implementer selects nothing); the component-test ticket carries the
+`@wip` acceptance, module tickets carry unit-by-formula; the backlog assembles the whole service →
+hand off to `program-implementation`.
