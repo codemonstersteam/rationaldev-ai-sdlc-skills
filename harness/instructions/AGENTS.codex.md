@@ -313,6 +313,12 @@ as a **Component scenarios** table (+ Gherkin-mapping), tagging which are `@wip`
 paths/responses/schemas). Non-zero exit → return `STOP: contract not frozen/incomplete — <what>` to izi.
 Design **against the frozen contract**, not by guessing.
 
+**Consequent (output correctness — C4 must render):** after writing `c4.md` you **MUST** run
+`node harness/validate-mermaid.mjs docs/design/<slice>/c4.md`. Non-zero exit → your Mermaid C4 has a syntax
+error (UML stereotypes `<<...>>`, no diagram declaration, invalid statements) — **fix it** using the `c4`
+skill's Mermaid-C4 functions (`Component()`/`Rel()`/`Container_Boundary(){}`), do NOT return a diagram that
+will not render. You draw the C4 → you verify it renders.
+
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or `STOP: <reason>`.
 You **MUST NOT** do other stages or write code.
 
@@ -323,10 +329,16 @@ You **MUST NOT** do other stages or write code.
 You are **ONE stage** of the staged planning pipeline; `izi` calls you directly (depth 1).
 **Load ONLY the `implementation-ticket-writer` skill** (small fresh context, fast).
 
-**In:** the design package of ALL slices (trees, contracts with `io:`, use cases). **Out:** tickets **per
-slice** — `docs/design/slice-<name>/tickets/ticket-N.md` (file `ticket-<id>.md`, `id` from the header). Global
-dependency order: **scaffold ticket first** (`ticket-0` of the lead slice, `blocked_by: []`, blocks all)
-→ per slice {component RED → module} → infra.
+**In:** the design package of ALL slices (trees, contracts with `io:`, use cases) **+ the FRD/`TASK.md`
+Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<name>/tickets/ticket-N.md` (file
+`ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
+lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module} → infra.
+
+**DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
+wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
+and map **every** item → a concrete deliverable + its **exact path** as a `[ ]` acceptance line (root
+`Dockerfile`/`docker-compose.yml` are distinct from `component-tests/`). Do NOT leave DoD gaps for the
+implementer to discover. See `implementation-ticket-writer` → "Integration / final ticket special rule".
 
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):
@@ -394,6 +406,7 @@ The slices' `docs/design/slice-<name>/PLAN.md` (index + summary) + the package p
   - `node harness/validate-slices.mjs` — **slices atomic, no over-decomposition** (1 external input = 1 slice;
     scaffold/method/route/config/4xx are NOT slices). Non-zero exit = **blocker → @linger reworks the decomposition**;
   - `node harness/validate-contract-frozen.mjs` — contract complete and frozen (`x-frozen`, paths/responses/schemas);
+  - `node harness/validate-mermaid.mjs` — the slices' `c4.md` Mermaid/C4 renders (no UML stereotypes / syntax errors);
   - `node harness/validate-tickets.mjs` — ticket headers machine-readable (`type`/`blocked_by`/`inputs`,
     links intact, one scaffold) — else izi cannot route mechanically.
 
@@ -473,6 +486,20 @@ skills = faster, sharper). You **MUST NOT** load io sub-skills or type skills th
 **ONE ticket** `docs/design/slice-<name>/tickets/ticket-N.md` (not the whole backlog or spec) + the deps it
 names (artifacts of already-done tickets). The ticket is self-contained — work strictly to it, fast and precise.
 The plan is frozen after Gate #1; no ticket / handoff not approved → STOP.
+
+## Read ONLY the ticket + its inputs — do NOT explore
+You **MUST** read exactly: the ticket, the paths in its `inputs` (e.g. `contracts.md`, `module-tree.md`,
+and any already-done module the ticket lists), and the file(s) you are writing. The ticket + its inputs are
+self-contained by design — a module's signature you depend on is in `contracts.md`/`module-tree.md`, not to
+be discovered from source. You **MUST NOT**: read the FRD/plan/other slices, `glob` the codebase
+(`**/*.go`), or walk directories to "understand the project". Go straight from ticket → implement. Reading
+the whole tree = wasted tokens and the wrong level (that's the planner's job, already done).
+
+## Tests — use the ticket's command, do NOT probe Docker
+Run the **unit test** command for your module. If the ticket's `Verify` line has a component/smoke command,
+run **exactly that** — it is the scaffolded template's runner (it builds and starts Docker Compose
+internally). You **MUST NOT** hand-probe Docker (`docker --version`, `docker compose build/up`, `curl /health`,
+wait-loops) — the runner owns that; read only its exit code. Do NOT hunt for the command: it is in the ticket.
 
 ## Output
 Code **in the working tree** (no git); new feature behind an OFF toggle; coverage by the pyramid levels.

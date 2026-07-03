@@ -63,5 +63,11 @@ as a **Component scenarios** table (+ Gherkin-mapping), tagging which are `@wip`
 paths/responses/schemas). Non-zero exit → return `STOP: contract not frozen/incomplete — <what>` to izi.
 Design **against the frozen contract**, not by guessing.
 
+**Consequent (output correctness — C4 must render):** after writing `c4.md` you **MUST** run
+`node harness/validate-mermaid.mjs docs/design/<slice>/c4.md`. Non-zero exit → your Mermaid C4 has a syntax
+error (UML stereotypes `<<...>>`, no diagram declaration, invalid statements) — **fix it** using the `c4`
+skill's Mermaid-C4 functions (`Component()`/`Rel()`/`Container_Boundary(){}`), do NOT return a diagram that
+will not render. You draw the C4 → you verify it renders.
+
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or `STOP: <reason>`.
 You **MUST NOT** do other stages or write code.

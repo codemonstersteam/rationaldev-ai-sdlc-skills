@@ -56,6 +56,13 @@ Ready-to-fill Mermaid templates (`C4Container`/`C4Component`) + head-pipe exampl
 - **I/O nodes are pipes.** Label each I/O component with its `io:` tag and "pipe — no
   transformations" (consistent with `program-design` Step 6).
 - **Mermaid only.** `C4Container`/`C4Component` blocks (render on GitHub); no images, no plugins.
+- **Mermaid-C4 FUNCTIONS, never UML/PlantUML stereotypes.** Use `Person()/System_Ext()/Container()/
+  ContainerDb()/Component()/Container_Boundary(id,"..."){…}/Rel(a,b,"...")`. You **MUST NOT** write UML
+  stereotypes `<<component>>`/`<<external_system>>`, bare `[LABEL]` lines, or a block without a
+  `C4Container`/`C4Component` first line — **they do NOT render** (Mermaid "Syntax error"). **Anti-example
+  (WRONG):** `<<component>>` / `httpapi (ingress)` / `[ingress — io: none]`. **Copy the templates in
+  [`templates.md`](./templates.md) verbatim and fill placeholders — do not invent syntax.** Verify with
+  `node harness/validate-mermaid.mjs` before handing off.
 - **Only C2 + C3.** No C1 (landing link instead), no C4 (code).
 
 ## STOP

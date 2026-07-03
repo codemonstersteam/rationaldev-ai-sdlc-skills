@@ -63,6 +63,7 @@ The slices' `docs/design/slice-<name>/PLAN.md` (index + summary) + the package p
   - `node harness/validate-slices.mjs` — **slices atomic, no over-decomposition** (1 external input = 1 slice;
     scaffold/method/route/config/4xx are NOT slices). Non-zero exit = **blocker → @linger reworks the decomposition**;
   - `node harness/validate-contract-frozen.mjs` — contract complete and frozen (`x-frozen`, paths/responses/schemas);
+  - `node harness/validate-mermaid.mjs` — the slices' `c4.md` Mermaid/C4 renders (no UML stereotypes / syntax errors);
   - `node harness/validate-tickets.mjs` — ticket headers machine-readable (`type`/`blocked_by`/`inputs`,
     links intact, one scaffold) — else izi cannot route mechanically.
 

@@ -152,3 +152,21 @@ test("validateSlices: псевдо-срезы (scaffold/method/route/config) →
   assert.ok(e.some((x) => /method-not-allowed/.test(x)))
   assert.ok(e.length >= 4)
 })
+
+// --- validateMermaid (C4/Mermaid syntax) ---
+import { validateMermaid } from "../lib/validators.mjs"
+
+test("validateMermaid: валидный C4 → нет ошибок", () => {
+  const md = "```mermaid\nC4Component\n    title X\n    Container_Boundary(a, \"svc\") {\n      Component(h, \"H\", \"head\", \"orch\")\n    }\n    System_Ext(e, \"store\", \"\")\n    Rel(h, e, \"reads\")\n```\n"
+  assert.deepEqual(validateMermaid(md), [])
+})
+test("validateMermaid: UML-стереотипы <<>> → ошибка", () => {
+  const md = "```mermaid\n<<component>>\nhttpapi (ingress)\n```\n"
+  const e = validateMermaid(md)
+  assert.ok(e.length >= 1)
+  assert.ok(e.some((x) => /UML-стереотип|тип диаграммы/.test(x)))
+})
+test("validateMermaid: не-C4 блок (flowchart) не трогаем глубоко", () => {
+  const md = "```mermaid\nflowchart TD\n  A[Start] --> B[End]\n```\n"
+  assert.deepEqual(validateMermaid(md), [])
+})
