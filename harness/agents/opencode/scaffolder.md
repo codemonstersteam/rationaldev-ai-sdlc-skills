@@ -4,7 +4,7 @@ version: "1.0"
 mode: all
 temperature: 0.1
 steps: 25
-model: openrouter/qwen/qwen3.6-27b
+model: openrouter/z-ai/glm-5.2
 permission:
   read: allow
   grep: allow
