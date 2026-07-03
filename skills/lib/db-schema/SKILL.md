@@ -14,6 +14,9 @@ no logic; the Store (`db-io`) is a pure pipe over it.
 > **Principle:** push nothing into the database that the code already guarantees. A table is a
 > bucket of columns, not a place for business rules.
 
+> Companion (read on demand): [`reference.md`](./reference.md) — the pre-commit checklist +
+> foundations. Read when you verify a migration before commit.
+
 ## KISS rules (hard)
 
 - **Simple flat tables.** One table per aggregate/entity. No premature normalization, no clever
@@ -65,21 +68,4 @@ Stop and ask the operator, don't guess:
 - Schema changed by hand instead of a migration → STOP, write the migration.
 - FK/constraint added to enforce a business rule → STOP, that's logic, not schema.
 
-## Checklist — schema design → migration
-
-- [ ] one flat table per entity; no premature normalization/EAV/inheritance
-- [ ] no mandatory columns except the PK/identity; validity guaranteed by code
-- [ ] **no logic in the DB** (no triggers/procs/business CHECK/generated cols/cascade)
-- [ ] simple column types; no DB enums/custom types
-- [ ] surrogate PK; referential integrity handled in code, not FK logic
-- [ ] every index maps to a real query the slice runs (recorded)
-- [ ] change is a **versioned forward-only migration** (Atlas/goose/golang-migrate), applied from code
-- [ ] migrations run identically in CI and prod (startup or migrate step)
-- [ ] destructive change flagged for operator review (+ ADR if hard to reverse)
-
-## Foundations
-
-KISS / YAGNI schema design; validity-in-code (domain constructors, "module always valid" —
-`program-design`); code-first, forward-only migrations (Liquibase concept, realized with Go tools:
-Atlas schema-as-code, goose, golang-migrate). Pairs with `db-io` (Store = pure pipe over these
-tables) and `component-tests` (the schema's reproducible failures — see the `db-io` adapter branches).
+> Pre-commit checklist (tick before the migration lands) + foundations → [`reference.md`](./reference.md).
