@@ -57,6 +57,12 @@ be discovered from source. You **MUST NOT**: read the FRD/plan/other slices, `gl
 (`**/*.go`), or walk directories to "understand the project". Go straight from ticket → implement. Reading
 the whole tree = wasted tokens and the wrong level (that's the planner's job, already done).
 
+## Tests — run the script, do NOT probe Docker
+Module tickets: run **unit tests** (`go test ./<your-module>/...`). If a ticket needs the component/smoke
+check, you **MUST** just run `sh component-tests/scripts/run-tests.sh` — it builds and starts Docker
+Compose internally. You **MUST NOT** hand-probe Docker (`docker --version`, `docker compose build/up`,
+`curl /health`, wait-loops) — the script owns that. Read only the exit code.
+
 ## Output
 Code **in the working tree** (no git); new feature behind an OFF toggle; coverage by the pyramid levels.
 Append → `.agent/decisions.log`.
