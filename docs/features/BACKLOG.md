@@ -19,6 +19,7 @@
 | #41 | Хуки-напоминания (`category-skill-reminder`) | 🟡 P1 | ⏳ не начат; сцеплен с #43 | — |
 | — | **harden-decomposition** (детекторы против переусложнения срезов) | 🔴 P0 | ✅ **реализован** (найден на live-прогоне) — `validate-frd`/`validate-slices` + правила + mills-гейт | [harden-decomposition.md](./harden-decomposition.md) |
 | — | **planning-cost-model-tiering** (Qwen для лёгких Wirth-ролей, GLM для дизайна) | 🟡 P1 | ⏳ идея (планирование $1.12, 50/60 на GLM); валидаторы снижают риск слабой модели | [planning-cost-model-tiering.md](./planning-cost-model-tiering.md) |
+| — | **README + концепт workflow API** (обозначить вектор: оси задача/приложение/среды; C4-граф API-флоу) | 🟡 P1 | ⏳ тикет | [readme-workflow-concept.md](./readme-workflow-concept.md) |
 
 ## Что дальше (порядок)
 
