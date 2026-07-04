@@ -192,9 +192,9 @@ principle».
 > **Инвариант флоу:** субагенту `izi` передаёт **только его тикет + пути из `inputs`** — не весь
 > бэклог и не проект. Роли-исполнители не разведывают кодовую базу.
 
-| Шаг | Комментарий |
-|---|---|
-| **Вход** — `TASK.md` | Замороженный промпт (одинаков для всех прогонов) — что подаём на вход конвейеру. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **1** | **Вход** — `TASK.md` | Замороженный промпт (одинаков для всех прогонов) — что подаём на вход конвейеру. |
 
 <details>
 <summary>📄 <b>TASK.md</b> — задача на входе</summary>
@@ -355,13 +355,13 @@ That script is the **only** arbiter of "done".
 
 ### Планирование
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 0 · `@wirth-triage`** — `TASK.md` → level | go-api, 1 endpoint → полный конвейер планирования (не `trivial`-шорткат). Артефакта нет — только вердикт-строка. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **2** | **Stage 0 · `@wirth-triage`** — `TASK.md` → level | go-api, 1 endpoint → полный конвейер планирования (не `trivial`-шорткат). Артефакта нет — только вердикт-строка. |
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 1 · `@wirth-intake`** — `TASK.md` → `frd.md` | 2 актёра, UC1 (+Extensions 1a–1e), failure-map 5 строк. `validate-frd` ✓ (псевдо-UC нет). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **3** | **Stage 1 · `@wirth-intake`** — `TASK.md` → `frd.md` | 2 актёра, UC1 (+Extensions 1a–1e), failure-map 5 строк. `validate-frd` ✓ (псевдо-UC нет). |
 
 <details>
 <summary>📄 <b>frd.md</b> — выход <code>wirth-intake</code></summary>
@@ -512,9 +512,9 @@ integer. Sort is `platform` asc, then `service` asc. Array (not an object).
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 2 · `@wirth-slicer`** — `frd.md` → `slices.md` | **1 срез** `slice-01`; все режимы отказа — Extensions UC1, не отдельные срезы. `validate-slices` ✓ (#срезов=1 ≤ #endpoints=1). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **4** | **Stage 2 · `@wirth-slicer`** — `frd.md` → `slices.md` | **1 срез** `slice-01`; все режимы отказа — Extensions UC1, не отдельные срезы. `validate-slices` ✓ (#срезов=1 ≤ #endpoints=1). |
 
 <details>
 <summary>📄 <b>slices.md</b> — выход <code>wirth-slicer</code></summary>
@@ -561,9 +561,9 @@ None — can start immediately (scaffold ticket precedes implementation but is n
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 3 · `@wirth-usecase`** — slice-01 + frd → `use-case.md` | Cockburn fully-dressed: MSS + Extensions 0a (boot) / 2a / 2b / 2c (empty) / 4a (internal) + бизнес-правила. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **5** | **Stage 3 · `@wirth-usecase`** — slice-01 + frd → `use-case.md` | Cockburn fully-dressed: MSS + Extensions 0a (boot) / 2a / 2b / 2c (empty) / 4a (internal) + бизнес-правила. |
 
 <details>
 <summary>📄 <b>use-case.md</b> — выход <code>wirth-usecase</code></summary>
@@ -677,13 +677,13 @@ None — can start immediately (scaffold ticket precedes implementation but is n
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 4 · `@wirth-apidesigner`** — все use-case → `api-specification/openapi.yaml` FROZEN | `GET /services` → `200` array; `500 {error.code}`. `validate-contract-frozen` ✓ (`x-frozen: true`). Артефакт — сам OpenAPI (заморожен). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **6** | **Stage 4 · `@wirth-apidesigner`** — все use-case → `api-specification/openapi.yaml` FROZEN | `GET /services` → `200` array; `500 {error.code}`. `validate-contract-frozen` ✓ (`x-frozen: true`). Артефакт — сам OpenAPI (заморожен). |
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 5 · `@wirth-moduledesigner`** — contract + use-case → module-tree / contracts / c4 | Дерево модулей, контракты с `io:` на модуль, C4 (C2 Container + C3 Component). `validate-mermaid` ✓. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **7** | **Stage 5 · `@wirth-moduledesigner`** — contract + use-case → module-tree / contracts / c4 | Дерево модулей, контракты с `io:` на модуль, C4 (C2 Container + C3 Component). `validate-mermaid` ✓. |
 
 <details>
 <summary>📄 <b>module-tree.md</b> — дерево модулей + head-pipe псевдокод</summary>
@@ -1064,9 +1064,9 @@ case (`use-case.md`).
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 6 · `@wirth-ticketer`** — весь дизайн → 7 тикетов | Порядок: `01 scaffold` (блокирует все) → `02 component RED` → `03–06 modules` → `07 wiring+README`. `validate-tickets` ✓. **Два примера ниже** (`scaffold` + `module`; `component` `ticket-02` — в разделе «Пример тикета»). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **8** | **Stage 6 · `@wirth-ticketer`** — весь дизайн → 7 тикетов | Порядок: `01 scaffold` (блокирует все) → `02 component RED` → `03–06 modules` → `07 wiring+README`. `validate-tickets` ✓. **Два примера ниже** (`scaffold` + `module`; `component` `ticket-02` — в разделе «Пример тикета»). |
 
 <details>
 <summary>🎫 <b>ticket-01</b> (type: scaffold)</summary>
@@ -1163,9 +1163,9 @@ run `go test ./internal/config/...` → green? mark done. Do not touch other mod
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 7 · `@wirth-planner`** — пути пакета → `PLAN.md` | Path-index среза + Gate #1 summary (граф зависимостей тикетов, чек-лист готовности). Планер не проектирует — собирает индекс. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **9** | **Stage 7 · `@wirth-planner`** — пути пакета → `PLAN.md` | Path-index среза + Gate #1 summary (граф зависимостей тикетов, чек-лист готовности). Планер не проектирует — собирает индекс. |
 
 <details>
 <summary>📄 <b>PLAN.md</b> — выход <code>wirth-planner</code></summary>
@@ -1286,33 +1286,33 @@ review at **Gate #1**. On approval, the implementer may start at ticket-01 (scaf
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **Stage 8 · `@mills`** — PLAN + пути → `OK` | Верхнеуровневая консистентность (декомпозиция полна, срезы атомарны, порядок тикетов, контракт заморожен) + ПЕРЕзапуск всех валидаторов. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **10** | **Stage 8 · `@mills`** — PLAN + пути → `OK` | Верхнеуровневая консистентность (декомпозиция полна, срезы атомарны, порядок тикетов, контракт заморожен) + ПЕРЕзапуск всех валидаторов. |
 
-| Шаг | Комментарий |
-|---|---|
-| **Human Gate #1** — акцепт плана | Оператор пишет **«акцепт»** → плагин `rational-guardrail` **сам** создаёт `.agent/gates/gate1.approved`; `izi` **верифицирует** маркер через `ls` (не создаёт) и начинает реализацию. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **11** | **Human Gate #1** — акцепт плана | Оператор пишет **«акцепт»** → плагин `rational-guardrail` **сам** создаёт `.agent/gates/gate1.approved`; `izi` **верифицирует** маркер через `ls` (не создаёт) и начинает реализацию. |
 
 ### Реализация — `izi` маршрутизирует по `type` из заголовка тикета
 
 Каждому исполнителю — **только тикет + `inputs`**. Порядок — по `blocked_by`; прогресс — в durable `.agent/planner/done.log` (упавший тикет ретраится точечно).
 
-| Шаг | Комментарий |
-|---|---|
-| **`IMPL ticket-01` (scaffold) · `@scaffolder`** | `scaffold.sh` (clone template + build), `/health` 200. → `green`; `done.log += ticket-01`. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **12** | **`IMPL ticket-01` (scaffold) · `@scaffolder`** | `scaffold.sh` (clone template + build), `/health` 200. → `green`; `done.log += ticket-01`. |
 
-| Шаг | Комментарий |
-|---|---|
-| **`IMPL ticket-02` (component) · `@wirth-tester`** | 4 сценария `.feature` `@wip`, RED по бизнес-причине (сервис — заглушка). → `green` (RED-ready). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **13** | **`IMPL ticket-02` (component) · `@wirth-tester`** | 4 сценария `.feature` `@wip`, RED по бизнес-причине (сервис — заглушка). → `green` (RED-ready). |
 
-| Шаг | Комментарий |
-|---|---|
-| **`IMPL ticket-03..06` (module) · `@hughes`** | Модули RED→green; скилл по `io:` из заголовка (`03` catalog · `04` config · `05` storage `io:db`+`db-io` · `06` httpapi). |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **14** | **`IMPL ticket-03..06` (module) · `@hughes`** | Модули RED→green; скилл по `io:` из заголовка (`03` catalog · `04` config · `05` storage `io:db`+`db-io` · `06` httpapi). |
 
-| Шаг | Комментарий |
-|---|---|
-| **`IMPL ticket-07` (module) · `@hughes`** | Головной модуль (thin wiring) + README; компонентные тесты становятся GREEN. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **15** | **`IMPL ticket-07` (module) · `@hughes`** | Головной модуль (thin wiring) + README; компонентные тесты становятся GREEN. |
 
 <details>
 <summary>🧩 <b>cmd/app/main.go</b> — головной модуль (wiring, без бизнес-логики)</summary>
@@ -1379,13 +1379,13 @@ func main() {
 
 </details>
 
-| Шаг | Комментарий |
-|---|---|
-| **`@linger`** — приёмка среза | Снимает `@wip`, CI зелёный, добивает DoD (корневые `Dockerfile`/`docker-compose.yml`). → **Human Gate #2 (мерж)**. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **16** | **`@linger`** — приёмка среза | Снимает `@wip`, CI зелёный, добивает DoD (корневые `Dockerfile`/`docker-compose.yml`). → **Human Gate #2 (мерж)**. |
 
-| Шаг | Комментарий |
-|---|---|
-| **`@michtom`** — релиз | Канарейка за фиче-тогглом + 4 золотых сигнала. → **Human Gate #3 (приёмка прод-релиза)**. |
+| # | Шаг | Комментарий |
+|---|---|---|
+| **17** | **`@michtom`** — релиз | Канарейка за фиче-тогглом + 4 золотых сигнала. → **Human Gate #3 (приёмка прод-релиза)**. |
 
 ## Пример тикета
 
