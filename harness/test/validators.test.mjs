@@ -170,3 +170,50 @@ test("validateMermaid: не-C4 блок (flowchart) не трогаем глуб
   const md = "```mermaid\nflowchart TD\n  A[Start] --> B[End]\n```\n"
   assert.deepEqual(validateMermaid(md), [])
 })
+
+// --- validatePlan: граф blocked_by (DAG) + порядок + DoD-замыкание + parseDodNumbers ---
+import { validatePlan, parseDodNumbers } from "../lib/validators.mjs"
+
+// Минимальный валидный план: scaffold(0) → component(1) → module(2, sink с DoD-1..2)
+const P = () => [
+  { name: "t0.md", data: { id: "00", type: "scaffold", blocked_by: [] }, body: "" },
+  { name: "t1.md", data: { id: "01", type: "component", blocked_by: ["00"] }, body: "" },
+  { name: "t2.md", data: { id: "02", type: "module", io: "none", blocked_by: ["00", "01"] }, body: "DoD-1 ok\nDoD-2 ok" },
+]
+
+test("validatePlan: валидный план + DoD покрыт → нет ошибок", () => {
+  assert.deepEqual(validatePlan(P(), [1, 2]), [])
+})
+test("validatePlan: цикл в blocked_by → blocker", () => {
+  const p = P(); p[0].data.blocked_by = ["02"] // 0→2→...→0
+  assert.ok(validatePlan(p, []).some((e) => /цикл/.test(e)))
+})
+test("validatePlan: scaffold не корень → blocker", () => {
+  // scaffold висит на независимом листе 09 (не цикл — 09 никого не блокирует)
+  const p = P(); p[0].data.blocked_by = ["09"]
+  p.push({ name: "t9.md", data: { id: "09", type: "module", io: "none", blocked_by: [] }, body: "" })
+  assert.ok(validatePlan(p, []).some((e) => /scaffold должен быть корнем/.test(e)))
+})
+test("validatePlan: module без component-предка (RED-first нарушен) → blocker", () => {
+  const p = P(); p[2].data.blocked_by = ["00"] // висит только на scaffold, минуя component
+  assert.ok(validatePlan(p, []).some((e) => /RED-first/.test(e)))
+})
+test("validatePlan: sink не замыкает DoD → blocker", () => {
+  const p = P(); p[2].body = "" // финальный тикет без DoD-N
+  assert.ok(validatePlan(p, [1, 2]).some((e) => /не замыкает DoD/.test(e)))
+})
+test("validatePlan: DoD-замыкание неполно (пункт без владельца) → blocker", () => {
+  assert.ok(validatePlan(P(), [1, 2, 3]).some((e) => /DoD-3/.test(e)))
+})
+test("validatePlan: dodNumbers=[] → DoD-проверка пропущена", () => {
+  const p = P(); p[2].body = ""
+  assert.deepEqual(validatePlan(p, []), [])
+})
+
+test("parseDodNumbers: нумерованный список под §Definition of done", () => {
+  const task = "# T\n## Definition of done\nintro\n1. one\n2. two\n7. seven\n## Next\n9. nope\n"
+  assert.deepEqual(parseDodNumbers(task), [1, 2, 7])
+})
+test("parseDodNumbers: нет секции → []", () => {
+  assert.deepEqual(parseDodNumbers("# T\n## Scope\n1. x\n"), [])
+})

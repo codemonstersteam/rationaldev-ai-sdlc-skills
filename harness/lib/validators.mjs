@@ -107,6 +107,93 @@ export function validateTicketHeaders(tickets) {
   return errors
 }
 
+// Номера пунктов TASK §Definition of done (нумерованный список под заголовком). Чисто.
+// Построчно (не одним regex: `$` под флагом m обрывал бы секцию на первом переносе).
+export function parseDodNumbers(taskText) {
+  const lines = String(taskText).replace(/\r\n/g, "\n").split("\n")
+  let i = lines.findIndex((l) => /^#{1,6}[ \t]*Definition of done\b/i.test(l))
+  if (i < 0) return []
+  const nums = new Set()
+  for (i++; i < lines.length; i++) {
+    if (/^#{1,6}[ \t]/.test(lines[i])) break // следующий заголовок — конец секции
+    const g = lines[i].match(/^\s*(\d+)\.\s/)
+    if (g) nums.add(Number(g[1]))
+  }
+  return [...nums].sort((a, b) => a - b)
+}
+
+// --- План как целое: граф зависимостей (DAG без циклов) + порядок + DoD-замыкание ---
+// Забирает у LLM-ревьювера (mills) МЕХАНИЧЕСКИЕ межтикетные проверки, которые validate-tickets
+// (заголовок-в-одиночку) не покрывает: цикл в blocked_by, scaffold-корень, component-before-module,
+// и покрытие каждого пункта TASK §Definition of done тикетом-владельцем. Чисто: без fs.
+//   tickets: [{ name, data, body }] — data = frontmatter, body = текст тикета (для DoD-N).
+//   dodNumbers: number[] — номера пунктов TASK §Definition of done ([] → DoD-проверка пропускается).
+// Допущение: один сервис/срез (текущий харнес). Ложный blocker хуже пропуска — проверки
+// консервативны (нераспознанное = не ошибка).
+export function validatePlan(tickets, dodNumbers = []) {
+  const errors = []
+  const valid = tickets.filter((t) => t.data && t.data.id !== undefined && Array.isArray(t.data.blocked_by))
+  if (!valid.length) return errors // нечего проверять — заголовки ловит validate-tickets
+  const byId = new Map(valid.map((t) => [normId(t.data.id), t]))
+  const deps = (t) => t.data.blocked_by.map(normId).filter((b) => byId.has(b))
+
+  // 1) DAG без циклов — DFS с тремя цветами; при цикле собираем путь
+  const color = new Map([...byId.keys()].map((id) => [id, 0])) // 0=white 1=gray 2=black
+  const stack = []
+  let cycle = null
+  const dfs = (id) => {
+    color.set(id, 1); stack.push(id)
+    for (const b of deps(byId.get(id))) {
+      if (color.get(b) === 1) { cycle = [...stack.slice(stack.indexOf(b)), b]; return true }
+      if (color.get(b) === 0 && dfs(b)) return true
+    }
+    color.set(id, 2); stack.pop(); return false
+  }
+  for (const id of byId.keys()) if (color.get(id) === 0 && dfs(id)) break
+  if (cycle) { errors.push(`цикл в графе blocked_by: ${cycle.join(" → ")}`); return errors } // граф нецелостен — дальше бессмысленно
+
+  // предок по blocked_by, удовлетворяющий pred?
+  const reaches = (id, pred) => {
+    const seen = new Set(), st = [...deps(byId.get(id))]
+    while (st.length) {
+      const c = st.pop(); if (seen.has(c)) continue; seen.add(c)
+      if (pred(byId.get(c))) return true
+      for (const b of deps(byId.get(c))) st.push(b)
+    }
+    return false
+  }
+
+  // 2) Порядок: scaffold-корень; всё транзитивно зависит от него; module — после component
+  const scaffolds = valid.filter((t) => t.data.type === "scaffold")
+  if (scaffolds.length === 1) {
+    const sc = scaffolds[0], scId = normId(sc.data.id)
+    if (deps(sc).length) errors.push(`${sc.name}: scaffold должен быть корнем (blocked_by: []), а не ${JSON.stringify(sc.data.blocked_by)}`)
+    for (const t of valid) {
+      const id = normId(t.data.id)
+      if (id !== scId && !reaches(id, (a) => normId(a.data.id) === scId))
+        errors.push(`${t.name}: не зависит транзитивно от scaffold (${sc.data.id}) — порядок нарушен`)
+    }
+  }
+  if (valid.some((t) => t.data.type === "component"))
+    for (const t of valid.filter((t) => t.data.type === "module"))
+      if (!reaches(normId(t.data.id), (a) => a.data.type === "component"))
+        errors.push(`${t.name}: module не зависит (транзитивно) от component-тикета — RED-first нарушен`)
+
+  // 3) DoD-замыкание: sink-тикеты (никто не blocked_by них) обязаны покрыть все пункты TASK §DoD
+  if (dodNumbers.length) {
+    const blocked = new Set(valid.flatMap(deps))
+    const sinks = valid.filter((t) => !blocked.has(normId(t.data.id)))
+    const covered = new Set()
+    for (const t of sinks) for (const m of String(t.body || "").matchAll(/\bDoD[-\s]?(\d+)\b/gi)) covered.add(Number(m[1]))
+    if (!covered.size) errors.push("финальный тикет не замыкает DoD: ни один sink-тикет не ссылается на пункты TASK §Definition of done (DoD-N)")
+    else {
+      const missing = dodNumbers.filter((n) => !covered.has(n))
+      if (missing.length) errors.push(`DoD-замыкание неполно — пункты TASK §Definition of done без владельца-тикета: ${missing.map((n) => "DoD-" + n).join(", ")}`)
+    }
+  }
+  return errors
+}
+
 // --- Против переусложнения декомпозиции (harden-decomposition) ---------------
 // Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
 // тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
