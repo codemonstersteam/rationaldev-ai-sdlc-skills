@@ -185,20 +185,19 @@ principle».
 
 ## Прогон с конкретными примерами
 
-Ниже — **реальный прогон** задачи `services-by-platform` (артефакты из
-`test-harnes-data/03-07-2026/1-harnes`). Читатель видит: что подаётся на вход, какие
-**однострочные задачи** `izi` шлёт субагентам, и какие артефакты рождаются на каждом шаге —
-включая **два тикета, сгенерированных `wirth-ticketer`**. Каждый артефакт — под раскрывашкой
-(GitHub рендерит `<details>`; страница остаётся читаемой). Между ними — статус-строки, которыми
-`izi` отчитывается оператору.
+**Реальный прогон** задачи `services-by-platform` (артефакты из `test-harnes-data/03-07-2026/1-harnes`).
+Каждый шаг — строкой таблицы (**шаг → комментарий**); артефакты шага — в раскрывашке под ним. Так
+читатель видит, какие **однострочные задачи** `izi` шлёт субагентам и что рождается на выходе.
 
-> **Ключевой инвариант флоу:** каждому субагенту `izi` передаёт **только его тикет + пути из
-> `inputs`**, не весь бэклог и не весь проект. Роли-исполнители не разведывают кодовую базу.
+> **Инвариант флоу:** субагенту `izi` передаёт **только его тикет + пути из `inputs`** — не весь
+> бэклог и не проект. Роли-исполнители не разведывают кодовую базу.
 
-### Вход — задача
+| Шаг | Комментарий |
+|---|---|
+| **Вход** — `TASK.md` | Замороженный промпт (одинаков для всех прогонов) — что подаём на вход конвейеру. |
 
 <details>
-<summary>📄 <b>TASK.md</b> — замороженный промпт, что присылаем на вход</summary>
+<summary>📄 <b>TASK.md</b> — задача на входе</summary>
 
 # Bench task — service `services-by-platform` (Go)
 
@@ -354,19 +353,18 @@ That script is the **only** arbiter of "done".
 
 </details>
 
-### Планирование — лента делегирований `izi`
+### Планирование
 
-`izi` — механический роутер: делегирует этап → читает одну статус-строку → делегирует следующий.
-Ниже — фактические статус-строки прогона; под каждой — артефакт, который вернул субагент.
+| Шаг | Комментарий |
+|---|---|
+| **Stage 0 · `@wirth-triage`** — `TASK.md` → level | go-api, 1 endpoint → полный конвейер планирования (не `trivial`-шорткат). Артефакта нет — только вердикт-строка. |
 
-**`Stage 0 — @wirth-triage (input: TASK.md) → level=modular`** — go-api, 1 endpoint → полный
-конвейер планирования (не `trivial`-шорткат).
-
-**`Stage 1 — @wirth-intake (input: TASK.md) → frd.md`** — 2 актёра, UC1 (+Extensions 1a–1e),
-failure-map 5 строк. `validate-frd` ✓ (псевдо-UC нет).
+| Шаг | Комментарий |
+|---|---|
+| **Stage 1 · `@wirth-intake`** — `TASK.md` → `frd.md` | 2 актёра, UC1 (+Extensions 1a–1e), failure-map 5 строк. `validate-frd` ✓ (псевдо-UC нет). |
 
 <details>
-<summary>📄 <b>frd.md</b> — выход <code>wirth-intake</code> (FRD: problem, actors, UC1, failure-map, NFR)</summary>
+<summary>📄 <b>frd.md</b> — выход <code>wirth-intake</code></summary>
 
 # services-by-platform — FRD
 
@@ -514,11 +512,12 @@ integer. Sort is `platform` asc, then `service` asc. Array (not an object).
 
 </details>
 
-**`Stage 2 — @wirth-slicer (input: frd.md) → slices.md`** — **1 срез** `slice-01-list-services-by-platform`; все режимы отказа —
-Extensions UC1, не отдельные срезы. `validate-slices` ✓ (#срезов=1 ≤ #endpoints=1).
+| Шаг | Комментарий |
+|---|---|
+| **Stage 2 · `@wirth-slicer`** — `frd.md` → `slices.md` | **1 срез** `slice-01`; все режимы отказа — Extensions UC1, не отдельные срезы. `validate-slices` ✓ (#срезов=1 ≤ #endpoints=1). |
 
 <details>
-<summary>📄 <b>slices.md</b> — выход <code>wirth-slicer</code> (бэклог срезов: 1 атомарный срез)</summary>
+<summary>📄 <b>slices.md</b> — выход <code>wirth-slicer</code></summary>
 
 # Slice backlog — services-by-platform
 
@@ -562,11 +561,12 @@ None — can start immediately (scaffold ticket precedes implementation but is n
 
 </details>
 
-**`Stage 3 — @wirth-usecase (input: slice-01 + frd) → use-case.md`** — Cockburn fully-dressed:
-MSS + Extensions (0a boot, 2a/2b store, 2c empty, 4a internal).
+| Шаг | Комментарий |
+|---|---|
+| **Stage 3 · `@wirth-usecase`** — slice-01 + frd → `use-case.md` | Cockburn fully-dressed: MSS + Extensions 0a (boot) / 2a / 2b / 2c (empty) / 4a (internal) + бизнес-правила. |
 
 <details>
-<summary>📄 <b>use-case.md</b> — выход <code>wirth-usecase</code> (UC-01, fully-dressed, с Extensions и BR)</summary>
+<summary>📄 <b>use-case.md</b> — выход <code>wirth-usecase</code></summary>
 
 # UC-01: List services by platform
 
@@ -677,14 +677,16 @@ MSS + Extensions (0a boot, 2a/2b store, 2c empty, 4a internal).
 
 </details>
 
-**`Stage 4 — @wirth-apidesigner (input: все use-case) → api-specification/openapi.yaml FROZEN`** —
-`GET /services` → `200` array; `500 {error.code}`. `validate-contract-frozen` ✓ (`x-frozen: true`).
+| Шаг | Комментарий |
+|---|---|
+| **Stage 4 · `@wirth-apidesigner`** — все use-case → `api-specification/openapi.yaml` FROZEN | `GET /services` → `200` array; `500 {error.code}`. `validate-contract-frozen` ✓ (`x-frozen: true`). Артефакт — сам OpenAPI (заморожен). |
 
-**`Stage 5 — @wirth-moduledesigner (input: contract + use-case) → module-tree + contracts + c4`** —
-дерево модулей, контракты с `io:` на модуль, C4 (C2+C3). `validate-mermaid` ✓.
+| Шаг | Комментарий |
+|---|---|
+| **Stage 5 · `@wirth-moduledesigner`** — contract + use-case → module-tree / contracts / c4 | Дерево модулей, контракты с `io:` на модуль, C4 (C2 Container + C3 Component). `validate-mermaid` ✓. |
 
 <details>
-<summary>📄 <b>module-tree.md</b> — выход <code>wirth-moduledesigner</code> (дерево модулей + head-pipe псевдокод)</summary>
+<summary>📄 <b>module-tree.md</b> — дерево модулей + head-pipe псевдокод</summary>
 
 # Module tree — slice-01-list-services-by-platform
 
@@ -792,7 +794,7 @@ component scenarios.
 </details>
 
 <details>
-<summary>📄 <b>contracts.md</b> — выход <code>wirth-moduledesigner</code> (контракты модулей: io/antecedent/consequent + формула юнит-тестов + компонентные сценарии)</summary>
+<summary>📄 <b>contracts.md</b> — контракты модулей (io / antecedent / consequent + формула юнит-тестов + компонентные сценарии)</summary>
 
 # Module contracts — slice-01-list-services-by-platform
 
@@ -984,7 +986,7 @@ defensive (non-reproducible) — in the contract as a catch-all, no dedicated sc
 </details>
 
 <details>
-<summary>📊 <b>c4.md</b> — выход <code>wirth-moduledesigner</code> (C4: C2 Container + C3 Component, Mermaid — рендерится ниже)</summary>
+<summary>📊 <b>c4.md</b> — C4 C2+C3 (Mermaid — рендерится)</summary>
 
 # C4 — slice-01-list-services-by-platform
 
@@ -1062,14 +1064,111 @@ case (`use-case.md`).
 
 </details>
 
-**`Stage 6 — @wirth-ticketer (input: весь дизайн) → 7 тикетов`** — порядок: `01 scaffold` (блокирует
-все) → `02 component RED` → `03–06 modules` → `07 wiring+README`. `validate-tickets` ✓.
-
-**`Stage 7 — @wirth-planner (input: пути пакета) → PLAN.md`** — path-index среза + Gate #1 summary
-(граф зависимостей тикетов, чек-лист готовности). Планер не проектирует — собирает индекс.
+| Шаг | Комментарий |
+|---|---|
+| **Stage 6 · `@wirth-ticketer`** — весь дизайн → 7 тикетов | Порядок: `01 scaffold` (блокирует все) → `02 component RED` → `03–06 modules` → `07 wiring+README`. `validate-tickets` ✓. **Два примера ниже** (`scaffold` + `module`; `component` `ticket-02` — в разделе «Пример тикета»). |
 
 <details>
-<summary>📄 <b>PLAN.md</b> — выход <code>wirth-planner</code> (path-index + граф зависимостей тикетов + Gate #1 чек-лист)</summary>
+<summary>🎫 <b>ticket-01</b> (type: scaffold)</summary>
+
+```md
+---
+id: 01
+type: scaffold
+slice: slice-01-list-services-by-platform
+blocked_by: []
+inputs: [.agent/planner/slices.md, .agent/planner/frd.md, docs/design/slice-01-list-services-by-platform/module-tree.md, api-specification/openapi.yaml]
+skills: [service-scaffold]
+---
+
+### TICKET 01 — scaffold: runnable placeholder service
+
+**io:** — → skills: service-scaffold
+
+**Context (only this scaffold):**
+- Goal: a runnable Go service placeholder from the stack template — builds with `go build ./...`,
+  `/health` returns 200, every other route returns 501. No business logic yet.
+- Stack: Go module, `net/http`, `log/slog`, `gopkg.in/yaml.v3`. Single binary.
+- Modular layout already scaffolded (empty packages): `internal/config`, `internal/storage`,
+  `internal/catalog`, `internal/httpapi`, thin `main.go` at module root (wiring only).
+- Deliverables at repo root: `Dockerfile`, `docker-compose.yml` (service + `tester` container),
+  `run-tests.sh` (`docker compose up --abort-on-container-exit --exit-code-from tester`).
+- The frozen OpenAPI contract `api-specification/openapi.yaml` is already present — do NOT modify it.
+- `config.yaml` placeholder + `services.yaml` fixture (a few entries) so the placeholder runs.
+
+**Dependencies:** none (first ticket — blocks all others).
+
+**Subagent instruction:** clone/configure the Go stack template per `service-scaffold`; create the
+package skeleton from `module-tree.md`; ensure `go build ./...` passes and `/health` is green;
+add `Dockerfile` + `docker-compose.yml` + `run-tests.sh`. Do not implement business logic.
+
+**Acceptance:**
+- [ ] `go build ./...` passes.
+- [ ] `/health` returns 200; other routes return 501.
+- [ ] `Dockerfile`, `docker-compose.yml`, `run-tests.sh` present.
+- [ ] Package skeleton `internal/{config,storage,catalog,httpapi}` + thin `main.go` exists.
+```
+
+</details>
+
+<details>
+<summary>🎫 <b>ticket-04</b> (type: module, io: none)</summary>
+
+```md
+---
+id: 04
+type: module
+slice: slice-01-list-services-by-platform
+blocked_by: [01]
+inputs: [docs/design/slice-01-list-services-by-platform/contracts.md]
+io: none
+skills: []
+---
+
+### TICKET 04 — config: boot infrastructure (file + env, fail-fast)
+
+**io:** none → skills: (none — boot infra, not a per-request I/O object)
+
+**Context (only this module):**
+- Package: `internal/config`
+- Types:
+  - `Config` — `Port int; StorePath string`.
+- Functions:
+  - `NewConfig(port int, storePath string) -> (Config, error)` — validates: port in valid range
+    (1–65535), non-empty `StorePath`. Invalid → error (fail-fast).
+  - `Load(configPath string, env Env) -> (Config, error)` — reads `config.yaml` (YAML), applies env
+    overrides (`PORT` env overrides file port, default `8080`; store-path env override if present).
+    Returns `Config` via `NewConfig` (validation). Malformed `config.yaml` → error.
+- `Env` is a thin abstraction over `os.LookupEnv` (for testability — inject a map in tests).
+- No hardcoded ports, paths, or magic constants. Default `8080` is the only literal, documented.
+
+**Unit tests by formula (1 happy + Σ antecedent branches):**
+
+| Function | Happy | Branches | Total |
+|---|---|---|---|
+| `NewConfig` | 1 | 2 (port out of range; empty storePath) | 3 |
+
+> `Load` reads a file (I/O at boot) — not unit-tested by the formula; its happy path is proven by
+> the service starting (component tests). `NewConfig` validation is the unit-covered logic.
+
+**Dependencies:** scaffold (01) — needs the package skeleton. No imports from other internal packages.
+
+**Subagent instruction:** write the `NewConfig` unit tests first → implement `config.go`, `load.go` →
+run `go test ./internal/config/...` → green? mark done. Do not touch other modules.
+
+**Acceptance:**
+- [ ] `go test ./internal/config/...` passes (3 unit tests green).
+- [ ] No hardcoded ports/paths; `PORT` env honored (default `8080`).
+```
+
+</details>
+
+| Шаг | Комментарий |
+|---|---|
+| **Stage 7 · `@wirth-planner`** — пути пакета → `PLAN.md` | Path-index среза + Gate #1 summary (граф зависимостей тикетов, чек-лист готовности). Планер не проектирует — собирает индекс. |
+
+<details>
+<summary>📄 <b>PLAN.md</b> — выход <code>wirth-planner</code></summary>
 
 # PLAN — slice-01-list-services-by-platform
 
@@ -1187,138 +1286,36 @@ review at **Gate #1**. On approval, the implementer may start at ticket-01 (scaf
 
 </details>
 
-**`Stage 8 — @mills (input: PLAN + пути) → OK`** — верхнеуровневая консистентность (декомпозиция
-полна, срезы атомарны, порядок тикетов, контракт заморожен), ПЕРЕзапуск всех валидаторов → `OK`.
+| Шаг | Комментарий |
+|---|---|
+| **Stage 8 · `@mills`** — PLAN + пути → `OK` | Верхнеуровневая консистентность (декомпозиция полна, срезы атомарны, порядок тикетов, контракт заморожен) + ПЕРЕзапуск всех валидаторов. |
 
-**→ Human Gate #1.** Оператор пишет **«акцепт»** → плагин `rational-guardrail` **сам** создаёт
-`.agent/gates/gate1.approved`; `izi` **верифицирует** маркер через `ls` (не создаёт его) и начинает
-реализацию.
-
-### Тикеты, сгенерированные `wirth-ticketer` (2 примера)
-
-Из дизайн-пакета `wirth-ticketer` родил **7 тикетов** (граф зависимостей — в `PLAN.md` выше). Вот
-**два разных типа** — `scaffold` и `module` (тип `component` — `ticket-02` — показан выше в
-разделе «Пример тикета»). Виден строгий машиночитаемый заголовок (по нему `izi` маршрутизирует, не
-читая тело) и самодостаточный минимальный контекст:
-
-<details>
-<summary>🎫 <b>ticket-01</b> (type: scaffold) — сгенерирован <code>wirth-ticketer</code></summary>
-
-```md
----
-id: 01
-type: scaffold
-slice: slice-01-list-services-by-platform
-blocked_by: []
-inputs: [.agent/planner/slices.md, .agent/planner/frd.md, docs/design/slice-01-list-services-by-platform/module-tree.md, api-specification/openapi.yaml]
-skills: [service-scaffold]
----
-
-### TICKET 01 — scaffold: runnable placeholder service
-
-**io:** — → skills: service-scaffold
-
-**Context (only this scaffold):**
-- Goal: a runnable Go service placeholder from the stack template — builds with `go build ./...`,
-  `/health` returns 200, every other route returns 501. No business logic yet.
-- Stack: Go module, `net/http`, `log/slog`, `gopkg.in/yaml.v3`. Single binary.
-- Modular layout already scaffolded (empty packages): `internal/config`, `internal/storage`,
-  `internal/catalog`, `internal/httpapi`, thin `main.go` at module root (wiring only).
-- Deliverables at repo root: `Dockerfile`, `docker-compose.yml` (service + `tester` container),
-  `run-tests.sh` (`docker compose up --abort-on-container-exit --exit-code-from tester`).
-- The frozen OpenAPI contract `api-specification/openapi.yaml` is already present — do NOT modify it.
-- `config.yaml` placeholder + `services.yaml` fixture (a few entries) so the placeholder runs.
-
-**Dependencies:** none (first ticket — blocks all others).
-
-**Subagent instruction:** clone/configure the Go stack template per `service-scaffold`; create the
-package skeleton from `module-tree.md`; ensure `go build ./...` passes and `/health` is green;
-add `Dockerfile` + `docker-compose.yml` + `run-tests.sh`. Do not implement business logic.
-
-**Acceptance:**
-- [ ] `go build ./...` passes.
-- [ ] `/health` returns 200; other routes return 501.
-- [ ] `Dockerfile`, `docker-compose.yml`, `run-tests.sh` present.
-- [ ] Package skeleton `internal/{config,storage,catalog,httpapi}` + thin `main.go` exists.
-```
-
-</details>
-
-<details>
-<summary>🎫 <b>ticket-04</b> (type: module, io: none) — сгенерирован <code>wirth-ticketer</code></summary>
-
-```md
----
-id: 04
-type: module
-slice: slice-01-list-services-by-platform
-blocked_by: [01]
-inputs: [docs/design/slice-01-list-services-by-platform/contracts.md]
-io: none
-skills: []
----
-
-### TICKET 04 — config: boot infrastructure (file + env, fail-fast)
-
-**io:** none → skills: (none — boot infra, not a per-request I/O object)
-
-**Context (only this module):**
-- Package: `internal/config`
-- Types:
-  - `Config` — `Port int; StorePath string`.
-- Functions:
-  - `NewConfig(port int, storePath string) -> (Config, error)` — validates: port in valid range
-    (1–65535), non-empty `StorePath`. Invalid → error (fail-fast).
-  - `Load(configPath string, env Env) -> (Config, error)` — reads `config.yaml` (YAML), applies env
-    overrides (`PORT` env overrides file port, default `8080`; store-path env override if present).
-    Returns `Config` via `NewConfig` (validation). Malformed `config.yaml` → error.
-- `Env` is a thin abstraction over `os.LookupEnv` (for testability — inject a map in tests).
-- No hardcoded ports, paths, or magic constants. Default `8080` is the only literal, documented.
-
-**Unit tests by formula (1 happy + Σ antecedent branches):**
-
-| Function | Happy | Branches | Total |
-|---|---|---|---|
-| `NewConfig` | 1 | 2 (port out of range; empty storePath) | 3 |
-
-> `Load` reads a file (I/O at boot) — not unit-tested by the formula; its happy path is proven by
-> the service starting (component tests). `NewConfig` validation is the unit-covered logic.
-
-**Dependencies:** scaffold (01) — needs the package skeleton. No imports from other internal packages.
-
-**Subagent instruction:** write the `NewConfig` unit tests first → implement `config.go`, `load.go` →
-run `go test ./internal/config/...` → green? mark done. Do not touch other modules.
-
-**Acceptance:**
-- [ ] `go test ./internal/config/...` passes (3 unit tests green).
-- [ ] No hardcoded ports/paths; `PORT` env honored (default `8080`).
-```
-
-</details>
-
-`skills:` в каждом тикете — ровно вывод io-router по `type`/`io` (`scaffold`→`[service-scaffold]`,
-module `io:none`→`[]`); `validate-tickets` падает при любом расхождении. Исполнитель ничего не
-выбирает — берёт, что дано.
+| Шаг | Комментарий |
+|---|---|
+| **Human Gate #1** — акцепт плана | Оператор пишет **«акцепт»** → плагин `rational-guardrail` **сам** создаёт `.agent/gates/gate1.approved`; `izi` **верифицирует** маркер через `ls` (не создаёт) и начинает реализацию. |
 
 ### Реализация — `izi` маршрутизирует по `type` из заголовка тикета
 
-Каждому исполнителю — **только тикет + `inputs`**. Порядок — по `blocked_by`; независимые тикеты
-параллельно. Прогресс — в durable `.agent/planner/done.log` (упавший тикет ретраится точечно).
+Каждому исполнителю — **только тикет + `inputs`**. Порядок — по `blocked_by`; прогресс — в durable `.agent/planner/done.log` (упавший тикет ретраится точечно).
 
-**`IMPL ticket-01 (scaffold) → @scaffolder (input: ticket-01 + inputs)`** — `scaffold.sh`
-(clone template + build), `/health` 200. → `green`. `done.log += ticket-01`.
+| Шаг | Комментарий |
+|---|---|
+| **`IMPL ticket-01` (scaffold) · `@scaffolder`** | `scaffold.sh` (clone template + build), `/health` 200. → `green`; `done.log += ticket-01`. |
 
-**`IMPL ticket-02 (component) → @wirth-tester (input: ticket-02 + contracts.md)`** — 4 сценария
-`.feature` `@wip`, RED по бизнес-причине. → `green` (RED-ready).
+| Шаг | Комментарий |
+|---|---|
+| **`IMPL ticket-02` (component) · `@wirth-tester`** | 4 сценария `.feature` `@wip`, RED по бизнес-причине (сервис — заглушка). → `green` (RED-ready). |
 
-**`IMPL ticket-03..06 (module) → @hughes (input: ticket-NN + contracts.md)`** — модули RED→green;
-скилл по `io:` из заголовка (`03` catalog · `04` config · `05` storage `io:db`+`db-io` · `06` httpapi).
+| Шаг | Комментарий |
+|---|---|
+| **`IMPL ticket-03..06` (module) · `@hughes`** | Модули RED→green; скилл по `io:` из заголовка (`03` catalog · `04` config · `05` storage `io:db`+`db-io` · `06` httpapi). |
 
-**`IMPL ticket-07 (module) → @hughes`** — головной модуль (wiring) + README; компонентные тесты
-становятся GREEN.
+| Шаг | Комментарий |
+|---|---|
+| **`IMPL ticket-07` (module) · `@hughes`** | Головной модуль (thin wiring) + README; компонентные тесты становятся GREEN. |
 
 <details>
-<summary>🧩 <b>cmd/app/main.go</b> — головной модуль (thin wiring, без бизнес-логики) — реализовал <code>@hughes</code></summary>
+<summary>🧩 <b>cmd/app/main.go</b> — головной модуль (wiring, без бизнес-логики)</summary>
 
 ```go
 // Command app — точка входа services-by-platform.
@@ -1382,14 +1379,13 @@ func main() {
 
 </details>
 
-**`@linger (приёмка среза)`** — снимает `@wip`, CI зелёный, добивает DoD (корневые
-`Dockerfile`/`docker-compose.yml`). → **Human Gate #2 (мерж)**.
+| Шаг | Комментарий |
+|---|---|
+| **`@linger`** — приёмка среза | Снимает `@wip`, CI зелёный, добивает DoD (корневые `Dockerfile`/`docker-compose.yml`). → **Human Gate #2 (мерж)**. |
 
-**`@michtom`** — канарейка за фиче-тогглом + 4 золотых сигнала. → **Human Gate #3 (приёмка)**.
-
-Итог: читатель видит весь путь — вход (`TASK.md`) → однострочные делегирования `izi` → артефакты
-каждого этапа → тикеты от `wirth-ticketer` → реализацию модулей, где каждому субагенту отдан
-**только его узкий тикет**.
+| Шаг | Комментарий |
+|---|---|
+| **`@michtom`** — релиз | Канарейка за фиче-тогглом + 4 золотых сигнала. → **Human Gate #3 (приёмка прод-релиза)**. |
 
 ## Пример тикета
 
