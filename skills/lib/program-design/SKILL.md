@@ -32,48 +32,27 @@ DON'T:
 - Make architecture decisions without operator approval.
 - Add dependencies or technologies without explicit justification.
 
-## Steps
+## Steps (procedure map + progressive disclosure)
 
-**Step-index (procedure map).** Hold the whole process by this table; if you get lost,
-return here, find the current step and open its detail file (`reference/step-NN-*.md`,
-map below). Each step's file has its own "In/Out".
+Hold the whole process by this table. Keep only the **current step** in context, not the whole
+skill — find the step number, open its detail file (`reference/step-NN-*.md`); each file has its own
+In/Out. If you get lost, return here.
 
-| Step | Does | Main out |
-|-----|------------|---------------|
-| 0 | Check mandatory input artifacts (FRD, contract, failure table, Gherkin) | decision "design / stop" |
-| 1 | Confirm the FRD from `requirements-intake` (problem statement + use cases + interfaces) | verified `requirements/<slug>.md` |
-| 2 | List the external inputs of the slices | slice table |
-| 3 | Design each slice's module tree | tree + head-pipe pseudocode |
-| 4 | Describe the message catalog | `messages.md` (types, `Result<T, Error>`) |
-| 5 | Describe module contracts by template | contracts (Input/Deps/antecedent/consequent) |
-| 6 | Isolate I/O into autonomous objects | I/O objects (`Store`/`Client`/`Publisher`) |
-| 7 | Describe the app infrastructure module | `infrastructure.md` |
-| 8 | Count unit tests by formula + reconcile design with Gherkin | unit-test table + Gherkin-mapping |
-| 9 | Reconcile contract consistency via the call graph | `contracts-graph.md` |
-| 10 | Assemble the design package | folder `.agent/planner/design/<slug>/` |
-| 11 | Build the ticket backlog (one per slice) | `backlog.md` (tickets) |
-| 12 | Fill in the handoff checklist | handoff checklist in `backlog.md` |
-
-## Step navigation (progressive disclosure)
-
-Each step's detail lives in its own file — keep only the **current step** in context, not
-the whole skill. By the Step-index above, find the step number and open its file:
-
-| Step | Detail file |
-|-----|-------------|
-| 0 | `reference/step-00-input.md` — check mandatory input artifacts |
-| 1 | `reference/step-01-requirements.md` — confirm the FRD from `requirements-intake` |
-| 2 | `reference/step-02-inputs.md` — list slice inputs |
-| 3 | `reference/step-03-module-tree.md` — module tree, hard rules, C4, head-pipe pseudocode |
-| 4 | `reference/step-04-messages.md` — message catalog + error model |
-| 5 | `reference/step-05-contracts.md` — module contracts, `Dependencies:` checklist |
-| 6 | `reference/step-06-isolate-io.md` — isolate I/O into autonomous objects |
-| 7 | `reference/step-07-infrastructure.md` — app infrastructure module |
-| 8 | `reference/step-08-tests-gherkin.md` — unit tests by formula + Gherkin reconciliation |
-| 9 | `reference/step-09-contracts-graph.md` — call graph + consistency reconciliation |
-| 10 | `reference/step-10-package.md` — assemble the design package |
-| 11 | `reference/step-11-backlog.md` — ticket backlog (+ `reference/ticket-template.md`) |
-| 12 | `reference/step-12-handoff.md` — conformance-gate + handoff checklist + approval semantics |
+| Step | Does | Main out | Detail file (`reference/`) |
+|-----|------|----------|----------------------------|
+| 0 | Check mandatory input artifacts (FRD, contract, failure table, Gherkin) | decision "design / stop" | `step-00-input.md` |
+| 1 | Confirm the FRD from `requirements-intake` (problem statement + use cases + interfaces) | verified `requirements/<slug>.md` | `step-01-requirements.md` |
+| 2 | List the external inputs of the slices | slice table | `step-02-inputs.md` |
+| 3 | Design each slice's module tree (hard rules, C4, head-pipe pseudocode) | tree + head-pipe pseudocode | `step-03-module-tree.md` |
+| 4 | Describe the message catalog + error model | `messages.md` (types, `Result<T, Error>`) | `step-04-messages.md` |
+| 5 | Describe module contracts by template (`Dependencies:` checklist) | contracts (Input/Deps/antecedent/consequent) | `step-05-contracts.md` |
+| 6 | Isolate I/O into autonomous objects | I/O objects (`Store`/`Client`/`Publisher`) | `step-06-isolate-io.md` |
+| 7 | Describe the app infrastructure module | `infrastructure.md` | `step-07-infrastructure.md` |
+| 8 | Count unit tests by formula + reconcile design with Gherkin | unit-test table + Gherkin-mapping | `step-08-tests-gherkin.md` |
+| 9 | Reconcile contract consistency via the call graph | `contracts-graph.md` | `step-09-contracts-graph.md` |
+| 10 | Assemble the design package | folder `.agent/planner/design/<slug>/` | `step-10-package.md` |
+| 11 | Build the ticket backlog (one per slice; + `ticket-template.md`) | `backlog.md` (tickets) | `step-11-backlog.md` |
+| 12 | Fill in the conformance-gate + handoff checklist + approval semantics | handoff checklist in `backlog.md` | `step-12-handoff.md` |
 
 ## Hard rules and STOP (consolidated — this is the skill's conformance-gate)
 

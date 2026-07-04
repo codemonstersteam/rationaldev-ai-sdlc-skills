@@ -44,10 +44,17 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
       // создавать/трогать — иначе human-gate обходится самоакцептом (найдено на dry-run).
       if (tool === "bash") {
         const cmd = String((args as any).command ?? "")
-        if (cmd.includes(GATE_MARK)) {
+        // Блокируем только СОЗДАНИЕ/ЗАПИСЬ маркера (редирект >/>> или touch/tee/cp/mv/ln/install/dd),
+        // но НЕ чтение-верификацию (ls/test/cat/stat) — izi ДОЛЖЕН мочь проверить маркер (см. izi.md).
+        const gm = GATE_MARK.replace(/[.]/g, "\\.")
+        const writesMarker =
+          new RegExp(`>>?\\s*['\"]?[^\\s;|&'\"]*${gm}`).test(cmd) ||
+          new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)
+        if (writesMarker) {
           throw new Error(
             "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") ставит ТОЛЬКО оператор " +
-            "вне сессии. Агенту создавать/трогать его запрещено — на Gate #1 задай question и жди.",
+            "вне сессии. Создавать/писать его агенту запрещено — на Gate #1 задай question и жди. " +
+            "(Чтение-проверка `ls`/`test -f` разрешена.)",
           )
         }
       }

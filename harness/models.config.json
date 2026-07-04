@@ -18,7 +18,9 @@
     },
     "//roles": "Оркестратор (Витт) = Qwen: только роутит/делегирует куски плана короткими турнами. Всё планирование и проектирование тикетов (Wirth) = large=GLM 5.2: этапы intake/slicer/usecase/apidesigner/moduledesigner/ticketer + сборка индекса planner. GLM гонять МИМО Novita (прокси GLM_IGNORE_PROVIDERS=Novita) — Novita рвёт длинный tool-call. glm-5-turbo НЕ использовать (куцый ответ, виснет).",
     "roles": {
-      "izi": "openrouter/qwen/qwen3.6-27b"
+      "izi": "openrouter/qwen/qwen3.6-27b",
+      "scaffolder": "openrouter/z-ai/glm-5.2",
+      "wirth-tester": "openrouter/z-ai/glm-5.2"
     }
   },
   "codex": {

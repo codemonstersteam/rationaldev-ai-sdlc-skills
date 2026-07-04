@@ -106,3 +106,109 @@ export function validateTicketHeaders(tickets) {
   if (scaffold.length !== 1) errors.push(`ожидался ровно ОДИН scaffold-тикет, найдено ${scaffold.length}`)
   return errors
 }
+
+// --- Против переусложнения декомпозиции (harden-decomposition) ---------------
+// Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
+// тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
+// use case, отказы = Extensions; по vertical-slices: 1 срез = 1 внешний вход (endpoint).
+const PSEUDO_UC = /method[\s-]?not[\s-]?allowed|unknown[\s-]?route|route[\s-]?not[\s-]?found|internal[\s-]?error|start\s?up|fail[\s-]?fast|invalid config|config.*(fail|invalid)|bad request|invalid.*(sort|input|param)/i
+const PSEUDO_SLICE = /scaffold|method[\s-]?not[\s-]?allowed|unknown[\s-]?route|not[\s-]?found|fail[\s-]?fast|config|internal[\s-]?error|\b40[45]\b/i
+
+// #operations контракта = HTTP-метод-ключи под paths: (грубо, но детерминированно).
+export function countOpenapiOperations(openapiText) {
+  const t = String(openapiText).replace(/\r\n/g, "\n")
+  const after = t.split(/^paths:[ \t]*$/m)[1]
+  if (!after) return 0
+  const block = after.split(/\n(?=\S)/)[0] // до следующего top-level ключа
+  return (block.match(/^[ \t]+(get|post|put|delete|patch|head|options):/gim) || []).length
+}
+
+// UC в FRD, которые суть framework/boot/generic-error → должны быть Extensions, не top-level UC.
+export function validateFrdUseCases(frdText) {
+  const errors = []
+  for (const m of String(frdText).matchAll(/^#{2,4}\s+UC[\s-]?\d+\s*[:—-]?\s*(.+)$/gim)) {
+    const title = (m[1] || "").trim()
+    if (PSEUDO_UC.test(title)) {
+      errors.push(`UC «${title}» — framework/boot/generic-error, не user-goal use case; ` +
+        `сделай Extension'ом (Кокборн: один внешний запрос = один UC, отказы = Extensions)`)
+    }
+  }
+  return errors
+}
+
+// Срезов не больше, чем operations контракта; и никаких псевдо-срезов.
+export function validateSlices(slicesText, openapiText) {
+  const errors = []
+  const ops = countOpenapiOperations(openapiText || "")
+  // срезы: заголовки "## Slice <NN>" (с номером — не путать с "## Slice inventory")
+  // либо уникальные имена slice-<name>
+  let n = (slicesText.match(/^##\s+Slice[\s-]?\d/gim) || []).length
+  if (!n) n = new Set([...slicesText.matchAll(/\bslice-[a-z0-9-]+/gi)].map((x) => x[0].toLowerCase())).size
+  if (ops > 0 && n > ops) {
+    errors.push(`срезов ${n} > operations контракта ${ops} — переусложнение ` +
+      `(1 внешний вход = 1 срез; отказы/framework/boot — Extensions, не срезы). Слить лишние.`)
+  }
+  // псевдо-срезы по заголовку и по имени папки
+  for (const m of slicesText.matchAll(/^##\s+Slice\s+\S+\s*[:—-]?\s*(.+)$/gim)) {
+    const name = (m[1] || "").trim()
+    if (PSEUDO_SLICE.test(name)) errors.push(`псевдо-срез «${name}» — framework/boot/тип-тикета, не внешний вход контракта`)
+  }
+  for (const m of slicesText.matchAll(/\bslice-[a-z0-9-]+/gi)) {
+    if (PSEUDO_SLICE.test(m[0])) errors.push(`псевдо-срез «${m[0]}» — не отдельный внешний вход`)
+  }
+  return [...new Set(errors)]
+}
+
+// --- Mermaid C4: синтаксис-линт (валидность рендера без тяжёлого движка) -------
+// Ловит частый провал: C4-диаграмма написана UML/PlantUML-синтаксисом (<<component>>,
+// bare [LABEL]) вместо Mermaid-C4 функций (Component()/Rel()/Container_Boundary(){}) → «Syntax error».
+const C4_HEADER = /^(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)\b/
+const C4_STMT = new RegExp(
+  "^\\s*(Person|Person_Ext|System|System_Ext|SystemDb|SystemDb_Ext|SystemQueue|Container|Container_Ext|" +
+  "ContainerDb|ContainerDb_Ext|ContainerQueue|Component|Component_Ext|ComponentDb|ComponentQueue|" +
+  "Boundary|Enterprise_Boundary|System_Boundary|Container_Boundary|Node|Node_L|Node_R|Deployment_Node|" +
+  "Rel|BiRel|Rel_U|Rel_D|Rel_L|Rel_R|Rel_Up|Rel_Down|Rel_Left|Rel_Right|Rel_Back|" +
+  "UpdateElementStyle|UpdateRelStyle|UpdateLayoutConfig|UpdateBoundaryStyle|title)\\b" +
+  "|^\\s*[{}]\\s*$|^\\s*%%|^\\s*$",
+)
+
+// Извлечь ```mermaid блоки из markdown.
+function mermaidBlocks(md) {
+  const out = []
+  const re = /```mermaid\s*\n([\s\S]*?)```/gi
+  let m
+  while ((m = re.exec(String(md)))) out.push(m[1])
+  return out
+}
+
+// Известные типы диаграмм Mermaid — блок обязан начинаться с одного из них.
+const MERMAID_HEADER = /^(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(-v2)?|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|requirementDiagram|gitGraph|sankey(-beta)?|xychart(-beta)?|block(-beta)?)\b/
+
+export function validateMermaid(md) {
+  const errors = []
+  const blocks = mermaidBlocks(md)
+  blocks.forEach((block, bi) => {
+    const lines = block.split("\n")
+    const first = (lines.find((l) => l.trim()) || "").trim()
+    const isC4 = C4_HEADER.test(first)
+    // (1) каждый блок обязан объявить тип диаграммы первой непустой строкой
+    if (!MERMAID_HEADER.test(first)) {
+      errors.push(`mermaid[${bi + 1}]: нет объявления типа диаграммы (первая строка «${first.slice(0, 40)}») — ` +
+        `Mermaid требует C4Component/flowchart/… первой строкой`)
+    }
+    lines.forEach((line, li) => {
+      const t = line.trim()
+      if (!t) return
+      // (2) UML/PlantUML-стереотипы `<<...>>` не рендерятся Mermaid ни в какой диаграмме
+      if (/<<[^>]*>>/.test(line)) {
+        errors.push(`mermaid[${bi + 1}] строка ${li + 1}: UML-стереотип «${t.slice(0, 40)}» — не Mermaid ` +
+          `(в C4 используй функции Component()/System_Ext()/Rel(), не <<...>>)`)
+      } else if (isC4 && !C4_HEADER.test(t) && !C4_STMT.test(line)) {
+        // (3) внутри C4-блока — только валидные C4-стейтменты
+        errors.push(`mermaid[${bi + 1}] строка ${li + 1}: «${t.slice(0, 40)}» — не валидный C4-стейтмент ` +
+          `(ожидается Component/Container/Rel/..._Boundary/{ }); копируй шаблон c4, не выдумывай синтаксис`)
+      }
+    })
+  })
+  return errors
+}

@@ -64,7 +64,11 @@ function claudeFile(role, m, body, model) {
 function opencodeFile(role, m, body, model, temp) {
   const modelLine = model ? `model: ${model}\n` : ""
   const temperature = typeof temp === "number" ? temp : m.temperature
-  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${m.mode}\ntemperature: ${temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
+  // Атомарное тестирование шага: субагенты в OpenCode получают mode: all — вызываются
+  // напрямую (`opencode --agent <role>` для теста одного шага) И остаются делегируемыми
+  // из izi. Источник роли (`_shared`) остаётся `subagent` — это семантика контракта.
+  const ocMode = m.mode === "subagent" ? "all" : m.mode
+  return `---\ndescription: ${JSON.stringify(m.description)}\nversion: ${JSON.stringify(m.version)}\nmode: ${ocMode}\ntemperature: ${temperature}\nsteps: ${m.steps}\n${modelLine}${permYaml(m.permission)}\n---\n\n${body}`
 }
 
 function codexFile(role, m, body, _model) {

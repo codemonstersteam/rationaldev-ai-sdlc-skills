@@ -41,6 +41,15 @@ async function run() {
   const after = (await readFile(join(dir, ".agent", "decisions.log"), "utf8")).length
   assert.equal(before, after); pass++
 
+  // H. bash: ЗАПИСЬ маркера gate1 (самоакцепт) блокируется
+  const bash = (c: string) => hooks["tool.execute.before"]({ tool: "bash", args: { command: c } }, { args: { command: c } })
+  await assert.rejects(() => bash("touch .agent/gates/gate1.approved"), /Маркер Gate #1/); pass++
+  await assert.rejects(() => bash("echo ok > .agent/gates/gate1.approved"), /Маркер Gate #1/); pass++
+
+  // I. bash: ЧТЕНИЕ-верификация маркера РАЗРЕШЕНА (izi должен мочь проверить — иначе ложный цикл)
+  await bash("test -f .agent/gates/gate1.approved && echo EXISTS"); pass++
+  await bash("ls .agent/gates/gate1.approved 2>/dev/null"); pass++
+
   // F. Регресс (баг "/"): directory="/" НЕ используется как корень → фоллбэк на cwd, без EROFS-краша.
   const origCwd = process.cwd()
   const cwdTmp = await mkdtemp(join(tmpdir(), "ra-cwd-"))
@@ -62,7 +71,7 @@ async function run() {
   pass++
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/7 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/11 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
