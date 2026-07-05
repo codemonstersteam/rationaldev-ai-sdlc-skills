@@ -45,6 +45,40 @@
 (стенд/кольца/SRE-агент/банк/удалённые скиллы) не осталось. Диаграмма (`docs/SDLC.svg`)
 и презентация (`presentation/sdlc.html`) перерисованы под CI→канарейку.
 
+## Тестовый прогон харнеса — как запускать
+
+1. **Песочница:** `experiments/token-bench/runners/prepare-rational-sandbox.sh` — пересобирает
+   `../test-harnes-rational` (идемпотентно), ставит харнес `--hard` (guardrail-плагин), модели
+   large=GLM-5.2 / medium+small=Qwen3.6-27b через прокси :4000, отключает omo. Перед этим —
+   `tmux kill-server` (tmux только для прогонов харнеса).
+2. **Запуск (наблюдаемый через tmux):** сессия `bench-rational`, в `../test-harnes-rational`
+   `export OPENROUTER_API_KEY=… && opencode --agent izi`. **Точка входа — роль `izi`** (не
+   orchestrator). Операторский промпт минимальный: «Прочитай ./TASK.md и веди задачу».
+3. **Вести прогон:** прокликивать только рутинные `Allow`-пермишены (доступ к `harness/lib`,
+   `harness/*`). Столл субагента диагностировать по `~/.local/share/opencode/log/opencode.log`
+   (`loop step`/`stream`/`llm runtime selected`), не по прокси.
+4. **Gate #1 / #2 — человеческие, НЕ прокликивать.** Оператор акцептует план сам:
+   `touch ../test-harnes-rational/.agent/gates/gate1.approved` — только после реальной оценки
+   плана (валидаторы + вывод mills + сами артефакты). Guardrail до маркера жёстко блокирует
+   @implementer.
+
+## Тестовые прогоны харнеса — где хранить результаты
+
+Два разных места, не путать:
+
+- **Сырьё прогона** → `../test-harnes-data/DD-MM-YYYY/N-harnes/` (сиблинг репо, **не коммитится**,
+  иммутабельно — новый прогон в свою папку, старые не трогать). Структура и пошаговая процедура —
+  в `test-harnes-data/README.md`. Кладём: `agent-trace/` (из песочницы `.agent/`), `project/`
+  (`rsync` снапшот без `.opencode/.agent/harness/test/.git/.env/vendor`), `proxy/` (**срез окна**:
+  `jq 'select(.ts>="<старт-UTC>")'` для `usage.jsonl`+`flow.jsonl`), обязательные `models.md` и
+  `analysis.md` (итог, метрики, фазовый сплит по Gate #1, сравнение с прошлым). Секрет-чек
+  `grep -c 'sk-or-\|Bearer' proxy/*.jsonl` == 0.
+- **Коммитимый синтез/методология** → `experiments/token-bench/*.md` (`EXPERIMENT.md` A/B-таблица,
+  `RUNS.md` кросс-прогонный индекс, `RUNBOOK.md`, `spec/`). Сырые per-run дампы сюда НЕ класть.
+
+Подготовка песочницы — `experiments/token-bench/runners/prepare-rational-sandbox.sh`; экономику
+логирует token-прокси (:4000). Диагностика столла субагента — `~/.local/share/opencode/log/opencode.log`.
+
 ## Фрейм работы с агентом
 
 > Агент: прочитай `CONCEPT.md` и `AGENTS.md` перед тем как отвечать.

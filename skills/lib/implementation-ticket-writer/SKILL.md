@@ -102,8 +102,10 @@ Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT:
 (scaffold + component), or `[03]` where `03` already carries `02`.
 
 - **Dependency order** within modules (a module before its consumers); record `blocked_by`.
-- **One ticket = one subagent = one module** (or one small slice). If two modules always change
-  together, they may share a ticket; otherwise split.
+- **One ticket = one subagent = one module (MUST).** Every module-tree node is its own ticket; a
+  slice of N modules = N module tickets, regardless of slice size. There is **no shared ticket** —
+  what "always changes together" is, by the discipline (one node = one responsibility), a single
+  module, not two.
 - Unit tests live **inside each module ticket** (per formula); component tests are their own earlier ticket.
 
 ## STOP

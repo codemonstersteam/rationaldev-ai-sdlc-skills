@@ -56,7 +56,7 @@ cat <<EOF
 Запуск харнеса:
   cd "$SB"
   export OPENROUTER_API_KEY=$KEY
-  opencode --agent orchestrator     # затем: прочитай ./TASK.md и реализуй
+  opencode --agent izi     # затем: прочитай ./TASK.md и реализуй
 
 Апрув Gate #1 (guardrail жёстко блокирует @implementer до этого; агент маркер не поставит):
   touch "$SB/.agent/gates/gate1.approved"     # ← ставит ОПЕРАТОР, когда принял план
