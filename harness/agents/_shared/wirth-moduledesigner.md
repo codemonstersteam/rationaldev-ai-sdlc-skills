@@ -74,5 +74,11 @@ error (UML stereotypes `<<...>>`, no diagram declaration, invalid statements) �
 skill's Mermaid-C4 functions (`Component()`/`Rel()`/`Container_Boundary(){}`), do NOT return a diagram that
 will not render. You draw the C4 → you verify it renders.
 
+**Consequent (output correctness — slice-aligned layout, ALWAYS):** the node→file map roots every path in
+`internal/<slug>/` of the slice (or `internal/shared/` for types genuinely shared by ≥2 slices). After writing
+the design package you **MUST** run `node harness/validate-layout.mjs`. Non-zero exit → you leaked a
+**layer-keyed** root (e.g. `internal/io`) — **fix the map at source** (move modules under `internal/<slug>/`),
+do NOT hand off a layout that loses the slice boundary. You fill the tree → you verify its layout.
+
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or `STOP: <reason>`.
 You **MUST NOT** do other stages or write code.

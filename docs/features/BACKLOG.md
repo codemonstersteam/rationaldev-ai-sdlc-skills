@@ -19,8 +19,12 @@
 | #41 | Хуки-напоминания (`category-skill-reminder`) | 🟡 P1 | ⏳ не начат; сцеплен с #43 | — |
 | — | **harden-decomposition** (детекторы против переусложнения срезов) | 🔴 P0 | ✅ **реализован** (найден на live-прогоне) — `validate-frd`/`validate-slices` + правила + mills-гейт | [harden-decomposition.md](./harden-decomposition.md) |
 | — | **planning-cost-model-tiering** (Qwen для лёгких Wirth-ролей, GLM для дизайна) | 🟡 P1 | ⏳ идея (планирование $1.12, 50/60 на GLM); валидаторы снижают риск слабой модели | [planning-cost-model-tiering.md](./planning-cost-model-tiering.md) |
+| — | **model-tiering-benchmark** (выбор моделей по ролям через бенчмарк; router izi нестабилен на Qwen) | 🟡 P1 | ⏳ аналитика (live: izi Qwen мис-роутит+кривые tool-call); кандидаты GLM-4.7-Flash/Qwen3.6-Plus/Kimi K2.7; ждёт прогонов | [model-tiering-benchmark.md](./model-tiering-benchmark.md) |
+| — | **git-workflow-steps** (вынести git из program-implementation в отдельные operator-owned шаги; роли git-less) | 🟡 P1 | ⏳ аудит: core-скилл hughes git-driven, а роль git запрещает — мостика нет; git-DoD из ticket-template уже убран | [git-workflow-steps.md](./git-workflow-steps.md) |
 | — | **README + концепт workflow API** (обозначить вектор: оси задача/приложение/среды; C4-граф API-флоу) | 🟡 P1 | ⏳ тикет | [readme-workflow-concept.md](./readme-workflow-concept.md) |
 | — | **template-agent-instrument** (шаблон = инструмент агента: команды тестов + карта структуры в корне) | 🟡 P1 | ⏳ тикет; шаблон-репо | [template-agent-instrument.md](./template-agent-instrument.md) |
+| — | **domain-context-adr-layout** (bounded-context: CONTEXT-MAP + per-slice CONTEXT.md/ADR; слайс=контекст) | 🟡 P1 | ✅ **реализован** — lib-скилл `domain-modeling` (Ф0) + intake/slicer/documentation wired (Ф1–3) + `validate-context-map.mjs` мягкий гейт (Ф4); co-location B, linger ADR lean; 79 тестов | [domain-context-adr-layout.md](./domain-context-adr-layout.md) |
+| — | **slice-aligned-code-layout** (раскладка кода по срезам `internal/<slug>/` — принцип, ВСЕГДА) | 🔴 P0 | ✅ **реализован** — канон `internal/<slug>/`; правки 7 скиллов (карта протечек закрыта) + `validate-layout.mjs` (paths+declarations, 14 тестов); shift-left в 3 рунга (slicer/moduledesigner/ticketer) + gate у mills | [slice-aligned-code-layout.md](./slice-aligned-code-layout.md) |
 
 ## Что дальше (порядок)
 

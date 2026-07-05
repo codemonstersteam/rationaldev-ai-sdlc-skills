@@ -28,7 +28,9 @@ DO:
 DON'T:
 - Design module trees, contracts, or pseudocode (that is `program-design`).
 - Write OpenAPI/AsyncAPI, use cases, tests, or code (later stages / their skills).
-- Put file paths or code snippets into a slice (they go stale).
+- Put detailed file lists or code snippets into a slice (those go stale). **But** the slice's
+  **package root** `internal/<slug>/` is stable = the slice's identity — declare it (see `Owns package:`
+  below). Designing the module *tree* inside that root is `program-design`, not the slicer.
 
 ## Vertical-slice rules (hard)
 
@@ -55,7 +57,7 @@ DON'T:
 |------|------|-----|
 | 1 | Confirm input (FRD + high-level plan present; else STOP → `requirements-intake`) | verified input |
 | 2 | List external inputs of the service (endpoints + consumed messages) | input list |
-| 3 | Map each external input to one slice; name it in glossary terms | draft slices |
+| 3 | Map each external input to one slice; name it + its **bounded context** in glossary terms | draft slices |
 | 4 | Order slices by dependency (blockers first) | ordered list |
 | 5 | Quiz the operator on granularity + dependencies; iterate to approval | approved backlog |
 | 6 | Write `.agent/planner/slices.md` by the template below | slice backlog |
@@ -69,6 +71,21 @@ For each slice show: **Title**, **Blocked by**, **Use case(s) covered**. Ask:
 
 Iterate until the operator approves. **Do not proceed to stage 2 without approval.**
 
+## Bounded context + CONTEXT-MAP (slice = context)
+
+Each slice owns **one bounded context** — name it (glossary terms) in the slice's `Bounded context:` field.
+Format for `CONTEXT-MAP.md` = the **single source** [`domain-modeling`](../domain-modeling/SKILL.md) — do
+**NOT** re-describe it here.
+
+- **Single context** (one slice, or all slices share one context): stays laconic — one root `CONTEXT.md`,
+  **no** `CONTEXT-MAP`.
+- **≥2 contexts:** finalize the root **`CONTEXT-MAP.md`** that intake seeded — **bind** each context to its
+  slice `<slug>` and complete the **Relationships** section (upstream/downstream, shared types → `internal/shared/`).
+  Intake **identified** the contexts; you **bind** them to slugs.
+- **Ordering:** `docs/design/slice-<slug>/` does not exist yet (built by `program-design`). You finalize the
+  **map**; the per-context `CONTEXT.md` co-locates into the design package when it is built (co-location B —
+  knowledge in `docs/design/`, **never** `internal/`).
+
 ## Slice template (one per slice in `slices.md`)
 
 ```md
@@ -76,6 +93,11 @@ Iterate until the operator approves. **Do not proceed to stage 2 without approva
 
 Status: `todo`
 External input: <one endpoint or one consumed message>
+Owns package: `internal/<slug>/`   ← MANDATORY, always (incl. single-slice); the slice's
+                                      code lives here. Layer-keyed roots (internal/httpapi,
+                                      internal/io, …) are forbidden — `program-design` fills
+                                      this root, `validate-layout` gates it.
+Bounded context: <context name in glossary terms>   ← slice = one bounded context
 Use case(s) covered: <ref to Cockburn use case section>
 
 ### What to build

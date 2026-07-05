@@ -34,12 +34,23 @@ into module source — tickets and design artifacts only.
   - `node harness/validate-slices.mjs` — **slices atomic, no over-decomposition** (1 external input = 1 slice;
     scaffold/method/route/config/4xx are NOT slices). Non-zero exit = **blocker → @linger reworks the decomposition**;
   - `node harness/validate-contract-frozen.mjs` — contract complete and frozen (`x-frozen`, paths/responses/schemas);
-  - `node harness/validate-mermaid.mjs` — the slices' `c4.md` Mermaid/C4 renders (no UML stereotypes / syntax errors);
   - `node harness/validate-tickets.mjs` — ticket headers machine-readable (`type`/`blocked_by`/`inputs`
     exist, `skills`==io-router, links intact, one scaffold) — else izi cannot route mechanically;
   - `node harness/validate-plan.mjs` — the plan **as a graph**: `blocked_by` is a **cycle-free DAG**, scaffold
     is the root (everything transitively depends on it), every `module` depends on its `component` (RED-first),
     and **every `TASK.md §Definition of done` line is owned by a ticket** (DoD-closure) — else unbuildable/incomplete.
+  - `node harness/validate-layout.mjs` — **slice-aligned layout (ALWAYS)**: every `internal/…` code path lives
+    under `internal/<slug>/` of a declared slice OR `internal/shared/`; a layer-keyed root (`internal/io`,
+    `internal/httpapi`, `internal/catalog`, …) = **blocker** — the vertical slice boundary is lost in the sources.
+  - `node harness/validate-context-map.mjs` — **context map (S3 coverage, soft)**: only in **multi-context**
+    (≥2 `CONTEXT.md`) — root `CONTEXT-MAP.md` exists, its links resolve, every context is covered, a
+    `Relationships` section is present, ADR numbering is 1..n per dir. Single-context is a no-op (no false blocker).
+
+> **`validate-mermaid` is ADVISORY, not a Gate #1 blocker.** C4 rendering is the `wirth-moduledesigner`
+> **consequent** (single author of `c4.md`, self-checked at source) and a **doc-quality** concern
+> (`doc-quality-review` lens), not plan buildability. A non-rendering diagram → an **advisory** note that does
+> **NOT** hold `OK`. Optionally re-run `node harness/validate-mermaid.mjs docs/design/<slice>/c4.md` as a cheap
+> backstop against a skipped consequent — but never return `blocker` on it alone.
 
 > **You MUST NOT trust the slicer's prose justification** (e.g. "405/404 are distinct inputs"):
 > over-decomposition is caught ONLY by the deterministic `validate-slices` + the "1 endpoint = 1 slice" rule,

@@ -34,7 +34,7 @@ phrase, in one sentence.
 
 #### Mapping a slice onto code (package files)
 
-Each slice is a **self-contained package** `internal/slice/<name>/` with a strict file set;
+Each slice is a **self-contained package** `internal/<slug>/` with a strict file set;
 the tree nodes map onto them one-to-one:
 
 | File | Tree node |
@@ -47,9 +47,12 @@ the tree nodes map onto them one-to-one:
 | `register.go` | `Deps` + wiring the slice to its entry point |
 
 The head is named `Process<Slice>` and lives in `head.go` — visible at once. **Do not** hide
-the head/adapter behind a delegating wrapper: they're exported directly. Cross-cutting things
-(report/response types, autonomous I/O objects, shared egress) go in shared packages
-(`internal/{domain,io,cli}`), not in the slice.
+the head/adapter behind a delegating wrapper: they're exported directly. **Slice-aligned layout —
+ALWAYS:** by default **everything lives in the slice's `internal/<slug>/`** — its I/O adapter
+(`io.go`), domain types, egress. Only types/nodes **genuinely shared by ≥2 slices** move to
+`internal/shared/` (lazily, when the second slice appears); a slice never imports another slice's
+internals. **Forbidden:** layer-keyed roots `internal/{domain,io,cli,httpapi,catalog,storage,config}`
+as a default sink — that leaks the vertical boundary. `cmd/<app>/main` is the only slice-composition point.
 
 #### Hard rule of the single argument (data vs deps)
 

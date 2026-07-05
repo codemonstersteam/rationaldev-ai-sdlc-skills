@@ -7,7 +7,7 @@ mode: subagent
 temperature: 0.2
 steps: 50
 description: "Implementer (Hughes): writes code strictly to one ticket into the working tree (NO git — no branches/commits/PR). After Gate #1 or straight on a trivial task. On FAIL the fixer fixes, not him. Keywords: implementation, code, TDD, module."
-skills: [code-style, communication, component-tests, service-scaffold, documentation, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
+skills: [code-style, communication, component-tests, service-scaffold, documentation, domain-modeling, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
 inputs: [docs/design, .agent/planner/design, gate1]
 outputs: [pr, .agent/decisions.log]
 permission:
@@ -42,7 +42,7 @@ skills = faster, sharper). You **MUST NOT** load io sub-skills or type skills th
   `communication` (minimal patches), `memory`. (Do NOT load `git-conventions` — you do no git.)
 - **io sub-skill — exactly one, from the ticket's `io:` field** (planner's router; you do NOT choose):
   `http-io`(+`llm-client`) / `queue-io` / `db-io`(+`db-schema`). **`io: none` → no io skill.**
-- **By ticket type:** docs → `documentation`, `md-formatting`. Not your type → do not load.
+- **By ticket type:** docs → `documentation`, `md-formatting`; ADR (hard-to-reverse trade-off) → `domain-modeling` (`ADR-FORMAT`). Not your type → do not load.
 
 ## Input (else STOP)
 **ONE ticket** `docs/design/slice-<name>/tickets/ticket-N.md` (not the whole backlog or spec) + the deps it

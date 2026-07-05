@@ -63,7 +63,7 @@ orchestrator (`izi`) can route **mechanically** without reading the body. Use **
 id: 05
 type: module            # scaffold | component | module
 slice: slice-02-catalog
-blocked_by: [01, 04]    # ids of prerequisite tickets (may be [])
+blocked_by: [01, 02, 04] # scaffold(01) + component-RED(02, RED-first EDGE) + any module dep(04). May add more.
 inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
 io: none                # REQUIRED for type: module — none|http|llm|queue|db (router key)
 skills: [db-io, db-schema]
@@ -90,6 +90,16 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
 executable spec modules are built *against* (RED → GREEN), not a check written after unit tests.
+
+**RED-first is a `blocked_by` EDGE, not just list order (HARD).** «Precedes» above is not enough: every
+`module` ticket **MUST** carry the slice's **component-test ticket in its `blocked_by`** — directly, or
+transitively through another module that already does. The component test is **not** a code prerequisite of
+the module (the reverse is true: the test greens *because of* the module), so it feels wrong to list — but
+RED-first requires this edge in the dependency graph so the RED test exists before any module is built.
+`validate-plan.mjs` checks the **edge** (`module → component`), not the list position — omit it and the plan
+is a **blocker** (this is exactly what bounces to `@linger`; wire the edge here and skip the round).
+Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT: `blocked_by: [01, 02]`
+(scaffold + component), or `[03]` where `03` already carries `02`.
 
 - **Dependency order** within modules (a module before its consumers); record `blocked_by`.
 - **One ticket = one subagent = one module** (or one small slice). If two modules always change

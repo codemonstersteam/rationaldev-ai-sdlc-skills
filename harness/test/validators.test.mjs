@@ -1,7 +1,7 @@
 // Юнит-тесты чистых ядер валидаторов (io: none). Формула: 1 happy + по ветке-blocker.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills } from "../lib/validators.mjs"
+import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests } from "../lib/validators.mjs"
 
 // --- validateFrd ---
 const FRD_OK = `# svc — FRD
@@ -216,4 +216,143 @@ test("parseDodNumbers: нумерованный список под §Definition
 })
 test("parseDodNumbers: нет секции → []", () => {
   assert.deepEqual(parseDodNumbers("# T\n## Scope\n1. x\n"), [])
+})
+
+// --- validateLayout (slice-aligned-code-layout, чисто) ---
+const LAYOUT_OK = [
+  "internal/list-services/head.go",
+  "internal/list-services/io.go",
+  "internal/list-services/logic.go",
+  "internal/shared/money.go",
+  "cmd/app/main.go",           // не под internal/ — игнор
+]
+test("validateLayout: slice-aligned + shared → нет ошибок", () => {
+  assert.deepEqual(validateLayout(LAYOUT_OK, ["list-services"]), [])
+})
+test("validateLayout: layer-keyed internal/io → blocker (даже со slugs)", () => {
+  const errs = validateLayout(["internal/io/store.go"], ["list-services"])
+  assert.equal(errs.length, 1)
+  assert.ok(/layer-keyed/.test(errs[0]) && /internal\/io\//.test(errs[0]))
+})
+test("validateLayout: layer-keyed ловится и БЕЗ объявленных срезов", () => {
+  assert.ok(validateLayout(["internal/httpapi/handler.go"], []).some((e) => /layer-keyed/.test(e)))
+})
+test("validateLayout: корень не среза и не shared (slugs есть) → blocker", () => {
+  assert.ok(validateLayout(["internal/orders/head.go"], ["list-services"]).some((e) => /не объявлен ни одним срезом/.test(e)))
+})
+test("validateLayout: неизвестный корень без slugs → НЕ блокируем (консервативно)", () => {
+  assert.deepEqual(validateLayout(["internal/orders/head.go"], []), [])
+})
+test("validateLayout: одна ошибка на корень, не на каждый путь", () => {
+  const errs = validateLayout(["internal/io/a.go", "internal/io/b.go", "internal/io/c.go"], ["s1"])
+  assert.equal(errs.length, 1)
+})
+test("validateLayout: slug с docs-префиксом slice- нормализуется", () => {
+  assert.deepEqual(validateLayout(["internal/list-services/head.go"], ["slice-list-services"]), [])
+})
+test("validateLayout: internal/shared/ разрешён всегда", () => {
+  assert.deepEqual(validateLayout(["internal/shared/customerid.go"], []), [])
+})
+test("validateLayout: markdown-токены с кавычками/backtick чистятся", () => {
+  assert.deepEqual(validateLayout(["`internal/list-services/io.go`", "./internal/list-services/head.go"], ["list-services"]), [])
+})
+
+// --- validateSliceDeclarations (рунг 1: граница объявлена до дизайна) ---
+const SLICES_OK = `# slices
+## Slice inventory
+что-то про инвентарь без Owns package
+## Slice 01: list services by platform
+Status: \`todo\`
+External input: GET /services
+Owns package: \`internal/list-services/\`
+Use case(s): UC1
+## Slice 02: create order
+Owns package: internal/create-order/
+`
+test("validateSliceDeclarations: все срезы объявили Owns package → нет ошибок", () => {
+  assert.deepEqual(validateSliceDeclarations(SLICES_OK), [])
+})
+test("validateSliceDeclarations: срез без Owns package → ошибка", () => {
+  const bad = SLICES_OK.replace("Owns package: `internal/list-services/`\n", "")
+  assert.ok(validateSliceDeclarations(bad).some((e) => /Slice 01.*нет поля Owns package/.test(e)))
+})
+test("validateSliceDeclarations: layer-keyed корень в объявлении → ошибка", () => {
+  const bad = SLICES_OK.replace("internal/create-order/", "internal/httpapi/")
+  assert.ok(validateSliceDeclarations(bad).some((e) => /Slice 02.*layer-keyed/.test(e)))
+})
+test("validateSliceDeclarations: кривая форма (не internal/<slug>/) → ошибка", () => {
+  const bad = SLICES_OK.replace("internal/create-order/", "pkg/orders")
+  assert.ok(validateSliceDeclarations(bad).some((e) => /не вида internal/.test(e)))
+})
+test("validateSliceDeclarations: '## Slice inventory' не считается срезом", () => {
+  // единственная секция среза (01) валидна, inventory без Owns package не даёт ошибки
+  const one = "## Slice inventory\nтекст\n## Slice 01: x\nOwns package: `internal/x/`\n"
+  assert.deepEqual(validateSliceDeclarations(one), [])
+})
+
+// --- validateContextMap (Ф4: карта контекстов + ADR-нумерация) ---
+const CTX2 = ["docs/design/slice-ordering/CONTEXT.md", "docs/design/slice-billing/CONTEXT.md"]
+const MAP_OK = `# Context Map
+## Contexts
+- [Ordering](./docs/design/slice-ordering/CONTEXT.md) — orders
+- [Billing](./docs/design/slice-billing/CONTEXT.md) — invoices
+## Relationships
+- Ordering → Billing: OrderPlaced
+`
+test("validateContextMap: single-context (1 CONTEXT.md, нет карты) → нет ошибок", () => {
+  assert.deepEqual(validateContextMap(["CONTEXT.md"], "", []), [])
+})
+test("validateContextMap: multi + полная карта + ADR 1,2 → нет ошибок", () => {
+  assert.deepEqual(validateContextMap(CTX2, MAP_OK, [{ dir: "docs/adr", numbers: [1, 2] }]), [])
+})
+test("validateContextMap: ≥2 CONTEXT.md без карты → blocker", () => {
+  assert.ok(validateContextMap(CTX2, "", []).some((e) => /нет root CONTEXT-MAP/.test(e)))
+})
+test("validateContextMap: карта без Relationships → blocker", () => {
+  const noRel = MAP_OK.replace(/## Relationships[\s\S]*/, "")
+  assert.ok(validateContextMap(CTX2, noRel, []).some((e) => /Relationships/.test(e)))
+})
+test("validateContextMap: ссылка карты не резолвится → blocker", () => {
+  const bad = MAP_OK.replace("slice-billing/CONTEXT.md", "slice-payments/CONTEXT.md")
+  assert.ok(validateContextMap(CTX2, bad, []).some((e) => /не резолвится.*payments/.test(e)))
+})
+test("validateContextMap: контекст не покрыт картой → blocker (S3)", () => {
+  // billing существует, но карта ссылается только на ordering
+  const partial = MAP_OK.replace(/- \[Billing\][^\n]*\n/, "")
+  assert.ok(validateContextMap(CTX2, partial, []).some((e) => /billing.*не указан/.test(e)))
+})
+test("validateContextMap: дыра в ADR-нумерации → blocker", () => {
+  assert.ok(validateContextMap(["CONTEXT.md"], "", [{ dir: "docs/adr", numbers: [1, 3] }]).some((e) => /дыр/.test(e)))
+})
+test("validateContextMap: дубль ADR-номера → blocker", () => {
+  assert.ok(validateContextMap(["CONTEXT.md"], "", [{ dir: "docs/adr", numbers: [1, 1, 2] }]).some((e) => /дубль/.test(e)))
+})
+
+// --- validateComponentTests (защита оракула) ---
+const FEAT_OK = { business: ["1. Happy", "2. Empty store", "3. Not found", "4. Malformed"], wip: 4, smoke: 1 }
+test("validateComponentTests: полное покрытие + все @wip + smoke + N совпал → нет ошибок", () => {
+  assert.deepEqual(validateComponentTests(FEAT_OK, 4), [])
+})
+test("validateComponentTests: declaredN=null → сверка с дизайном мягко пропущена", () => {
+  assert.deepEqual(validateComponentTests(FEAT_OK, null), [])
+})
+test("validateComponentTests: #сценариев ≠ дизайн N → blocker (пропуск/выдумка)", () => {
+  assert.ok(validateComponentTests(FEAT_OK, 5).some((e) => /≠ дизайн N=5/.test(e)))
+})
+test("validateComponentTests: не все @wip → blocker (гейминг)", () => {
+  assert.ok(validateComponentTests({ ...FEAT_OK, wip: 3 }, 4).some((e) => /@wip/.test(e)))
+})
+test("validateComponentTests: нет smoke → blocker (обвязка не доказана)", () => {
+  assert.ok(validateComponentTests({ ...FEAT_OK, smoke: 0 }, 4).some((e) => /smoke/.test(e)))
+})
+test("validateComponentTests: дыра в нумерации сценариев → blocker (пропущен)", () => {
+  const gap = { business: ["1. a", "2. b", "4. d"], wip: 3, smoke: 1 }
+  assert.ok(validateComponentTests(gap, null).some((e) => /нумераци/.test(e)))
+})
+test("validateComponentTests: дубль сценария → blocker", () => {
+  const dup = { business: ["1. a", "1. a"], wip: 2, smoke: 1 }
+  assert.ok(validateComponentTests(dup, null).some((e) => /дубль/.test(e)))
+})
+test("validateComponentTests: пустой (только smoke) → blocker", () => {
+  assert.ok(validateComponentTests({ business: [], wip: 0, smoke: 1 }, null).some((e) => /покрытие не реализовано/.test(e)))
 })

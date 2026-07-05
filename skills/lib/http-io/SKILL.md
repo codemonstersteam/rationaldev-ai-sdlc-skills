@@ -139,9 +139,9 @@ The spec carries into both test layers; the two budget formulas become **asserti
 
 ## I/O object shape
 
-Like all I/O in `internal/io`: an autonomous object hiding its dependency; each method
+Like all slice I/O in `internal/<slug>/io.go`: an autonomous object hiding its dependency; each method
 is a **pipe** (one message → external call → result/domain error); the only branching
-is mapping an external code to a domain sentinel.
+is mapping an external code to a domain sentinel. (A client shared by ≥2 slices → `internal/shared/`.)
 
 | Failure class | Nature | Action | LLM example |
 |---|---|---|---|
@@ -186,5 +186,5 @@ Stop and ask the operator, don't guess:
 
 ## Before commit
 
-`gofmt -l ./internal/slice/<name>/` (empty = clean) and, on a new dependency, `go.sum`
+`gofmt -l ./internal/<slug>/` (empty = clean) and, on a new dependency, `go.sum`
 committed + copied into `Dockerfile.runtime`. Details — [`llm-client`](../llm-client/SKILL.md) → "Before commit".

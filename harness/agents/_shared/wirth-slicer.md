@@ -7,9 +7,9 @@ mode: subagent
 temperature: 0.3
 steps: 20
 description: "Stage 1: FRD → atomic vertical slices (1 external input = 1 slice; failures/framework/boot/scaffold are NOT slices). Keywords: slices, vertical, decomposition."
-skills: [vertical-slices]
+skills: [vertical-slices, domain-modeling]
 inputs: [.agent/planner/frd.md]
-outputs: [.agent/planner/slices.md]
+outputs: [.agent/planner/slices.md, CONTEXT-MAP.md]
 permission:
   read: allow
   grep: allow
@@ -30,13 +30,15 @@ permission:
     "*": allow
   edit:
     ".agent/**": allow
+    "CONTEXT-MAP.md": allow
     "*": deny
 ---
 
 # wirth-slicer — pipeline stage (izi: Wirth)
 
 You are **ONE stage**; `izi` calls you directly (depth 1).
-**Load ONLY the `vertical-slices` skill** (small fresh context).
+**Load the `vertical-slices` skill** (entry — small fresh context); pull in **`domain-modeling` on demand**
+for the `CONTEXT-MAP` **format** (loads only when ≥2 contexts and you finalize the map — allowlist, not preload).
 
 **In:** `.agent/planner/frd.md`. **Out:** `.agent/planner/slices.md` (ordered slice backlog).
 
@@ -51,6 +53,12 @@ type!)**, internal-error are **NOT external inputs → NOT slices** (they are Ex
 slice). One endpoint → **exactly one slice**. **Consequent (self-check before returning):** you **MUST** run
 `node harness/validate-slices.mjs`. Non-zero exit → you have pseudo-slices / over-decomposition — **merge
 them** and re-check; do NOT return an inflated package.
+
+**Package boundary (HARD):** every slice **MUST** declare its stable package root `Owns package:
+internal/<slug>/` — the slice's identity; you set the *boundary*, `program-design` fills the *tree* (never a
+layer-keyed root like `internal/io`). **Consequent (self-check before returning):** you **MUST** run
+`node harness/validate-layout.mjs --declarations`. Non-zero exit → a slice has no / a malformed / a layer-keyed
+`Owns package:` — **fix the declaration** so the boundary is named before design begins.
 
 **Return contract (for izi's mechanical routing):** you **MUST** return **one line with the SLICE LIST** in
 dependency order so izi can iterate without reading the artifact:

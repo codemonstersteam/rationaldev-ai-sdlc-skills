@@ -8,6 +8,14 @@ import { join } from "node:path"
 
 const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
 
+// Замкнутый набор пайплайн-ролей. Делегация `task` кому-либо вне набора (@general и пр.) —
+// мис-роутинг: izi должен повторить ТУ ЖЕ стадию или escalate, а не выдумывать агента.
+const PIPELINE = new Set([
+  "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
+  "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
+  "scaffolder", "hughes", "wirth-tester", "linger", "michtom",
+])
+
 function pickRole(args: unknown): string {
   if (!args || typeof args !== "object") return "unknown"
   const a = args as Record<string, unknown>
@@ -70,6 +78,21 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
       if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
+
+      // (1) Замкнутый набор: делегация вне пайплайн-ролей запрещена (ловит @general/мис-роут в источнике).
+      // "unknown" (роль не резолвится из args) — НЕ блокируем, чтобы не давать ложных срабатываний.
+      if (role !== "unknown") {
+        const r = role.toLowerCase().replace(/^@/, "").trim()
+        if (!PIPELINE.has(r)) {
+          throw new Error(
+            "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
+            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/michtom). " +
+            "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
+            "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
+          )
+        }
+      }
+
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
       if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") return
       if (!(await exists(review)) || !(await exists(gate1))) {

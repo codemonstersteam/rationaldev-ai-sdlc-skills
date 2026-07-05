@@ -239,14 +239,14 @@ An event happened → find the row → update exactly the listed files.
 | New endpoint / contract change | `api-specification/`, `README.md` (API table + pipe) |
 | Entry point change or new domain | `docs/architecture.md` (flowchart, proc. B) |
 | New / changed slice or external input | `docs/architecture.md` (C3 tree, C4 use case + extensions, proc. B3/B4), `README.md` (failure table) |
-| Significant architectural choice | `docs/adr/` + a line in `CLAUDE.md` (Decisions) |
+| Significant architectural choice | context-local → `docs/design/slice-<slug>/adr/`; system-wide → root `docs/adr/` (+ line in `CLAUDE.md`) |
 | Step merge | `CLAUDE.md` (Module status, Next step), `backlog.md` (Done) |
 | Repo structure / run method change | `README.md` (Structure, Run) |
 | Development step completed | `devlog/NN-topic.md` |
 
 Format templates:
 - Devlog entry: [`docs/templates/devlog.md`](../../docs/templates/devlog.md) — after each step's merge.
-- ADR: [`docs/templates/adr.md`](../../docs/templates/adr.md) — on a significant technology/pattern/structure choice.
+- ADR: format + numbering + three-condition «offer sparingly» → [`domain-modeling`](../domain-modeling/SKILL.md) → `ADR-FORMAT` (single source). Placement: context-local → `docs/design/slice-<slug>/adr/`, system-wide → `docs/adr/`.
 
 ---
 

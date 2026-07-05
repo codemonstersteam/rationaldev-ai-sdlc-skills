@@ -86,6 +86,13 @@
       "description": "Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker models — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing)."
     },
     {
+      "name": "domain-modeling",
+      "path": "skills/lib/domain-modeling/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Single source of the domain-model FORMAT for the planning pipeline — CONTEXT.md (ubiquitous language), ADR (decisions), CONTEXT-MAP (multi-context). The *active* discipline of sharpening the model (challenge terms, invent edge cases, write it down the moment it crystallises); merely *reading* CONTEXT.md is a one-line habit, not this skill. Consumed by requirements-intake (pins CONTEXT.md), vertical-slices (names bounded contexts + relationships), documentation (writes ADRs) — they reference this for format, never duplicate it. Rule: slice = bounded context; knowledge co-located in docs/design/slice-<slug>/, code in internal/<slug>/, bound by one slug. Lazy — create a file only when there is something to write. Do NOT use to design module trees (that is program-design) or to write code."
+    },
+    {
       "name": "git-conventions",
       "path": "skills/lib/git-conventions/SKILL.md",
       "version": "1.0",
@@ -237,7 +244,8 @@
     {
       "role": "wirth-intake",
       "skills": [
-        "requirements-intake"
+        "requirements-intake",
+        "domain-modeling"
       ],
       "inputs": [
         "requirements"
@@ -245,19 +253,22 @@
       "outputs": [
         ".agent/planner/frd.md",
         "api-specification",
-        "CONTEXT.md"
+        "CONTEXT.md",
+        "CONTEXT-MAP.md"
       ]
     },
     {
       "role": "wirth-slicer",
       "skills": [
-        "vertical-slices"
+        "vertical-slices",
+        "domain-modeling"
       ],
       "inputs": [
         ".agent/planner/frd.md"
       ],
       "outputs": [
-        ".agent/planner/slices.md"
+        ".agent/planner/slices.md",
+        "CONTEXT-MAP.md"
       ]
     },
     {
@@ -382,6 +393,7 @@
         "component-tests",
         "service-scaffold",
         "documentation",
+        "domain-modeling",
         "http-io",
         "llm-client",
         "queue-io",
@@ -424,7 +436,8 @@
         "git-conventions",
         "memory",
         "program-implementation",
-        "security"
+        "security",
+        "domain-modeling"
       ],
       "inputs": [
         "pr",

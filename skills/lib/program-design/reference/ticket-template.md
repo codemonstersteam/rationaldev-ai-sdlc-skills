@@ -17,7 +17,8 @@ the substitution table from Step 11.
 **Dependencies:** <S<m>, S<k> — what exactly is imported (types, I/O objects)>.
 No new external Go dependencies. (or: new go.mod entries: <list>)
 
-**Branch:** `feat/slice-<name>`
+**Git:** branch / PR / merge are **workflow-level** (operator-owned, one level up) — **NOT** part of this
+module-ticket's DoD. The implementer writes files into the working tree only; git is a separate workflow step (backlog).
 
 **Definition of Done:**
 
@@ -36,8 +37,7 @@ No new external Go dependencies. (or: new go.mod entries: <list>)
   Previously green scenarios S1–S<m> still pass.
 - [ ] `backlog.md` updated per each confirmed item
 - [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block
-- [ ] PR created, description filled by the skill's Step 8 template
-- [ ] PR merged into main, CI on main green
+- [ ] (git branch/PR/merge — workflow-level, not this ticket's DoD; see backlog)
 
 **Source links:**
 - Implementation skill: `program-implementation`
@@ -58,25 +58,27 @@ same layout holds for an HTTP endpoint):
 - `.agent/planner/design/<slug>/slices/<n>-<name>.md` (main document)
 - `.agent/planner/design/<slug>/messages.md` — `<Type1>`, `<Type2>`, `<Type3>`
 - `.agent/planner/design/<slug>/contracts-graph.md` — section "S<n> <name>"
-- `.agent/planner/design/<slug>/infrastructure.md` — wiring in `internal/cli/cli.go`
+- `.agent/planner/design/<slug>/infrastructure.md` — slice composition in `cmd/<app>/main.go`
 
 **Dependencies:** S<m> (in main) — `<Store>`, `<Sink>`, `New<Target>`,
 `NewConfig`, `buildReport`, egress. No new external Go dependencies.
 
-**Branch:** `feat/slice-<name>`
+**Git:** branch / PR / merge are **workflow-level** (operator-owned, one level up) — **NOT** part of this
+module-ticket's DoD. The implementer writes files into the working tree only; git is a separate workflow step (backlog).
 
 **Definition of Done:**
 
-- [ ] `internal/slice/<name>/domain.go`: types `<Type1>{...}`,
+- [ ] `internal/<slug>/domain.go`: types `<Type1>{...}`,
   `<Type2>{...}`, `<Type3>`; constructor `New<Type3>(input) -> <Type3>`
-- [ ] `internal/slice/<name>/logic.go`: `<extractX>`, `<verifyX>`,
+- [ ] `internal/<slug>/logic.go`: `<extractX>`, `<verifyX>`,
   `<buildX>`, `<mergeX>`, `New<Report>`, `<buildOutcome>`
   — pure functions, no I/O
-- [ ] `internal/io/<dep>.go`: interface `<Dep>` + `<NoopDep>{}` (null-object)
-- [ ] `internal/slice/<name>/adapter.go`: `ParseArgs(args,stderr) -> (Request, error)`
-- [ ] `internal/slice/<name>/head.go`: `Process<Slice>(req, Deps) -> (Report, error)`
-- [ ] `internal/slice/<name>/register.go`: `Deps{Store, <Dep>}` + `NewDeps`
-- [ ] `internal/cli/cli.go`: `run<Slice>Cmd` added, `"<name>"` removed from `subcommandsTodo`
+- [ ] `internal/<slug>/io.go`: interface `<Dep>` + `<NoopDep>{}` (null-object)
+  (shared by ≥2 slices → `internal/shared/`, not layer-keyed `internal/io`)
+- [ ] `internal/<slug>/adapter.go`: `ParseArgs(args,stderr) -> (Request, error)`
+- [ ] `internal/<slug>/head.go`: `Process<Slice>(req, Deps) -> (Report, error)`
+- [ ] `internal/<slug>/register.go`: `Deps{Store, <Dep>}` + `NewDeps`
+- [ ] `cmd/<app>/main.go`: `run<Slice>Cmd` wired, `"<name>"` removed from `subcommandsTodo`
 - [ ] unit tests by formula written and green — `go test ./...` passes.
   **<N> new tests**: `<extractX>`(2) + `New<Type3>`(1) + `<verifyX>`(3)
   + `<buildX>`(3) + `<mergeX>`(3) + `New<Report>`(1)
@@ -87,8 +89,7 @@ same layout holds for an HTTP endpoint):
   Previously green scenarios S1–S<m> still pass.
 - [ ] `backlog.md` updated per each confirmed item
 - [ ] `.agent/planner/design/<slug>/devlog.md` appended with an S<n> block
-- [ ] PR created, description filled by the skill's Step 8 template
-- [ ] PR merged into main, CI on main green
+- [ ] (git branch/PR/merge — workflow-level, not this ticket's DoD; see backlog)
 
 **Source links:**
 - Implementation skill: `program-implementation`

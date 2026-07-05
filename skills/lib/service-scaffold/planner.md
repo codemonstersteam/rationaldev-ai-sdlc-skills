@@ -39,6 +39,14 @@ The whole repo: `component-tests/` harness (runner, base steps, compose, `script
 green smoke), `cmd/<svc>/main.go` placeholder (`501` except `/health`), `api-specification/`
 skeleton, `go.mod`/`Dockerfile`/compose. See `component-tests` for the layout.
 
+**Slice-aligned clean by construction.** The template is already slice-aligned: its only `internal/`
+code is the **config seam at `internal/shared/config`** (shared infra/kernel, NOT a layer-keyed root).
+A fresh clone therefore passes `validate-layout` (`internal/shared/` is allowed). The scaffold ticket
+**MUST NOT** ask for a layer-keyed `internal/config` / `internal/<role>` — the config seam already lives
+in `internal/shared/`; the slice's own packages `internal/<slug>/…` are created later by module tickets,
+not here. State the scaffold's layout acceptance as **`validate-layout.mjs` exits 0** (which forbids *any*
+layer-keyed root), not a hand-listed set of forbidden names (a literal model treats the list as exhaustive).
+
 ## Foundations
 
 Preconfigured stack templates (registry: [`docs/templates/README.md`](../../../docs/templates/README.md)),

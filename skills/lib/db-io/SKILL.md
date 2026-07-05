@@ -64,7 +64,8 @@ when the DB is networked), so an embedded-SQLite slice specs `locked + disk_full
 
 ## Store object shape
 
-Autonomous object in `internal/io` hiding `*sql.DB`/pool; each method is a **pipe**:
+Autonomous object in the slice's `internal/<slug>/io.go` hiding `*sql.DB`/pool; each method is a
+**pipe** (a `*sql.DB`/pool shared by ≥2 slices lives in `internal/shared/`, not a layer-keyed `internal/io`):
 
 - `Load(key) -> (T, error)` / `Save(cmd) -> error` — one operation, one mode; map DB error →
   sentinel; a write with no useful output returns `error` only (`program-design` Step 5).

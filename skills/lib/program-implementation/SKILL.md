@@ -65,6 +65,7 @@ git checkout -b feat/slice-<name>
 Rule: a new branch is **always** off fresh main — never off yesterday's branch.
 
 ### Step 2. Read the slice spec
+> **Ticket-by-ticket (`@hughes`/`@scaffolder`): read ONLY the ticket + its `inputs:` (→ `docs/design/slice-<name>/`, NOT the planner's `.agent/planner/design/<slug>/`), not the whole package below.**
 
 - `slices/<n>-<name>.md` — module tree, contracts, and the **`## Gherkin-mapping`** table
   (each Gherkin Then-step → call-graph node);
@@ -202,17 +203,17 @@ typos **before** they go public (push triggers CI; undoing a pushed message is a
 
 ```bash
 # 1. Head knows no I/O deps — if you see sql/http/amqp/kafka, move it into the I/O object.
-grep -rn "database/sql\|net/http\|\"io\"\|amqp\|kafka" internal/slice/*/head.go
+grep -rn "database/sql\|net/http\|\"io\"\|amqp\|kafka" internal/*/head.go
 
 # 2. Tests don't call the head — its correctness is proven by a component scenario, not a
 #    unit. A Process*/Handle* call in *_test.go → delete the whole test block.
-grep -rn "^func Test" internal/slice/*/*_test.go | grep -iE "Process|Handle|Head|Orchestrat"
+grep -rn "^func Test" internal/*/*_test.go | grep -iE "Process|Handle|Head|Orchestrat"
 
 # 3. No test doubles (stubs/fakes/mocks). Only exception: testClock (time injection).
-grep -rn "^type.*struct{}" internal/slice/*/*_test.go | grep -iv "testclock\|testClock"
+grep -rn "^type.*struct{}" internal/*/*_test.go | grep -iv "testclock\|testClock"
 
 # 4. Deps has no fields for test substitution — each field is one real dependency.
-grep -n "func(" internal/slice/*/register.go
+grep -n "func(" internal/*/register.go
 ```
 
 **Trap:** a head test against real in-memory SQLite still breaks the rule — the head is never
@@ -289,8 +290,7 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for the next
-ticket (a `backlog.md` ticket whose dependencies are done → new branch off fresh main).
+The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for the next ticket (a `backlog.md` ticket whose deps are done → new branch off fresh main).
 
 ## Definition of Done (whole package)
 

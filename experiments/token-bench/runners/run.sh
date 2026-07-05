@@ -19,22 +19,22 @@ M="${TIER_MEDIUM:-$(jq -r '.opencode.tiers.medium // ""' "$CFG")}"
 S="${TIER_SMALL:-$(jq -r '.opencode.tiers.small // ""' "$CFG")}"
 [ -n "$L" ] && [ -n "$M" ] && [ -n "$S" ] || { echo "модели не заданы в $CFG (opencode.tiers)"; exit 1; }
 echo "модели по тирам: large=$L medium=$M small=$S"
-MAX="${MAX_SECONDS:-1800}"; SES="${SES:-bench-$ARM}"
+MAX="${MAX_SECONDS:-7200}"; SES="${SES:-bench-$ARM}"
 command -v tmux >/dev/null || { echo "нужен tmux"; exit 1; }
 
 sh "$HERE/reset.sh" "$SB" >/dev/null   # чистый go-модуль + services.yaml + TASK.md
 
 if [ "$ARM" = opencode ]; then
-  # харнес rationaldev для OpenCode + enforcement-адаптер (guardrail)
+  # харнес rationaldev (v2 flat) для OpenCode + enforcement-адаптер (guardrail).
+  # Модели проставляет gen-agents по тирам из harness/models.config.json при install — НЕ инжектим
+  # (роли orchestrator/planner/… в v2 не существуют; вход — primary-роль izi).
   ( cd "$BUNDLE" && sh install.sh opencode "$SB" --hard >/dev/null )
-  inject() { f="$SB/.opencode/agent/$1.md"; [ -f "$f" ] || return 0; s="$(readlink "$f" 2>/dev/null || echo "$f")"
-    awk -v m="$2" 'NR==1&&/^---/{print; print "model: " m; next}1' "$s" > "$f.t"; rm -f "$f"; mv "$f.t" "$f"; }
-  # 6 ролей rationaldev по тирам
-  inject orchestrator "$L"; inject planner "$L"; inject plan-reviewer "$L"
-  inject implementer "$S"; inject fixer "$L"; inject release-health "$M"
-  AGENTFLAG="--agent orchestrator"
-  # авто-аппрув Gate #1 (плагин блокирует @implementer)
-  ( i=0; while [ "$i" -lt "$MAX" ]; do [ -f "$SB/.agent/plan-reviewer/plan-review.md" ] && { mkdir -p "$SB/.agent/gates"; touch "$SB/.agent/gates/gate1.approved"; break; }; i=$((i+1)); sleep 2; done ) &
+  AGENTFLAG="--agent izi"
+  # Gate #1: по умолчанию ПАУЗА для ревью — guardrail держит имплементера до gate1.approved,
+  # который ставит ОПЕРАТОР. AUTO_GATE1=1 → авто-аппрув (hands-off, старый флоу).
+  if [ "${AUTO_GATE1:-}" = 1 ]; then
+    ( i=0; while [ "$i" -lt "$MAX" ]; do [ -f "$SB/.agent/plan-reviewer/plan-review.md" ] && { mkdir -p "$SB/.agent/gates"; touch "$SB/.agent/gates/gate1.approved"; break; }; i=$((i+1)); sleep 2; done ) &
+  fi
 else
   AGENTFLAG=""   # omo: глобальный плагин, дефолтный агент
 fi
@@ -43,7 +43,7 @@ tmux kill-session -t "$SES" 2>/dev/null || true
 tmux new-session -d -s "$SES" -x 210 -y 52 -c "$SB"
 tmux send-keys -t "$SES" "export ANTHROPIC_API_KEY='${ANTHROPIC_API_KEY:-}'${XDG_CONFIG_HOME:+ XDG_CONFIG_HOME='$XDG_CONFIG_HOME'}; opencode $AGENTFLAG" Enter
 sleep 12
-PROMPT='Read ./TASK.md in the CURRENT directory and implement it fully HERE per its requirements (modular service with internal/ packages, OpenAPI in api-specification/, config from file/env no hardcode, Gherkin component tests in Docker via godog, unit tests, README with failure-mode map). Do not search outside. Done = sh ./run-tests.sh exits 0. Start now.'
+PROMPT='Прочитай ./TASK.md в текущей директории и веди задачу до конца здесь. Не ищи снаружи. Готово = sh ./run-tests.sh даёт exit 0.'
 tmux send-keys -t "$SES" -l "$PROMPT"; tmux send-keys -t "$SES" Enter
 
 # наблюдение + авто-allow permission-промптов

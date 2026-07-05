@@ -60,7 +60,8 @@ failure surface / use-case Extension (`asyncapi-spec`, `cockburn-use-case`).
 
 ## I/O object shape
 
-Autonomous object in `internal/io` hiding the broker connection; each method is a **pipe**:
+Autonomous object in the slice's `internal/<slug>/io.go` hiding the broker connection; each method is
+a **pipe** (one broker connection shared by ≥2 slices → `internal/shared/`, not a layer-keyed `internal/io`):
 
 - **Publisher:** `Publish(msg) -> error` — send one message; map broker error → sentinel; carry the
   **idempotency key**. No success payload beyond ok/err.

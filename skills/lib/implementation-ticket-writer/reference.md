@@ -45,6 +45,12 @@ becomes a mid-implementation surprise → wasted fixer round).
   **distinct** from the component-test harness (which lives under `component-tests/`); state the **exact
   target path** for each so the implementer does not confuse them.
 - Every DoD item → its own `[ ]` acceptance line with the path; the ticket is done only when all are checked.
+- **Number-tag each closure line `DoD-<n>` (MUST — not just a path).** `validate-plan.mjs` checks DoD-closure
+  by matching the literal token `DoD-<n>` against the **numbered** `TASK.md §Definition of done` list — a path
+  alone does not satisfy it. So write e.g. `- [ ] DoD-3: root Dockerfile at ./Dockerfile`. (This requires
+  TASK's Definition-of-done to be a **numbered** list; if it isn't, that's an upstream FRD/TASK defect.)
+  The token is the *bridge* between the prose acceptance line and the deterministic gate — omit it and a
+  well-formed ticket still bounces to `@linger` as "DoD-замыкание неполно".
 
 ## Foundations
 

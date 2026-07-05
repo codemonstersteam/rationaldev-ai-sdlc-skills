@@ -23,6 +23,16 @@ async function run() {
   // B. Прочие роли проходят свободно
   await hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }); pass++
 
+  // B2. Делегация ВНЕ пайплайн-набора (@general / general-purpose) блокируется в источнике (мис-роут)
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("general"), { args: { subagent: "general" } }),
+    /вне пайплайн-набора/,
+  ); pass++
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("general-purpose"), { args: { subagent: "general-purpose" } }),
+    /вне пайплайн-набора/,
+  ); pass++
+
   // C. После апрува implementer проходит
   await mkdir(join(dir, ".agent", "plan-reviewer"), { recursive: true })
   await writeFile(join(dir, ".agent", "plan-reviewer", "plan-review.md"), "OK")
@@ -71,7 +81,7 @@ async function run() {
   pass++
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/11 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/13 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
