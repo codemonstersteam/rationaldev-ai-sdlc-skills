@@ -84,9 +84,8 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 1. **spec** — OpenAPI/AsyncAPI frozen (stages 3–4; usually already done in the design package);
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
 3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip` (`component-tests`) — **precedes every module ticket**;
-4. **module tickets** — one per module, each carrying **its own unit tests by formula** (io-router applied);
-5. **docs** (README) + wiring;
-6. component tests turn **GREEN** as the slice assembles → **fixer** removes `@wip`.
+4. **module tickets** — one per module-tree node (cutting formula below);
+5. **final** — entrypoint wiring + README + `DoD-N` closure (green comes later, from the fixer).
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
 executable spec modules are built *against* (RED → GREEN), not a check written after unit tests.
@@ -101,12 +100,25 @@ is a **blocker** (this is exactly what bounces to `@linger`; wire the edge here 
 Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT: `blocked_by: [01, 02]`
 (scaffold + component), or `[03]` where `03` already carries `02`.
 
-- **Dependency order** within modules (a module before its consumers); record `blocked_by`.
-- **One ticket = one subagent = one module (MUST).** Every module-tree node is its own ticket; a
-  slice of N modules = N module tickets, regardless of slice size. There is **no shared ticket** —
-  what "always changes together" is, by the discipline (one node = one responsibility), a single
-  module, not two.
-- Unit tests live **inside each module ticket** (per formula); component tests are their own earlier ticket.
+### Cutting formula (antecedent → consequent)
+
+`T = 1 scaffold + 1 component(RED,@wip) + N + 1 final` — **N = module-tree node count**. Dependency-order
+the module tickets (a module before its consumers) via `blocked_by`.
+
+**One ticket = one contract (MUST):** one antecedent **P** (`Input`+`Deps`) → one consequent **Q**
+(`Result<T,E>`). Two P→Q in a ticket = ≥2 modules → split; "always changes together" is one module (one
+responsibility), never a shared ticket. Acceptance verifies only the ticket's **Q** — unit tests by
+formula (io-testable node) **or** the component scenario(s) it greens (pipe/io node, no units). Green /
+`@wip`-removal is **not** a deliverable — it is the fixer's act (§6). `final` implements no module:
+wiring + README + `DoD-N` only.
+
+## Self-check (before handing to `@mills` — MUST; any No ⇒ fix first)
+
+1. Count == `1+1+N+1` and module tickets ↔ tree nodes are **bijective** (no node unowned, none owning two).
+2. No module ticket carries >1 contract (>1 P→Q).
+3. `final` implements no module logic — only wiring + README + `DoD-N`.
+4. No ticket delivers "all scenarios green" / "assemble the service"; green is nowhere a deliverable (fixer's, §6).
+5. Each ticket completes from only `{ticket + inputs}` — self-contained, Qwen-sized.
 
 ## STOP
 
