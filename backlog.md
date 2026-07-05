@@ -65,6 +65,18 @@ orchestrator) · `medium`=sonnet (release-health) · `small`=haiku (implementer)
   self-check в манифесте ticketer (коммит `f362b3b`) и валидатором биекции как гейтом. Решить: генератор
   (решение убрано у GLM) vs формула+гейт (GLM режет, гейт ловит). См. сессию 05-07.
 
+### Флаки tool-call Qwen-имплементера (dropout)
+Прогон 05-07/2-harnes: Qwen (`hughes`) на ticket-07 выдал tool-call с несуществующим именем →
+OpenCode отбил как «unavailable tool 'unknown'» → пустой возврат → dropout (2 ретрая, дожал @linger).
+Диагностика — `~/.local/share/opencode/log/opencode.log` + `opencode.db` (part-таблица). Причина —
+формат function-call модели, **не** размер/декомпозиция тикета (head/logic/Store прошли чисто).
+- [ ] **Пин провайдера OpenRouter для Qwen** (как `GLM_IGNORE_PROVIDERS=Novita`) — возможно, кривой
+  формат даёт конкретный провайдер-роут; проверить до смены модели. _Дёшево, первый шаг._
+- [ ] **Харнес-митигейт:** на «unavailable tool 'unknown'» — не отдавать пустой результат вверх, а
+  ретраить подагента с repair-подсказкой (доступные тулы) → следствие: одиночный кривой вызов не роняет тикет.
+- [ ] **Свап small-тира** на модель с надёжным structured tool-calling того же класса (~24–32B) —
+  если пин+митигейт не снимают. A/B через прокси, тиры в `models.config.json` свап-абельны.
+
 ### Скиллы из `SKILLS-BACKLOG.md` (детерминированные процедуры)
 Очередь и DoD — в [`SKILLS-BACKLOG.md`](SKILLS-BACKLOG.md). Кратко по приоритету:
 - [ ] **P0** `canary-release` — выкат канарейкой за тогглом на вариативную среду (роль Michtom)
