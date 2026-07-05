@@ -55,6 +55,14 @@ ALWAYS:** by default **everything lives in the slice's `internal/<slug>/`** — 
 internals. **Forbidden:** layer-keyed roots `internal/{domain,io,cli,httpapi,catalog,storage,config}`
 as a default sink — that leaks the vertical boundary. `cmd/<app>/main` is the only slice-composition point.
 
+**Composition root is a module — give it a contract.** `register.go` + `cmd/<app>/main` wire objects,
+so they get a Step-5 contract like `head`:
+- **Antecedent:** every module object is constructed.
+- **Consequent:** the service is wired to its route and serves; bad config → fail fast.
+- Contract-less nodes are ONLY `domain.go` (types) and `errors.go` (sentinels): they declare, they don't wire.
+- Never mark the composition root "no contract" → its ticket has no signatures to inline → the implementer
+  reads the whole tree to find them → dropout.
+
 #### Hard rule of the single argument (data vs deps)
 
 "One input" is read literally: **each tree node takes exactly one `data` entity** on input —
