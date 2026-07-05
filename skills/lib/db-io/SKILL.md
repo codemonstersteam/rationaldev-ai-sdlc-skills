@@ -16,18 +16,13 @@ designs the object and its failure surface.
 > queries) are closed in **design** — transaction boundary and isolation decided before code — not
 > in coding.
 
-## The Store is a pure pipe (no transformations, not unit-tested)
+## The Store is a pure pipe, NOT unit-tested — `program-design` Step 6 (empty-pipe rule)
 
-The Store only **carries data**: take the domain command/query → run the SQL → return typed rows or
-a mapped error. **No transformations, no data branching** (the only allowed branch is DB error →
-domain error, e.g. `SQLITE_BUSY → ErrDBLocked`). Reshaping/validating/computing over the data is a
-**logic module upstream**, not the Store.
-
-**Therefore the Store is NOT unit-tested** (a test against `:memory:` is a small integration test,
-not a unit). Unit-test the **logic module that builds the command** — its unit tests assert the
-exact payload (the contract) that enters the Store — and the pure **row → domain** mapping. We
-**expect the Store to persist/fetch that payload unchanged.** Success/failure is proven by component
-scenarios. See `program-design` Step 6 and Step 8.2 (no I/O rows in the unit table).
+Carries data only: domain command/query → SQL → typed rows / mapped error (only branch: DB error → domain
+error, e.g. `SQLITE_BUSY → ErrDBLocked`). Reshaping/validating/computing is a **logic module upstream**.
+**Therefore the Store is NOT unit-tested** (`:memory:` is a small integration test, not a unit): unit-test
+the logic module that builds the command (asserts the exact payload = the contract) + the pure row→domain
+mapping; the Store persists/fetches it unchanged. Success/failure → component scenarios (Step 8.2: no I/O rows in the unit table).
 
 ## Transactions & isolation — design parameters, not defaults
 

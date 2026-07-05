@@ -98,7 +98,7 @@ For the slice, these counts MUST match:
 
 - `docs/design/<slice>/use-case.md` exists, one fully-dressed UC, all template fields filled.
 - One trigger; user-goal level; glossary terms only.
-- `#Extensions == #failure-mode rows == #error codes` for the slice.
+- `#consumer-visible Extensions == #failure-mode rows == #error codes` for the slice.
 
 ## Foundations
 

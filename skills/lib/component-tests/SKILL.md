@@ -134,8 +134,10 @@ action (none / alert / escalate). If all four match, the modes collapse into one
 ## What NOT to do (MUST NOT)
 
 Derive failure modes from code as the primary path · generate request-field validation
-scenarios (unit-level) · re-prove business logic · write a launch smoke test (the compiler
-covers that) · add "just in case" scenarios · merge protocol phases into one scenario.
+scenarios (unit-level) · re-prove business logic · write a **product** launch smoke test (a
+business scenario that just asserts the app boots — the compiler + the required infra-bootstrap
+`features/smoke.feature` already cover that; the latter is NOT a "smoke test" in this sense) ·
+add "just in case" scenarios · merge protocol phases into one scenario.
 
 ## STOP rules
 

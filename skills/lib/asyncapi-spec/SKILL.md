@@ -82,7 +82,7 @@ scenario (stage 5) reads the same. Keep them literally aligned.
 ## Definition of Done
 
 - `api-specification/asyncapi.yaml` valid; the slice's channel + operation + message present.
-- Success outcome from the success guarantee; failure surface 1:1 with Extensions.
+- Success outcome from the success guarantee; failure surface 1:1 with **consumer-visible** Extensions.
 - Delivery semantics + idempotency key recorded; names are glossary terms.
 - Spec ready to freeze → satisfies `program-design` Step 0 and `pinout-asyncapi` (C1).
 

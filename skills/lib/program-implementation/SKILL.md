@@ -65,7 +65,7 @@ git checkout -b feat/slice-<name>
 Rule: a new branch is **always** off fresh main — never off yesterday's branch.
 
 ### Step 2. Read the slice spec
-> **Ticket-by-ticket (`@hughes`/`@scaffolder`): read ONLY the ticket + its `inputs:` (→ `docs/design/slice-<name>/`, NOT the planner's `.agent/planner/design/<slug>/`), not the whole package below.**
+> **Ticket-by-ticket (`@hughes`/`@scaffolder`): read ONLY the ticket + its `inputs:` (durable design → `docs/design/slice-<name>/`), not the whole package below** — the `.agent/planner/design/<slug>/` files in Steps 0/2/6 are the planner's own whole-slice/TBD-pass working set, which a single-ticket harness pass skips.
 
 - `slices/<n>-<name>.md` — module tree, contracts, and the **`## Gherkin-mapping`** table
   (each Gherkin Then-step → call-graph node);

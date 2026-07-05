@@ -8,8 +8,8 @@ temperature: 0.2
 steps: 50
 description: "Implementer (Hughes): writes code strictly to one ticket into the working tree (NO git — no branches/commits/PR). After Gate #1 or straight on a trivial task. On FAIL the fixer fixes, not him. Keywords: implementation, code, TDD, module."
 skills: [code-style, communication, component-tests, service-scaffold, documentation, domain-modeling, http-io, llm-client, queue-io, db-io, db-schema, md-formatting, memory, program-implementation]
-inputs: [docs/design, .agent/planner/design, gate1]
-outputs: [pr, .agent/decisions.log]
+inputs: [docs/design, gate1]
+outputs: [working-tree, .agent/decisions.log]
 permission:
   read: allow
   grep: allow

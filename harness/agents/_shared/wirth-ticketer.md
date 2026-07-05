@@ -8,7 +8,7 @@ temperature: 0.3
 steps: 40
 description: "Stage 6: design package → atomic per-slice tickets sized for Qwen, with io-router skills. Keywords: tickets, backlog, io-router, atomic."
 skills: [implementation-ticket-writer]
-inputs: [docs/design, .agent/planner/design]
+inputs: [docs/design]
 outputs: [docs/design]
 permission:
   read: allow

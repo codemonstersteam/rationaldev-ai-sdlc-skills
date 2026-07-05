@@ -16,7 +16,8 @@ assessment. "Deployed ≠ working."
 
 ## Input (else STOP)
 Release artifact built after Gate #2 (merge), toggle OFF; `.agent/planner/rollout-plan.md` (SLO/SLI thresholds,
-baseline, window, rollback plan); metrics wired to the environment.
+baseline, window, rollback plan) — **moduledesigner always emits a baseline; if it is genuinely absent, synthesize
+a default (canary window + 4 golden signals) rather than STOP**; metrics wired to the environment.
 
 ## Output → `.agent/release-health/`
 `deploy-log.md` (what/where/version/canary share); `release-health.md` (4 signals, baseline, window, verdict):

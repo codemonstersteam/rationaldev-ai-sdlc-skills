@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 40
 description: "Code fixer/reviewer (Linger): classifies CI errors (plan defect vs implementation), fixes by signal or returns a code-review verdict before Gate #2. Loads skills per problem (router), not all. Keywords: code review, fix, CI, error classification, bug."
 skills: [code-style, communication, component-tests, git-conventions, memory, program-implementation, security, domain-modeling]
-inputs: [pr, ci-signals, docs/design, .agent/plan-reviewer/plan-review.md]
+inputs: [working-tree, component-tests, ci-signals, docs/design, .agent/plan-reviewer/plan-review.md]
 outputs: [review-verdict, .agent/decisions.log]
 permission:
   read: allow

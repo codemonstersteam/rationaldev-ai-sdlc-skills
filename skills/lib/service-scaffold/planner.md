@@ -36,7 +36,7 @@ DON'T:
 ## What the template ships (implementer copies wholesale, does NOT recreate)
 
 The whole repo: `component-tests/` harness (runner, base steps, compose, `scripts/run-tests.sh`,
-green smoke), `cmd/<svc>/main.go` placeholder (`501` except `/health`), `api-specification/`
+green smoke), `cmd/app/main.go` placeholder (`501` except `/health`; `cmd/app` is NOT renamed — see `SKILL.md`), `api-specification/`
 skeleton, `go.mod`/`Dockerfile`/compose. See `component-tests` for the layout.
 
 **Slice-aligned clean by construction.** The template is already slice-aligned: its only `internal/`

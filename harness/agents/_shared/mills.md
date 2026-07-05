@@ -8,7 +8,7 @@ temperature: 0.1
 steps: 30
 description: "Plan reviewer (critic): runs deterministic validators (frd/slices/contract/tickets/plan — graph+DoD-closure) then a per-ticket SEMANTIC walk (misleading prose, empty acceptance, orphaned requirement) with evidence quotes before Gate #1; over-decomposition and PLAN-prose contradicting a ticket's blocked_by = blocker. Keywords: plan review, per-ticket walk, consistency, blocker, Gate #1."
 skills: [architecture, doc-quality-review, observability, program-design, c4, cockburn-use-case, security]
-inputs: [.agent/planner/design, docs/design, api-specification, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
+inputs: [docs/design, api-specification, .agent/planner/network-topology.md, .agent/planner/rollout-plan.md]
 outputs: [.agent/plan-reviewer/plan-review.md, .agent/plan-reviewer/round, .agent/decisions.log]
 permission:
   read: allow

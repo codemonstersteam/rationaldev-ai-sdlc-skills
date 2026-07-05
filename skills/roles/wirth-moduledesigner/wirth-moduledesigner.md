@@ -27,8 +27,10 @@ You **MUST end your output** with the sentinel as the last line of `module-tree.
 
 **In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` — module tree
 (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula. Attach the io sub-skill by type
-via `program-design` Step 6. NFR artifacts (if needed): `.agent/planner/network-topology.md` (network paths
-from I/O — security) and `.agent/planner/rollout-plan.md` (SLI/SLO/canary — observability).
+via `program-design` Step 6. You **MUST always emit a baseline** `.agent/planner/rollout-plan.md` (default
+canary window + 4 golden-signal thresholds — so `@michtom` never STOPs for a missing plan); expand it +
+`.agent/planner/network-topology.md` (network paths — security) on real NFR. **Multi-context:** co-locate
+each slice's `CONTEXT.md` into its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).
 
 **Component-scenario design (`component-tests` skill, the "design" half):** from the Cockburn cases and the
 `io:` field derive the **scenario set by the formula** `1 + Σ distinguishable io-adapter branches` — **Cockburn

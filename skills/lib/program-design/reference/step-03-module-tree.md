@@ -42,6 +42,7 @@ the tree nodes map onto them one-to-one:
 | `head.go` | **head** `Process<Slice>(req, deps) -> Result<…, Error>` |
 | `adapter.go` | ingress adapter (parsing) |
 | `logic.go` | domain-struct constructors and pure functions |
+| `io.go` | the slice's **I/O module** (Store/egress adapter — DB/broker/HTTP-out), when the slice has I/O |
 | `domain.go` | slice-specific types/messages |
 | `errors.go` | slice sentinel errors |
 | `register.go` | `Deps` + wiring the slice to its entry point |

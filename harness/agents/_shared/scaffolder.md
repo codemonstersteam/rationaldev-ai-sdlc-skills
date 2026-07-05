@@ -8,8 +8,8 @@ temperature: 0.1
 steps: 25
 description: "Scaffolder (Qwen): on a scaffold ticket runs harness/scaffold.sh (git-clone template + rename + build), then TWO verification scripts (go build/test + smoke) — green → done, red → FAIL (the FIXER fixes it, not this role). Does NOT read the template, does NOT fix, does NOT write tests — saves tokens. Keywords: scaffold, template, skeleton, build, health."
 skills: [service-scaffold]
-inputs: [docs/design, api-specification]
-outputs: [pr, .agent/decisions.log]
+inputs: [docs/design, api-specification, gate1]
+outputs: [working-tree, .agent/decisions.log]
 permission:
   read: allow
   grep: allow

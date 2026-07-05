@@ -211,9 +211,9 @@ Draw C4 in ` ```mermaid ` blocks (`C4Context`/`C4Container`/`C4Component`) — r
 | --- | --- | --- |
 | **C1** System Context | system ↔ actors ↔ external systems | platform landing (concept repo, skill `platform-landing`) |
 | **C2** Container | deployable units + libraries used | this file (`architecture.md`) |
-| **C3** Component | the slice's module tree (= the Pass B1 diagram) | this file (`architecture.md`) |
+| **C3** Component | the slice's module tree | `docs/design/<slice>/c4.md` (authored by `c4`); `architecture.md` **links** it, does NOT re-draw it |
 
-(Check: C2 and C3 present in the component repo; C3 matches the Pass B1 module tree; a link to the landing's C1 is present.)
+(Check: C2 in `architecture.md`; C3 in each slice's `docs/design/<slice>/c4.md` (linked, not re-drawn); a link to the landing's C1 is present.)
 
 **Pass B4 — Cockburn system use case (C4 level "how the program works").**
 Describe a **system use case (fully dressed, Cockburn)** — this is the C4 level of the model. Template (fill by fields, not prose):
@@ -239,14 +239,14 @@ An event happened → find the row → update exactly the listed files.
 | New endpoint / contract change | `api-specification/`, `README.md` (API table + pipe) |
 | Entry point change or new domain | `docs/architecture.md` (flowchart, proc. B) |
 | New / changed slice or external input | `docs/architecture.md` (C3 tree, C4 use case + extensions, proc. B3/B4), `README.md` (failure table) |
-| Significant architectural choice | context-local → `docs/design/slice-<slug>/adr/`; system-wide → root `docs/adr/` (+ line in `CLAUDE.md`) |
+| Significant architectural choice | context-local → `docs/design/<slice>/adr/`; system-wide → root `docs/adr/` (+ line in `CLAUDE.md`) |
 | Step merge | `CLAUDE.md` (Module status, Next step), `backlog.md` (Done) |
 | Repo structure / run method change | `README.md` (Structure, Run) |
 | Development step completed | `devlog/NN-topic.md` |
 
 Format templates:
 - Devlog entry: [`docs/templates/devlog.md`](../../docs/templates/devlog.md) — after each step's merge.
-- ADR: format + numbering + three-condition «offer sparingly» → [`domain-modeling`](../domain-modeling/SKILL.md) → `ADR-FORMAT` (single source). Placement: context-local → `docs/design/slice-<slug>/adr/`, system-wide → `docs/adr/`.
+- ADR: format + numbering + three-condition «offer sparingly» → [`domain-modeling`](../domain-modeling/SKILL.md) → `ADR-FORMAT` (single source). Placement: context-local → `docs/design/<slice>/adr/`, system-wide → `docs/adr/`.
 
 ---
 
@@ -281,7 +281,7 @@ Check before finishing. Every item must be "yes". Any "no" → go back and fix.
 - [ ] README: architecture and ADR are links, not body text.
 - [ ] `architecture.md`: has both the module tree AND the entry-point flowchart.
 - [ ] `architecture.md`: arrows top-down only; I/O separated from logic.
-- [ ] `architecture.md`: C4 drawn (C2 + C3 in Mermaid, C3 = module tree); link to the landing's C1 present.
+- [ ] `architecture.md`: C2 drawn in Mermaid; C3 **linked** per slice (`docs/design/<slice>/c4.md`), not re-drawn here; link to the landing's C1 present.
 - [ ] `architecture.md`: Cockburn system use case (Pass B4) present; number of Extensions = number of failure scenarios in the `.feature`.
 - [ ] All content created by passes A/B/C, not free prose bypassing the skill (gate, section 2). No `[x]` without a real artifact.
 - [ ] On a trigger (section 5), ALL listed files updated, not just some.

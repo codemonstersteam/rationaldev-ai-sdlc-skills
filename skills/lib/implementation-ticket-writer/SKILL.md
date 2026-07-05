@@ -65,8 +65,8 @@ type: module            # scaffold | component | module
 slice: slice-02-catalog
 blocked_by: [01, 02, 04] # scaffold(01) + component-RED(02, RED-first EDGE) + any module dep(04). May add more.
 inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
-io: none                # REQUIRED for type: module — none|http|llm|queue|db (router key)
-skills: [db-io, db-schema]
+io: db                  # REQUIRED for type: module — none|http|llm|queue|db (router key)
+skills: [db-io, db-schema]   # MUST equal io-router(db) — else validate-tickets blocks (over/under-provision)
 ---
 ```
 

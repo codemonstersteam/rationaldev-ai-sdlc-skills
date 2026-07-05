@@ -43,7 +43,7 @@ DON'T:
   never their own slice: **error outcomes** (4xx/5xx), **method-not-allowed** (405), **unknown-route**
   (404), **config/startup/fail-fast** (boot), **internal-error** (500), and **scaffold** (that is a
   ticket *type*, not a slice). **Anti-example (WRONG):** `slice-service-scaffold`, `slice-method-not-allowed`,
-  `slice-unknown-route`, `slice-config-fail-fast`. Rule: **`#slices == #distinct endpoints`.** One
+  `slice-unknown-route`, `slice-config-fail-fast`. Rule: **`#slices ≤ #operations`** (one endpoint → at most one slice; the gate `validate-slices.mjs` enforces `≤`). One
   endpoint → exactly one slice; the rest are Extensions/framework/boot. The deterministic gate
   `validate-slices.mjs` (`#slices ≤ #operations` + pseudo-slice names) rejects over-decomposition —
   **prose "these are distinct inputs" does NOT override it.**

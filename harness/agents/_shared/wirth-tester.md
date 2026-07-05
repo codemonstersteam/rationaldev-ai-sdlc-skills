@@ -8,7 +8,7 @@ temperature: 0.2
 steps: 25
 description: "Component-test implementer: cases already designed per Cockburn — mechanically lays them into executable .feature + step-defs + stubs, tags @wip, drives to RED. Adds a missing step-def (mechanical); invents no new scenarios. Call on a component ticket (after scaffold, before modules). Keywords: component tests, RED, @wip, gherkin, steps, stubs."
 skills: [component-tests]
-inputs: [api-specification, docs/design]
+inputs: [api-specification, docs/design, gate1]
 outputs: [component-tests, .agent/decisions.log]
 permission:
   read: allow
