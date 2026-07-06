@@ -15,6 +15,12 @@ For each **logic** module (domain-struct constructors and pure functions over th
 N_unit_tests = 1 (happy path) + Σ (antecedent branches)
 ```
 
+**An antecedent branch counts only if it yields a distinguishable consequent** (a different output or
+error). A field whose values all produce the **same** result — a fixed / informational param (e.g.
+`sort` pinned to one enum) — is **not** a branch → **0 units**. (Same distinguishing test as component
+branches, Step 8.6.) A field that *does* branch → a **pure choice function** unit (below), **never** an
+ingress-adapter unit (the adapter is never unit-tested).
+
 **Branches on a `Request` field — here.** Pure choice functions (`resolveDestination`,
 `renderReport` — Step 3, single-request rule) are counted by the same formula: the matrix
 `stdout|file × json|md` is covered by **units**, **not** component scenarios (otherwise the
