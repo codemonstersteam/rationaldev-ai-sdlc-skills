@@ -93,8 +93,9 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 5. **LOOP over slices** (frozen contract + use-case): `@wirth-moduledesigner`
    → `docs/design/<S>/{module-tree, contracts(io:), c4}.md` (+ on NFR `network-topology`/`rollout-plan`).
 6. `@wirth-ticketer` (whole design) → per slice `docs/design/slice-<name>/tickets/ticket-N.md`,
-   global dependency-order: `ticket-0` scaffold FIRST (blocks all) → per slice {component RED → module}
-   → infra. Each ticket carries a **type label** {scaffold|component|module} and dependency paths — for your routing.
+   global dependency-order: `ticket-0` scaffold FIRST (blocks all) → per slice {component RED → module×N:
+   **ONE module ticket per module-tree node** (do NOT collapse the slice into one module ticket)} → infra.
+   Each ticket carries a **type label** {scaffold|component|module} and dependency paths — for your routing.
    **If it returns `PARTIAL: wrote a..b, remaining c..d`** (didn't fit its step budget) → **re-delegate the
    remainder to `@wirth-ticketer` again** (it appends the missing tickets), repeat until `N tickets ready`.
    **NEVER** hand unfinished ticketing to `@hughes`/`@general` (see closed-set rule above).
@@ -104,7 +105,7 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 ## REVIEW (one pass) + LOCAL FIX
 
 8. `@mills` (input: the slices' `PLAN.md` + path list) — **top-level plan consistency**: decomposition complete,
-   slices atomic; ticket order (scaffold → component RED → module), scaffold first; contract frozen, `io:`
+   slices atomic; ticket order (scaffold → component RED → modules: **one per module-tree node**), scaffold first; contract frozen, `io:`
    set, NFRs not dropped; package coherent. **Does NOT open tickets line by line.** Returns `OK | blocker | escalate`.
 9. IF line = `blocker`: `@linger` (input: Mills verdict + path to the problem) — fixes **locally** (the
    module/artifact at fault; if io-module, reconciles the contract with its caller), **does not rewrite the
