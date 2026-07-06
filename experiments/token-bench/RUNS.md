@@ -9,6 +9,7 @@
 | — | — | omo (Ultimate) · opus | test0 | ✅ PASS | ≈28 мин | 123 761 | **$10.37** | дорого из-за впрыска контекста Sisyphus |
 | **2026-07-05** | **run5** | **Харнес(OpenCode) · GLM-5.2 + Qwen3.6-27b** | task.md | ⛔ **BLOCKED @ ticket-4** | ~28 мин продукт. + ≥30 мин холостых | 237 691 | **$1.88** | «дешёвый» Qwen $1.31 > вся планировка GLM $0.535; 76% его output — 4×32K runaway на sink-тикете |
 | **2026-07-05** | **run6** | **Харнес(OpenCode) · GLM-5.2 + Qwen3.6-27b** (ticketer P→Q формула) | task.md | ✅ **Gate #2** | ~1ч+ активных | 222 595 | **$2.72** | формула нарезки → **8 атомарных тикетов**, head/adapter раздельно, первый Gate #2; 2 дропаута Qwen (кривой tool-call · спираль composition) дожал @linger |
+| **2026-07-06** | **run7** | **Харнес(OpenCode) · GLM-5.2 + Qwen3.6-27b** (izi module×N + design root-cause) | task.md | ✅ **Gate #2** | ~2ч (с валидацией) | 195 605 | **$2.87** | **10 атомарных тикетов, ZERO дропаутов** (впервые); корень монстра = izi-промпт `{component RED → module}` сингуляр, фикс `module×N`; sort=0 юнитов (step-08); mills поймал+исправил NFR-blocker; толстый final ~16мин но собрался |
 
 > **Сырьё прогонов** (снапшот проекта, трасса ролей, proxy-логи, `analysis.md`/`models.md`) —
 > в `../test-harnes-data/DD-MM-YYYY/N-harnes/` (локально, не коммитится). Здесь — только коммитимый синтез.
