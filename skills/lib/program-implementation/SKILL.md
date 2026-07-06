@@ -175,6 +175,10 @@ legitimately dilute the package %, so gate on the **formula-count match**, not a
   count below the design formula to go green. A red unit is a real signal — fix the module, not the test.
 - Component red on the current slice: modules done but the slice won't assemble → check head
   + adapter; scenario expects undescribed behavior → stop, planner revisits Step 9.
+- **Component-set sanity (formula).** The slice's `.feature` set MUST be `1 happy + Σ distinguishable
+  adapter branches` (== #adapter `error.code`s). Fewer failure scenarios than the adapter has branches
+  → an uncovered branch in the plan → stop, planner revisits (Step 9); "all green" over a missing
+  scenario is a false pass.
 
 ### Step 5. Tick the ticket in backlog.md
 

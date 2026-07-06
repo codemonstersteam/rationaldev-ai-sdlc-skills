@@ -4,7 +4,9 @@
 
 **In:** the module tree and the message catalog. **Out:** each module's contract (Input/Deps/antecedent/consequent).
 
-For each slice module — a **hard contract template**:
+For each **behavioral** slice module — a **hard contract template**. No contract for `register.go` /
+`cmd main` (wiring) or `domain.go` / `errors.go` (types / sentinels) — they wire or declare, they
+have no antecedent/consequent (Step 3):
 
 ```
 ### <ModuleName>

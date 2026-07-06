@@ -61,6 +61,10 @@ do not trust Step 12's self-fill). **Any violation = STOP**, return to the named
 handoff forbidden. Anti-gaming: you **MUST NOT** tick `[x]` without an existing artifact.
 The full text of each rule is in its step's file.
 
+- **Correctness by composition, not coverage (P1, foundational).** A program is correct because each
+  module's consequent ⊆ the next's antecedent (Step 9) — not because tests pass ("testing never proves
+  the absence of errors; program better, don't test more"). Module bodies are structured: nested blocks,
+  one entry / one exit, only sequence/selection/iteration, no goto.
 - **Input gate (Step 0).** No contract (`OpenAPI`/`AsyncAPI`), no "failure-mode map" in
   the README, or no Gherkin scenarios for the slice endpoints → design **does not start**.
 - **Single `Request` (Step 3, lesson D1).** 1 slice = 1 external input = exactly one

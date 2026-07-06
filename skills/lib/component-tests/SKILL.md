@@ -50,7 +50,10 @@ follows the contract, not the reverse. Failure-mode sources, in priority order:
 
 Component tests verify **outward interface promises**: return codes, schema-typed
 response/report fields, the reaction to each distinguishable integration failure mode.
-They **MUST NOT** re-prove business logic — that's what units in `internal/` do.
+They **MUST NOT** re-prove business logic — that's what units in `internal/` do. They also
+**MUST NOT** assert build or startup — the compiler proves the build, and the infra-bootstrap
+`features/smoke.feature` proves the stack boots. A component scenario asserts a **contract branch**
+(an `error.code` / status / field), **never** "the service starts".
 
 Before adding a fixture or scenario, answer: **which new contract branch does it trigger**
 — a new `error.code`, `exit` value, status field value, response field, output format, or
