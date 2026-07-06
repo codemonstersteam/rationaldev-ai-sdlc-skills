@@ -38,10 +38,10 @@ slices in one branch; make unrelated "drive-by" improvements; make architecture 
 ### Step 0. Verify handoff (once per package, at start)
 
 Before the first ticket, open `.agent/planner/design/<slug>/backlog.md` **in main**, find
-`## Хендофф-чеклист`. Every item must be `[x]`, including the **last line**:
+`## Handoff checklist`. Every item must be `[x]`, including the **last line**:
 
 ```
-- [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
+- [x] Operator approves the package — @<github-handle>, <YYYY-MM-DD>
 ```
 
 This line is the **only** deterministic sign the package is accepted (merging the design
@@ -51,7 +51,7 @@ missing — you **MUST NOT** start, even if every other item is `[x]`.
 - No checklist → package not ready → stop, report.
 - `[ ]` on the approval line → design PR not merged / line not filled → stop, report.
 - `[ ]` on any other item → planner left it open deliberately; check the slice card's
-  "Решения по дизайну" for the rationale; if none → stop, report.
+  "Design decisions" for the rationale; if none → stop, report.
 - All `[x]` with handle + date → proceed to Step 1.
 
 ### Step 1. Pull main and create a branch
@@ -152,7 +152,7 @@ skipping any means the PR's CI fails:
 ```bash
 unformatted=$(gofmt -l .); [ -n "$unformatted" ] && echo "$unformatted" && exit 1   # 1. format
 go vet ./...                                                                          # 2. static
-go test ./...                                                                         # 3. unit
+go test -cover ./...                                                                  # 3. unit + coverage report
 ./component-tests/scripts/run-tests.sh healthy                                        # 4. component
 ```
 
@@ -162,8 +162,17 @@ assembled — mid-slice they legitimately stay red and **keep the `@wip` tag**. 
 **MUST NOT** remove `@wip` — that is the **fixer's slice-acceptance** (build→unit→component,
 pipeline §6). A red scenario in a prior accepted slice → stop.
 
-- Unit red: bug in the module → fix code (not the contract); bug in the test → fix the test;
-  contract contradicts callers → stop, report (Step 2).
+**Business-logic coverage gate.** Each domain constructor + pure logic function MUST carry its design
+formula's unit-test count (`1 happy + Σ branches`), all green — that is 100% branch coverage of the
+business logic **by construction**. `go test -cover` reports it; head/adapter/I/O have no unit tests and
+legitimately dilute the package %, so gate on the **formula-count match**, not a raw %.
+
+- Unit red: bug in the module → fix the code (not the contract); a genuinely wrong test → fix it,
+  but **MUST NOT** weaken/skip/delete a case or relabel a real module failure as a "test bug" to go
+  green — after the fix the branch/equivalence class is still covered; contract contradicts callers
+  → stop, report (Step 2).
+- **Anti-gaming (units).** You **MUST NOT** `t.Skip`, comment out assertions, or drop the unit-test
+  count below the design formula to go green. A red unit is a real signal — fix the module, not the test.
 - Component red on the current slice: modules done but the slice won't assemble → check head
   + adapter; scenario expects undescribed behavior → stop, planner revisits Step 9.
 
@@ -295,6 +304,7 @@ The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for 
 ## Definition of Done (whole package)
 
 - All `backlog.md` tickets `[x]`; main green.
+- Business logic 100% unit-covered: every domain constructor + pure logic function has its formula's unit tests, all green (head/adapter/I/O not unit-covered — by design).
 - All Gherkin component scenarios green.
 - `.agent/planner/design/<slug>/devlog.md` filled per ticket.
 - **Slice-acceptance is the fixer's:** each slice's component suite green and `@wip` removed — not a per-ticket implementer act.

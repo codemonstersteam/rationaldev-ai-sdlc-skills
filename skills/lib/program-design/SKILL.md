@@ -81,8 +81,9 @@ The full text of each rule is in its step's file.
   — the sole routing key for io sub-skills at ticket-writing (Step 11 / §4). `io: none` ⇒ no
   external client in `Dependencies:`.
 - **Component count by adapters (Step 8.6).** `#component_failure_scenarios ==
-  #distinguishable_I/O-adapter_branches == #consumer-visible_error_codes`; input-validation
-  Extensions map to unit boundaries, not component scenarios. Source for `component-tests`.
+  #distinguishable_I/O-adapter_branches == #error.codes of the adapter branches`; input-validation
+  Extensions map to unit boundaries, not component scenarios (their codes are NOT counted here).
+  Source for `component-tests`.
 - **Design artifacts + Gate #1 (Step 3).** Module tree + head-pipe pseudocode →
   `docs/design/<slice>/module-tree.md`, shown to the operator at **Gate #1** (part of plan
   acceptance). C4 → `c4` skill; use case → `cockburn-use-case`; not re-authored here.
