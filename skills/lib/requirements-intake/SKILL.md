@@ -61,12 +61,23 @@ This is the rational requirements vehicle: the Main Success Scenario becomes the
 each **Extension** becomes a failure scenario downstream (`component-tests`, `program-design`
 Step 8.6). The use case is the FRD's core.
 
-### Step 3 — sharpen the domain (active, domain-modeling style)
+### Step 3 — sharpen the domain (active — the `domain-modeling` discipline)
 While eliciting, **actively** de-fuzz the language (don't passively accept the BRD's words):
 - **Challenge** a term that conflicts with itself or the code ("you said 'account' — Customer or User?");
 - **Stress-test** with concrete edge-case scenarios that force precise boundaries;
-- **Pin** each resolved term in a glossary (ubiquitous language) at `CONTEXT.md`, inline, the moment it crystallises.
-Record genuinely hard-to-reverse, non-obvious trade-offs as ADRs in `docs/adr/` — sparingly.
+- **Pin** each resolved term inline, the moment it crystallises. Format = the **single source**
+  [`domain-modeling`](../domain-modeling/SKILL.md) → `CONTEXT-FORMAT` (opinionated `_Avoid_`, **only**
+  context-specific terms, tight defs). Do **NOT** re-describe the format here.
+
+**Single vs multi-context (co-location B — knowledge in the design package, NEVER `internal/`):**
+- **Default (single context):** one root `CONTEXT.md` glossary. Stays laconic — no `CONTEXT-MAP`.
+- **≥2 bounded contexts evident:** seed a root **`CONTEXT-MAP.md`** — list the contexts + a **Relationships**
+  section (upstream/downstream, shared types). You **identify** the contexts; the slicer (stage 2) **binds**
+  them to slice slugs and co-locates each `CONTEXT.md` to `docs/design/slice-<slug>/`. Ordering: at intake
+  slices don't exist yet, so per-context files land at slicing — intake produces the map seed, not the folders.
+
+Record genuinely hard-to-reverse, non-obvious trade-offs as ADRs — **sparingly**, by the three-condition rule
+in [`domain-modeling`](../domain-modeling/SKILL.md) → `ADR-FORMAT`; system-wide decisions → root `docs/adr/`.
 
 ### Step 4 — derive the contract and failure-mode map
 From the use cases + interfaces, draft:
@@ -100,7 +111,7 @@ complete" — surface the gap as an open question.
 ## Problem statement        # one phrase
 ## Actors & external systems # + interface per boundary (HTTP/gRPC/broker/CLI)
 ## Use cases                 # Cockburn: actor, pre/postcondition, MSS, Extensions
-## Glossary                  # ubiquitous language (or link to CONTEXT.md)
+## Glossary                  # ubiquitous language → link to root CONTEXT.md (or CONTEXT-MAP.md if ≥2 contexts)
 ## Contract (draft)          # OpenAPI/AsyncAPI skeleton from the use cases
 ## Failure-mode map          # → README ## Карта режимов отказа
 ## NFR / constraints

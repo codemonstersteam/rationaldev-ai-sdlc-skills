@@ -8,7 +8,7 @@ temperature: 0.2
 steps: 25
 description: "Component-test implementer: cases already designed per Cockburn — mechanically lays them into executable .feature + step-defs + stubs, tags @wip, drives to RED. Adds a missing step-def (mechanical); invents no new scenarios. Call on a component ticket (after scaffold, before modules). Keywords: component tests, RED, @wip, gherkin, steps, stubs."
 skills: [component-tests]
-inputs: [api-specification, docs/design]
+inputs: [api-specification, docs/design, gate1]
 outputs: [component-tests, .agent/decisions.log]
 permission:
   read: allow
@@ -56,6 +56,14 @@ Rules:
 - for external deps bring up **stubs** (real protocol, not an in-code mock) in compose;
 - tag slice scenarios **`@wip`**; they are **RED** by business reason (placeholder `501`/module absent) —
   `@hughes` turns them green, and `@linger` removes `@wip` at slice acceptance (**not you**).
+
+**Consequent (output completeness — coverage, self-check before returning):** After writing `.feature` you
+**MUST** run `node harness/validate-component-tests.mjs`. Non-zero exit → your coverage is off (**scenario
+count ≠ design `1+Σ`**, a **numbering gap** = dropped scenario, a scenario **not `@wip`**, or **no smoke**) —
+**fix it at source** before returning; do not hand off tests that miss/invent a case or leak a non-`@wip`
+(premature-green) scenario. This checks **coverage is complete, not that each test is semantically right** —
+RED-by-business-reason and step-def resolution stay with `@linger`/`@mills`. Run this **now**, while `@wip`
+is present — after `@linger`'s acceptance the tag is gone and the check no longer applies.
 
 Produce exactly your output and return **one line**: `wirth-tester → component-tests RED ready (N scenarios, @wip)`.
 No input (no contract/cases/harness) → STOP, return the reason to izi.

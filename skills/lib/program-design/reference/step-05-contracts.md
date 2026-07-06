@@ -4,7 +4,9 @@
 
 **In:** the module tree and the message catalog. **Out:** each module's contract (Input/Deps/antecedent/consequent).
 
-For each slice module — a **hard contract template**:
+For each **behavioral** slice module — a **hard contract template**. No contract for `register.go` /
+`cmd main` (wiring) or `domain.go` / `errors.go` (types / sentinels) — they wire or declare, they
+have no antecedent/consequent (Step 3):
 
 ```
 ### <ModuleName>
@@ -13,9 +15,10 @@ For each slice module — a **hard contract template**:
 - **Input (data):** one domain struct, or a Request DTO, or void.
                     If there are 2+ data arguments — it violates Step 3's
                     "hard rule of the single argument": return to Step 3.
-- **Dependencies (deps):** `*sql.DB`, `broker.Client`, `clock.Clock`,
-                            `*Logger`, config (`RPConfig`, `JWTConfig`).
-                            If there are no deps — write `—`.
+- **Dependencies (deps):** the autonomous I/O object (`Store`/`Client`/`Publisher`),
+                            `clock.Clock`, `*Logger`, config (`RPConfig`). **NEVER** a raw
+                            `*sql.DB`/`*http.Client`/broker-conn — those are hidden inside the
+                            I/O object (Step 6). If there are no deps — write `—`.
 - **io:** `none | http | llm | queue | db` — **mandatory on every module.**
 - **What it does:** one phrase.
 - **Antecedent:** conditions on the input.

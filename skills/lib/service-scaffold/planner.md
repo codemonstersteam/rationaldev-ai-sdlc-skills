@@ -36,8 +36,16 @@ DON'T:
 ## What the template ships (implementer copies wholesale, does NOT recreate)
 
 The whole repo: `component-tests/` harness (runner, base steps, compose, `scripts/run-tests.sh`,
-green smoke), `cmd/<svc>/main.go` placeholder (`501` except `/health`), `api-specification/`
+green smoke), `cmd/app/main.go` placeholder (`501` except `/health`; `cmd/app` is NOT renamed — see `SKILL.md`), `api-specification/`
 skeleton, `go.mod`/`Dockerfile`/compose. See `component-tests` for the layout.
+
+**Slice-aligned clean by construction.** The template is already slice-aligned: its only `internal/`
+code is the **config seam at `internal/shared/config`** (shared infra/kernel, NOT a layer-keyed root).
+A fresh clone therefore passes `validate-layout` (`internal/shared/` is allowed). The scaffold ticket
+**MUST NOT** ask for a layer-keyed `internal/config` / `internal/<role>` — the config seam already lives
+in `internal/shared/`; the slice's own packages `internal/<slug>/…` are created later by module tickets,
+not here. State the scaffold's layout acceptance as **`validate-layout.mjs` exits 0** (which forbids *any*
+layer-keyed root), not a hand-listed set of forbidden names (a literal model treats the list as exhaustive).
 
 ## Foundations
 

@@ -107,6 +107,93 @@ export function validateTicketHeaders(tickets) {
   return errors
 }
 
+// Номера пунктов TASK §Definition of done (нумерованный список под заголовком). Чисто.
+// Построчно (не одним regex: `$` под флагом m обрывал бы секцию на первом переносе).
+export function parseDodNumbers(taskText) {
+  const lines = String(taskText).replace(/\r\n/g, "\n").split("\n")
+  let i = lines.findIndex((l) => /^#{1,6}[ \t]*Definition of done\b/i.test(l))
+  if (i < 0) return []
+  const nums = new Set()
+  for (i++; i < lines.length; i++) {
+    if (/^#{1,6}[ \t]/.test(lines[i])) break // следующий заголовок — конец секции
+    const g = lines[i].match(/^\s*(\d+)\.\s/)
+    if (g) nums.add(Number(g[1]))
+  }
+  return [...nums].sort((a, b) => a - b)
+}
+
+// --- План как целое: граф зависимостей (DAG без циклов) + порядок + DoD-замыкание ---
+// Забирает у LLM-ревьювера (mills) МЕХАНИЧЕСКИЕ межтикетные проверки, которые validate-tickets
+// (заголовок-в-одиночку) не покрывает: цикл в blocked_by, scaffold-корень, component-before-module,
+// и покрытие каждого пункта TASK §Definition of done тикетом-владельцем. Чисто: без fs.
+//   tickets: [{ name, data, body }] — data = frontmatter, body = текст тикета (для DoD-N).
+//   dodNumbers: number[] — номера пунктов TASK §Definition of done ([] → DoD-проверка пропускается).
+// Допущение: один сервис/срез (текущий харнес). Ложный blocker хуже пропуска — проверки
+// консервативны (нераспознанное = не ошибка).
+export function validatePlan(tickets, dodNumbers = []) {
+  const errors = []
+  const valid = tickets.filter((t) => t.data && t.data.id !== undefined && Array.isArray(t.data.blocked_by))
+  if (!valid.length) return errors // нечего проверять — заголовки ловит validate-tickets
+  const byId = new Map(valid.map((t) => [normId(t.data.id), t]))
+  const deps = (t) => t.data.blocked_by.map(normId).filter((b) => byId.has(b))
+
+  // 1) DAG без циклов — DFS с тремя цветами; при цикле собираем путь
+  const color = new Map([...byId.keys()].map((id) => [id, 0])) // 0=white 1=gray 2=black
+  const stack = []
+  let cycle = null
+  const dfs = (id) => {
+    color.set(id, 1); stack.push(id)
+    for (const b of deps(byId.get(id))) {
+      if (color.get(b) === 1) { cycle = [...stack.slice(stack.indexOf(b)), b]; return true }
+      if (color.get(b) === 0 && dfs(b)) return true
+    }
+    color.set(id, 2); stack.pop(); return false
+  }
+  for (const id of byId.keys()) if (color.get(id) === 0 && dfs(id)) break
+  if (cycle) { errors.push(`цикл в графе blocked_by: ${cycle.join(" → ")}`); return errors } // граф нецелостен — дальше бессмысленно
+
+  // предок по blocked_by, удовлетворяющий pred?
+  const reaches = (id, pred) => {
+    const seen = new Set(), st = [...deps(byId.get(id))]
+    while (st.length) {
+      const c = st.pop(); if (seen.has(c)) continue; seen.add(c)
+      if (pred(byId.get(c))) return true
+      for (const b of deps(byId.get(c))) st.push(b)
+    }
+    return false
+  }
+
+  // 2) Порядок: scaffold-корень; всё транзитивно зависит от него; module — после component
+  const scaffolds = valid.filter((t) => t.data.type === "scaffold")
+  if (scaffolds.length === 1) {
+    const sc = scaffolds[0], scId = normId(sc.data.id)
+    if (deps(sc).length) errors.push(`${sc.name}: scaffold должен быть корнем (blocked_by: []), а не ${JSON.stringify(sc.data.blocked_by)}`)
+    for (const t of valid) {
+      const id = normId(t.data.id)
+      if (id !== scId && !reaches(id, (a) => normId(a.data.id) === scId))
+        errors.push(`${t.name}: не зависит транзитивно от scaffold (${sc.data.id}) — порядок нарушен`)
+    }
+  }
+  if (valid.some((t) => t.data.type === "component"))
+    for (const t of valid.filter((t) => t.data.type === "module"))
+      if (!reaches(normId(t.data.id), (a) => a.data.type === "component"))
+        errors.push(`${t.name}: module не зависит (транзитивно) от component-тикета — RED-first нарушен`)
+
+  // 3) DoD-замыкание: sink-тикеты (никто не blocked_by них) обязаны покрыть все пункты TASK §DoD
+  if (dodNumbers.length) {
+    const blocked = new Set(valid.flatMap(deps))
+    const sinks = valid.filter((t) => !blocked.has(normId(t.data.id)))
+    const covered = new Set()
+    for (const t of sinks) for (const m of String(t.body || "").matchAll(/\bDoD[-\s]?(\d+)\b/gi)) covered.add(Number(m[1]))
+    if (!covered.size) errors.push("финальный тикет не замыкает DoD: ни один sink-тикет не ссылается на пункты TASK §Definition of done (DoD-N)")
+    else {
+      const missing = dodNumbers.filter((n) => !covered.has(n))
+      if (missing.length) errors.push(`DoD-замыкание неполно — пункты TASK §Definition of done без владельца-тикета: ${missing.map((n) => "DoD-" + n).join(", ")}`)
+    }
+  }
+  return errors
+}
+
 // --- Против переусложнения декомпозиции (harden-decomposition) ---------------
 // Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
 // тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
@@ -157,6 +244,154 @@ export function validateSlices(slicesText, openapiText) {
     if (PSEUDO_SLICE.test(m[0])) errors.push(`псевдо-срез «${m[0]}» — не отдельный внешний вход`)
   }
   return [...new Set(errors)]
+}
+
+// --- Slice-aligned раскладка (slice-aligned-code-layout) -----------------------
+// Каждый code-путь под internal/ обязан лежать под internal/<slug>/ ОБЪЯВЛЕННОГО среза
+// ИЛИ под internal/shared/ (kernel для типов ≥2 срзов). Layer-keyed корень (техническая
+// роль: io/cli/domain/httpapi/catalog/storage/config/…) = blocker — вертикальная граница
+// среза потеряна. Чисто: (paths, slugs) → errors[]. Забирает у mills механическую проверку
+// «раскладка по срезу — ALWAYS» ([[mills-mechanical-vs-semantic]]).
+// Консервативно: без slugs ловим только заведомо layer-keyed набор (ложный blocker хуже пропуска).
+const LAYER_KEYED = new Set([
+  "io", "cli", "domain", "httpapi", "catalog", "storage", "config",
+  "handlers", "handler", "service", "services", "repo", "repository", "dao",
+  "models", "model", "usecase", "usecases", "infra", "infrastructure",
+  "adapter", "adapters", "controller", "controllers", "api", "transport",
+])
+
+export function validateLayout(paths, slugs = []) {
+  const errors = []
+  // slug нормализуем: срезаем docs-префикс slice- (docs/design/slice-<name> ↔ internal/<name>)
+  const declared = new Set(slugs.map((s) => String(s).trim().toLowerCase().replace(/^slice-/, "")).filter(Boolean))
+  const seen = new Set()
+  for (const raw of paths) {
+    const p = String(raw).trim().replace(/^["'`]+|["'`]+$/g, "").replace(/^\.?\//, "")
+    const m = p.match(/^internal\/([a-z0-9_-]+)\//i)
+    if (!m) continue // не под internal/<x>/ (cmd/, docs/, internal/<file> без подпапки) — не slice-scoped
+    const root = m[1].toLowerCase()
+    if (root === "shared") continue // явный kernel — разрешён
+    if (declared.has(root)) continue // под объявленным срезом — разрешён
+    if (seen.has(root)) continue // одна ошибка на корень, не на каждый путь
+    seen.add(root)
+    if (LAYER_KEYED.has(root)) {
+      errors.push(`layer-keyed корень internal/${root}/ — раскладка по технической роли, не по срезу ` +
+        `(код среза → internal/<slug>/; общее ≥2 срезов → internal/shared/)`)
+    } else if (declared.size) {
+      errors.push(`internal/${root}/ не объявлен ни одним срезом (Owns package) и не internal/shared/ — ` +
+        `вертикальная граница среза потеряна`)
+    }
+    // else: slugs не переданы и root не layer-keyed — не блокируем (консервативно)
+  }
+  return errors
+}
+
+// Declaration-mode (рунг 1 shift-left): слайсер ОБЯЗАН объявить границу пакета КАЖДОГО среза
+// (`Owns package: internal/<slug>/`) ещё до дизайна — тогда moduledesigner входит в стадию с уже
+// названной границей и не сваливается в layer-keyed по умолчанию. Проверяет НАЛИЧИЕ + форму поля,
+// не пути (пути наполняет program-design → там paths-mode validateLayout). Чисто: (slicesText) → errors[].
+export function validateSliceDeclarations(slicesText) {
+  const errors = []
+  const text = String(slicesText).replace(/\r\n/g, "\n")
+  // H2-секции; секция среза = заголовок "## Slice <…с цифрой…>" (как в validateSlices), не "## Slice inventory"
+  for (const sec of text.split(/^(?=##\s)/m)) {
+    const h = sec.match(/^##\s+Slice[\s-]?(\S+)/i)
+    if (!h || !/\d/.test(h[1])) continue
+    const label = `Slice ${h[1].replace(/[:—-]+$/, "")}`
+    const om = sec.match(/Owns package:\s*`?\s*([^\s`]+)/i)
+    if (!om) { errors.push(`${label}: нет поля Owns package: internal/<slug>/ — граница пакета не объявлена`); continue }
+    const vm = om[1].replace(/\/+$/, "").match(/^internal\/([a-z0-9_-]+)$/i)
+    if (!vm) { errors.push(`${label}: Owns package '${om[1]}' не вида internal/<slug>/`); continue }
+    if (LAYER_KEYED.has(vm[1].toLowerCase()))
+      errors.push(`${label}: Owns package internal/${vm[1]}/ — layer-keyed корень (техническая роль), не имя среза`)
+  }
+  return errors
+}
+
+// --- Карта контекстов (domain-context-adr-layout, Ф4) --------------------------
+// Мягкий гейт: при ≥2 CONTEXT.md — root CONTEXT-MAP.md существует, его ссылки резолвятся,
+// есть секция Relationships, каждый контекст покрыт картой; ADR-нумерация последовательна
+// (1..n, per dir). Консервативно — single-context не трогаем (ложный blocker хуже пропуска).
+// Матчинг по slug (slice-<slug>/CONTEXT.md), устойчив к различию префиксов путей. Чисто.
+//   contextPaths: string[] — найденные CONTEXT.md · mapText: root CONTEXT-MAP.md ("" если нет)
+//   adrDirs: [{ dir, numbers: number[] }] — номера ADR по директориям
+const ctxSlug = (p) => {
+  const m = String(p).match(/slice-([a-z0-9_-]+)[/\\]CONTEXT\.md$/i)
+  return m ? m[1].toLowerCase() : "root"
+}
+export function validateContextMap(contextPaths, mapText, adrDirs = []) {
+  const errors = []
+  const paths = (contextPaths || []).map(String)
+  const map = String(mapText || "")
+  const sliceSlugs = paths.map(ctxSlug).filter((s) => s !== "root")
+
+  // 1) ≥2 CONTEXT.md → root CONTEXT-MAP.md обязан существовать
+  if (paths.length >= 2 && !map.trim())
+    errors.push(`≥2 CONTEXT.md (${paths.length}), но нет root CONTEXT-MAP.md — карта контекстов потеряна`)
+
+  // 2) карта есть → Relationships + резолв ссылок + покрытие
+  if (map.trim()) {
+    if (!/^#{1,3}\s+Relationships\b/im.test(map))
+      errors.push("CONTEXT-MAP.md: нет секции Relationships (связи контекстов не описаны)")
+    const linkedSlugs = new Set([...map.matchAll(/\]\(([^)]*CONTEXT\.md)\)/gi)].map((m) => ctxSlug(m[1])))
+    for (const s of linkedSlugs)
+      if (s !== "root" && !sliceSlugs.includes(s))
+        errors.push(`CONTEXT-MAP.md: ссылка на контекст '${s}' не резолвится (нет docs/design/slice-${s}/CONTEXT.md)`)
+    if (paths.length >= 2)
+      for (const s of new Set(sliceSlugs))
+        if (!linkedSlugs.has(s))
+          errors.push(`CONTEXT-MAP.md: контекст '${s}' не указан в карте (S3-покрытие: связь потеряна)`)
+  }
+
+  // 3) ADR-нумерация последовательна per dir: уникальные, 1..n без дыр
+  for (const { dir, numbers } of adrDirs) {
+    const ns = (numbers || []).slice().sort((a, b) => a - b)
+    const uniq = [...new Set(ns)]
+    if (uniq.length !== ns.length) {
+      const dups = ns.filter((n, i) => i > 0 && n === ns[i - 1])
+      errors.push(`${dir}: дубль ADR-номера ${[...new Set(dups)].join(", ")}`)
+    }
+    if (uniq.length && (uniq[0] !== 1 || uniq.some((n, i) => n !== i + 1)))
+      errors.push(`${dir}: ADR-нумерация с дырой/не с 1 (${uniq.join(",")}; ожидалось ${uniq.map((_, i) => i + 1).join(",")})`)
+  }
+  return errors
+}
+
+// --- Компонентные тесты: защита ОРАКУЛА (предпосылка удешевления wirth-tester) --
+// Тесты — оракул корректности среза, а их не проверяет никто механически. Этот гейт даёт
+// механический backbone, чтобы realization можно было доверить слабой модели (Qwen): реализовано
+// РОВНО столько сценариев, сколько спроектировано; все @wip (снятие = акт фиксера); smoke есть.
+// RED-по-бизнес-причине и резолв step-def остаются семантике (@linger/@mills) — их тут НЕ ловим.
+// Чисто: (feature, declaredN?) → errors[]. declaredN=null → сверка с дизайном пропускается (soft).
+//   feature: { business: string[], wip: number, smoke: number }
+export function validateComponentTests(feature, declaredN = null) {
+  const errors = []
+  const biz = (feature && feature.business) || []
+  const wip = (feature && feature.wip) || 0
+  const smoke = (feature && feature.smoke) || 0
+
+  if (!biz.length) errors.push("нет бизнес-сценариев (.feature пуст кроме smoke) — покрытие не реализовано")
+  if (smoke < 1) errors.push("нет smoke-сценария — обвязка компонентных тестов не доказана")
+  if (wip < biz.length)
+    errors.push(`не все сценарии @wip (${wip}/${biz.length}) — риск преждевременного green/гейминга (снятие @wip = акт фиксера, не автора)`)
+
+  // дубль заголовков
+  const seen = new Set(), dup = new Set()
+  for (const t of biz) { const k = String(t).trim().toLowerCase(); if (seen.has(k)) dup.add(k); else seen.add(k) }
+  if (dup.size) errors.push(`дубль сценария: ${[...dup].join("; ")}`)
+
+  // нумерация (если сценарии пронумерованы «N. …») — 1..len без дыр/дублей: ловит пропущенный сценарий
+  const nums = biz.map((t) => { const m = String(t).match(/^\s*(\d+)[.)]/); return m ? Number(m[1]) : null })
+  if (biz.length && nums.every((x) => x != null)) {
+    const uniq = [...new Set(nums)].sort((a, b) => a - b)
+    if (uniq.length !== nums.length || uniq[0] !== 1 || uniq.some((n, i) => n !== i + 1))
+      errors.push(`нумерация сценариев с дырой/дублем (${nums.join(",")}) — возможен пропущенный/лишний сценарий`)
+  }
+
+  // сверка с дизайном (если N извлечён из contracts.md): пропуск/выдумка сценария
+  if (declaredN != null && biz.length !== declaredN)
+    errors.push(`#сценариев ${biz.length} ≠ дизайн N=${declaredN} (формула 1+Σ) — пропущен или выдуман сценарий`)
+  return errors
 }
 
 // --- Mermaid C4: синтаксис-линт (валидность рендера без тяжёлого движка) -------

@@ -4,8 +4,9 @@
 
 **In:** the module contracts from Step 5. **Out:** autonomous I/O objects (`Store`/`Client`/`Publisher`/`Consumer`), no raw dependencies in `Deps`.
 
-In each slice **all work with the external world is collected in I/O modules** (`*_io.go`,
-`*Repository`, `*Gateway`, `*Adapter`). The slice's business logic is pure functions — no HTTP /
+In each slice **all work with the external world is collected in I/O modules** (`io.go`,
+`*Repository`, `*Gateway`). (The ingress **adapter** is `io: none` — parsing only, not an I/O object;
+see Step 5.) The slice's business logic is pure functions — no HTTP /
 DB / broker / file system.
 
 **A slice may have several I/O modules** — that's normal. A real slice often does: "receive

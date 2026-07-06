@@ -61,6 +61,10 @@ do not trust Step 12's self-fill). **Any violation = STOP**, return to the named
 handoff forbidden. Anti-gaming: you **MUST NOT** tick `[x]` without an existing artifact.
 The full text of each rule is in its step's file.
 
+- **Correctness by composition, not coverage (P1, foundational).** A program is correct because each
+  module's consequent ⊆ the next's antecedent (Step 9) — not because tests pass ("testing never proves
+  the absence of errors; program better, don't test more"). Module bodies are structured: nested blocks,
+  one entry / one exit, only sequence/selection/iteration, no goto.
 - **Input gate (Step 0).** No contract (`OpenAPI`/`AsyncAPI`), no "failure-mode map" in
   the README, or no Gherkin scenarios for the slice endpoints → design **does not start**.
 - **Single `Request` (Step 3, lesson D1).** 1 slice = 1 external input = exactly one
@@ -81,8 +85,9 @@ The full text of each rule is in its step's file.
   — the sole routing key for io sub-skills at ticket-writing (Step 11 / §4). `io: none` ⇒ no
   external client in `Dependencies:`.
 - **Component count by adapters (Step 8.6).** `#component_failure_scenarios ==
-  #distinguishable_I/O-adapter_branches == #consumer-visible_error_codes`; input-validation
-  Extensions map to unit boundaries, not component scenarios. Source for `component-tests`.
+  #distinguishable_I/O-adapter_branches == #error.codes of the adapter branches`; input-validation
+  Extensions map to unit boundaries, not component scenarios (their codes are NOT counted here).
+  Source for `component-tests`.
 - **Design artifacts + Gate #1 (Step 3).** Module tree + head-pipe pseudocode →
   `docs/design/<slice>/module-tree.md`, shown to the operator at **Gate #1** (part of plan
   acceptance). C4 → `c4` skill; use case → `cockburn-use-case`; not re-authored here.
@@ -97,7 +102,7 @@ The full text of each rule is in its step's file.
 
 ## Definition of Done of the skill
 
-- All 12 steps passed.
+- All 13 steps (0–12) passed.
 - Folder `.agent/planner/design/<slug>/` (working package) created and filled.
 - **Durable docs published** to `docs/design/<slice>/`: `module-tree.md`, `contracts.md` (this skill),
   `c4.md` (`c4`), `use-case.md` (`cockburn-use-case`) — committed, reviewed at Gate #1 (Step 10 "Two locations").

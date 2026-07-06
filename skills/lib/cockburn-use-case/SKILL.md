@@ -21,7 +21,10 @@ need: it is the behavioral source of truth and drives the component tests (stage
 
 DO:
 - Expand exactly one slice's use case to fully-dressed form.
-- Keep every Extension consistent with the failure-mode map and the contract.
+- Keep every Extension consistent with the failure-mode map and the contract. The cross-artifact
+  traceability key is the **`error.code`** (stable across FRD ↔ use-case ↔ contract), **not** the
+  Cockburn `a/b/c` label — the label is local step-numbering and MAY differ from the FRD's. Every
+  Extension MUST carry its `error.code`.
 - Sit the use case next to `c4.md` in `docs/design/<slice>/`.
 
 DON'T:
@@ -98,7 +101,7 @@ For the slice, these counts MUST match:
 
 - `docs/design/<slice>/use-case.md` exists, one fully-dressed UC, all template fields filled.
 - One trigger; user-goal level; glossary terms only.
-- `#Extensions == #failure-mode rows == #error codes` for the slice.
+- `#consumer-visible Extensions == #failure-mode rows == #error codes` for the slice.
 
 ## Foundations
 

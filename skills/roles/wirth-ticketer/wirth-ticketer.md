@@ -30,5 +30,18 @@ module), `skills: [...]`. Exactly **one** scaffold ticket (`id: 01`, `blocked_by
 **MUST** be real (izi does not compute them, it takes them as-is). `harness/validate-tickets.mjs` and `@mills`
 reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.
 
-Return izi **one line**: `wirth-ticketer → N tickets ready (headers valid)` or `STOP: <reason>`.
-You **MUST NOT** do other stages or write code.
+**Consequent (self-check before returning — slice-aligned paths):** each DoD acceptance line carries an exact
+module path; every `internal/…` path **MUST** root in `internal/<slug>/` of its slice (or `internal/shared/`).
+After writing the tickets you **MUST** run `node harness/validate-layout.mjs`. Non-zero exit → a ticket
+hand-wrote a **layer-keyed** path (e.g. `internal/io`) — fix it to `internal/<slug>/` before returning.
+
+**Completeness + continuation (MUST — no silent partial).** You **MUST** write **ALL** tickets for the whole
+design (every slice's {scaffold/component/module} + infra, covering every DoD item) in this call. If you run
+out of your step budget before finishing, do **NOT** stop silently and do **NOT** hand the rest to another
+role — return the explicit machine signal `PARTIAL: wrote ticket-<a..b>, remaining ticket-<c..d>` so `izi`
+re-delegates the remainder **to you** (same stage). A partial set with no `PARTIAL:` line is a defect: it
+makes izi improvise the wrong routing.
+
+Return izi **one line**: `wirth-ticketer → N tickets ready (headers valid)`, or
+`PARTIAL: wrote ticket-<a..b>, remaining ticket-<c..d>` (unfinished — izi re-delegates the rest to you), or
+`STOP: <reason>`. You **MUST NOT** do other stages or write code.

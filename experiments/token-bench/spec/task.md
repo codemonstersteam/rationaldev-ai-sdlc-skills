@@ -49,7 +49,9 @@ repositories grouped by platform.
 
 ## Assumptions / out of scope
 - No write/update endpoints, no pagination, no filtering, no DB migration; a single data store.
-- Sort is fixed (`platform`, then `service`). `commits_2m` is served as-is (not computed).
+- Sort is fixed and **informational** — the service always sorts by `platform` then `service`
+  regardless of the `sort` value; it is NOT a validated input (no `400` on other values, no branch).
+  `commits_2m` is served as-is (not computed).
 
 ## Input format (`services.yaml`)
 

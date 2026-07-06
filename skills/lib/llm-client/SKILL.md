@@ -12,7 +12,7 @@ version: "1.0"
 > "from curl to tests with the formulas" bridge. This skill is the **LLM specifics**
 > on top of that discipline: protocol, `response_format`, role fan-out, fixing
 > responses. Anchored on a real `LLMClient` implementation
-> (`internal/slice/<name>/io.go`, slice devlog).
+> (`internal/<slug>/io.go`, slice devlog).
 
 ---
 
@@ -208,7 +208,7 @@ because the new dependency and I/O appeared exactly here):
 **1. gofmt**
 
 ```bash
-gofmt -l ./internal/slice/<name>/     # empty = clean; otherwise gofmt -w
+gofmt -l ./internal/<slug>/     # empty = clean; otherwise gofmt -w
 ```
 
 Check every `.go` file of the slice before each commit. A gofmt failure in CI is a sign

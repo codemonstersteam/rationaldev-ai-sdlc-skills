@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { appendFile, writeFile, mkdir, access } from "node:fs/promises"
+import { appendFile, writeFile, mkdir, access, readFile, readdir } from "node:fs/promises"
+import { createHash } from "node:crypto"
 import { join } from "node:path"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -7,6 +8,14 @@ import { join } from "node:path"
 //   2) Gate #1 — нельзя делегировать implementer без ревью плана и апрува оператора.
 
 const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
+
+// Замкнутый набор пайплайн-ролей. Делегация `task` кому-либо вне набора (@general и пр.) —
+// мис-роутинг: izi должен повторить ТУ ЖЕ стадию или escalate, а не выдумывать агента.
+const PIPELINE = new Set([
+  "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
+  "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
+  "scaffolder", "hughes", "wirth-tester", "linger", "michtom",
+])
 
 function pickRole(args: unknown): string {
   if (!args || typeof args !== "object") return "unknown"
@@ -29,6 +38,38 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
+  }
+
+  // Фрейм трассировки (docs/02_MEASUREMENT.md §«что фиксируем»): model + agents_rev + skillset_hash
+  // на каждое агентское действие. Считаем ОДИН раз на init (best-effort), кэшируем модель по роли.
+  const sha12 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 12)
+  let agentsRev = "na"
+  let skillsetHash = "na"
+  const modelCache = new Map<string, string>()
+  const frameInit = (async () => {
+    try { agentsRev = sha12(await readFile(join(root, "AGENTS.md"), "utf8")) } catch {}
+    try {
+      const skillsDir = join(root, ".opencode", "skills")
+      const parts: string[] = []
+      for (const n of (await readdir(skillsDir)).sort()) {
+        try {
+          const t = await readFile(join(skillsDir, n, "SKILL.md"), "utf8")
+          const v = /^version:\s*["']?([^"'\n]+)/m.exec(t)?.[1]?.trim() ?? "?"
+          parts.push(`${n}@${v}`)
+        } catch {}
+      }
+      if (parts.length) skillsetHash = sha12(parts.join(","))
+    } catch {}
+  })()
+  const resolveModel = async (role: string): Promise<string> => {
+    if (modelCache.has(role)) return modelCache.get(role)!
+    let m = "na"
+    try {
+      const t = await readFile(join(root, ".opencode", "agent", role + ".md"), "utf8")
+      m = /^model:\s*["']?([^"'\n]+)/m.exec(t)?.[1]?.trim() ?? "na"
+    } catch {}
+    modelCache.set(role, m)
+    return m
   }
 
   // Строка, по которой ловим попытку агента создать/тронуть маркер Gate #1.
@@ -70,6 +111,21 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
       if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
+
+      // (1) Замкнутый набор: делегация вне пайплайн-ролей запрещена (ловит @general/мис-роут в источнике).
+      // "unknown" (роль не резолвится из args) — НЕ блокируем, чтобы не давать ложных срабатываний.
+      if (role !== "unknown") {
+        const r = role.toLowerCase().replace(/^@/, "").trim()
+        if (!PIPELINE.has(r)) {
+          throw new Error(
+            "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
+            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/michtom). " +
+            "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
+            "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
+          )
+        }
+      }
+
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
       if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") return
       if (!(await exists(review)) || !(await exists(gate1))) {
@@ -109,7 +165,9 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
         const role = pickRole(input?.args)
         const ts = new Date().toISOString()
         const title = String(output?.title ?? output?.metadata?.title ?? "").slice(0, 120)
-        await appendFile(logPath, `${ts}\trole=${role}\tvia=opencode-plugin\t${title}\n`)
+        await frameInit
+        const model = await resolveModel(role)
+        await appendFile(logPath, `${ts}\trole=${role}\tmodel=${model}\tagents_rev=${agentsRev}\tskillset_hash=${skillsetHash}\tvia=opencode-plugin\t${title}\n`)
       } catch {
         // Аудит best-effort: сбой записи (например EROFS) НЕ валит делегирование.
       }

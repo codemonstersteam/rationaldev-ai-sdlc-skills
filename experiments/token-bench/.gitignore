@@ -8,3 +8,5 @@ results/
 acceptance/reference/services.yaml
 acceptance/reference/svc
 acceptance/reference/bench-reference
+# сырьё прогонов (снапшоты) — локально, не в гит (см. ../../../test-harnes-data/README.md)
+baseline-run*/
