@@ -111,6 +111,11 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 
 ## Gate #1 — plan acceptance (human; do NOT simulate)
 
+**Present the plan first — the operator decides on THIS, not a bare question.** For each slice, output its
+`PLAN.md` **Gate #1 summary verbatim** — the head-pipe functional block, the failure-mode map, and the
+ticket list (the planner already assembled them there). Copy from the artifact; invent nothing (you are a
+router). Then ask the accept `question`.
+
 Ask the operator a `question` and **wait**. The operator writes **"акцепт"/"approve"** → the
 `rational-guardrail` plugin **itself** creates `.agent/gates/gate1.approved`.
 

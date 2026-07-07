@@ -115,6 +115,11 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 
 ## Gate #1 — plan acceptance (human; do NOT simulate)
 
+**Present the plan first — the operator decides on THIS, not a bare question.** For each slice, output its
+`PLAN.md` **Gate #1 summary verbatim** — the head-pipe functional block, the failure-mode map, and the
+ticket list (the planner already assembled them there). Copy from the artifact; invent nothing (you are a
+router). Then ask the accept `question`.
+
 Ask the operator a `question` and **wait**. The operator writes **"акцепт"/"approve"** → the
 `rational-guardrail` plugin **itself** creates `.agent/gates/gate1.approved`.
 
@@ -426,8 +431,12 @@ is forbidden — flat depth 1). Wirth owns the plan: the plan and its sub-plans 
 **Out → `docs/design/slice-<name>/PLAN.md`** (one per slice) — a **path index** of that slice +
 a short summary for Gate #1:
 - links (paths) to: the slice's use-case/module-tree/contracts/c4 and its tickets — **no content duplication**;
-- an operator summary: module tree (by link), the slice's ticket count/order (scaffold → component RED →
-  modules), open questions / tech debt.
+- an operator summary for Gate #1 — the operator reads THIS, so inline the essentials (the one allowed
+  content copy; everything else stays a link):
+  - **the head module in functional style** — the head-pipe pseudocode block copied **verbatim** from
+    `module-tree.md` (`Process<Slice>(req, deps) -> Result<…>:` ROP pipe with `| step -> Type // note` lines);
+  - **the failure-mode map** — `error.code` → HTTP/exit + client/operator action (from the contract/README);
+  - the slice's ticket count/order (scaffold → component RED → modules), open questions / tech debt.
 
 You **MUST** verify the package is complete (every slice has design, tickets are cut, the contract is frozen)
 — if something is missing, return **STOP** to the orchestrator naming the unfinished stage. Append the
