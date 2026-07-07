@@ -17,11 +17,26 @@ Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<nam
 `ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
 lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module} → infra.
 
+**Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
+ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
+`go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures — as the template ships them.
+`scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` may not reshape the
+template. So do **NOT** declare a slice-named `cmd/<slug>/main.go` for the scaffold ticket — the real file is
+`cmd/app/main.go`, and the guardrail poka-yoke will (correctly) block the marker on the mismatch. If the binary
+must be slice-named, that rename is a **later ticket's** explicit `outputs` (with that path in ITS header),
+never the scaffold's. Same rule generally: a ticket's `outputs` = what its role deterministically writes.
+
 **DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
 wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
 and map **every** item → a concrete deliverable + its **exact path** as a `[ ]` acceptance line (root
 `Dockerfile`/`docker-compose.yml` are distinct from `component-tests/`). Do NOT leave DoD gaps for the
 implementer to discover. See `implementation-ticket-writer` → "Integration / final ticket special rule".
+
+**Keep the final ticket THIN (MUST — Qwen-sized).** The final carries ONLY wiring + README + deployment files
++ the DoD-closure checklist — **no behavioral logic, no heavy module**. The config-loader, observability/metrics
+middleware, and every module-tree node are **their own module tickets** (cut earlier), never folded into the
+final. A fat final blows past the implementer's context and drops (run 07-07/2: ticket-11 hit 76–80K tokens,
+3× a thin module → Qwen tool-call dropout). If the final would carry logic or assemble >1 node's worth of code, split it.
 
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):

@@ -156,6 +156,11 @@ Ask the operator a `question` and **wait**. The operator writes **"акцепт"
 - **Do NOT ask the operator to `touch` manually** — the plugin already did it.
 
 The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `plan-review.md`. "fix" → return to the right stage.
+- **Missing `plan-review.md` — auto-recover, do NOT ask the operator (genchi genbutsu).** If the block is
+  "requires `.agent/plan-reviewer/plan-review.md`" **and** `decisions.log` already shows a `role=mills` entry
+  (the review happened, `@mills` just dropped the file), **re-delegate `@mills` to write its verdict file**,
+  then continue implementation. `@mills` reviewed already — this only persists the artifact. Never stall or
+  ask the operator for a dropped review file; only escalate if `@mills` never ran.
 
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 

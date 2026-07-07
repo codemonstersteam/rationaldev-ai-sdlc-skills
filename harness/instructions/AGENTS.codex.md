@@ -131,6 +131,11 @@ Ask the operator a `question` and **wait**. The operator writes **"акцепт"
 - **Do NOT ask the operator to `touch` manually** — the plugin already did it.
 
 The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `plan-review.md`. "fix" → return to the right stage.
+- **Missing `plan-review.md` — auto-recover, do NOT ask the operator (genchi genbutsu).** If the block is
+  "requires `.agent/plan-reviewer/plan-review.md`" **and** `decisions.log` already shows a `role=mills` entry
+  (the review happened, `@mills` just dropped the file), **re-delegate `@mills` to write its verdict file**,
+  then continue implementation. `@mills` reviewed already — this only persists the artifact. Never stall or
+  ask the operator for a dropped review file; only escalate if `@mills` never ran.
 
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
@@ -385,11 +390,26 @@ Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<nam
 `ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
 lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module} → infra.
 
+**Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
+ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
+`go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures — as the template ships them.
+`scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` may not reshape the
+template. So do **NOT** declare a slice-named `cmd/<slug>/main.go` for the scaffold ticket — the real file is
+`cmd/app/main.go`, and the guardrail poka-yoke will (correctly) block the marker on the mismatch. If the binary
+must be slice-named, that rename is a **later ticket's** explicit `outputs` (with that path in ITS header),
+never the scaffold's. Same rule generally: a ticket's `outputs` = what its role deterministically writes.
+
 **DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
 wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
 and map **every** item → a concrete deliverable + its **exact path** as a `[ ]` acceptance line (root
 `Dockerfile`/`docker-compose.yml` are distinct from `component-tests/`). Do NOT leave DoD gaps for the
 implementer to discover. See `implementation-ticket-writer` → "Integration / final ticket special rule".
+
+**Keep the final ticket THIN (MUST — Qwen-sized).** The final carries ONLY wiring + README + deployment files
++ the DoD-closure checklist — **no behavioral logic, no heavy module**. The config-loader, observability/metrics
+middleware, and every module-tree node are **their own module tickets** (cut earlier), never folded into the
+final. A fat final blows past the implementer's context and drops (run 07-07/2: ticket-11 hit 76–80K tokens,
+3× a thin module → Qwen tool-call dropout). If the final would carry logic or assemble >1 node's worth of code, split it.
 
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):
@@ -545,10 +565,14 @@ Read `.agent/plan-reviewer/round` (no file → round `0`). Before the verdict, r
   (izi takes it to Gate #1 — the operator decides: accept with tech-debt / reformulate / stop).
 - **One** auto fix-round per cycle maximum; a second → escalate to the human.
 
-## Output → `.agent/plan-reviewer/plan-review.md`
-Verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket semantic walk**
-(`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append →
-`.agent/decisions.log`. izi reads only the verdict line.
+## Output → `.agent/plan-reviewer/plan-review.md` (durable completion signal — MUST, not your reply)
+**Write this FILE as your final action, before returning the verdict line to izi.** The FILE — not your
+one-line reply — is the completion signal: on `OK` the `--hard` guardrail **rejects @implementer delegation
+unless `.agent/plan-reviewer/plan-review.md` exists**, so a verdict without the file **stalls the pipeline**
+(izi cannot pass Gate #1). Write it once, then return the verdict line. Never report `OK` without the file on disk.
+Contents: verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket
+semantic walk** (`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append
+the verdict → `.agent/decisions.log`. izi reads the verdict line from the reply, but **advances only on the FILE**.
 
 ## STOP
 Input incomplete (no `PLAN.md`) → return `STOP: <reason>` to izi (counts as a round). Round ≥ 1 with a blocker → `escalate`.
