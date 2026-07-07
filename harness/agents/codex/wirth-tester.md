@@ -31,5 +31,12 @@ count ≠ design `1+Σ`**, a **numbering gap** = dropped scenario, a scenario **
 RED-by-business-reason and step-def resolution stay with `@linger`/`@mills`. Run this **now**, while `@wip`
 is present — after `@linger`'s acceptance the tag is gone and the check no longer applies.
 
+**Self-append the durable readiness marker (final DoD action):** ONLY after the `.feature` scenarios are
+authored, committed and coverage-complete (per the consequent above), append
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — here `green` means "this ticket
+is done"; the RED scenarios legitimately stay `@wip`). This durable side-effect — not your reply — is the
+completion signal; it survives an empty/dropped final message. The guardrail rejects the marker if the
+`.feature` artifact is missing; never append on an incomplete ticket.
+
 Produce exactly your output and return **one line**: `wirth-tester → component-tests RED ready (N scenarios, @wip)`.
 No input (no contract/cases/harness) → STOP, return the reason to izi.

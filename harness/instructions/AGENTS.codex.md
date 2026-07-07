@@ -559,6 +559,11 @@ Input incomplete (no `PLAN.md`) → return `STOP: <reason>` to izi (counts as a 
 `scaffolder → skeleton green (build+unit+smoke)` · `scaffolder → FAIL: <reason>` · `STOP: <reason>` (no script/template).
 Append the line to `.agent/decisions.log`. izi decides retry (K=2) / route to `@linger` / escalate.
 
+**On green — self-append the durable readiness marker (final DoD action):** ONLY after build+unit+smoke are
+green, append `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable
+side-effect — not your reply — is the completion signal; it survives an empty/dropped final message. The
+guardrail rejects the marker if the scaffold artifact is missing; never append on a red/STOP ticket.
+
 ---
 
 # hughes — implementer (izi: Hughes)
@@ -602,9 +607,14 @@ wait-loops) — the runner owns that; read only its exit code. Do NOT hunt for t
 Code **in the working tree** (no git); new feature behind an OFF toggle; coverage by the pyramid levels.
 Append → `.agent/decisions.log`.
 
-**Return contract (for izi's K=2 fuse):** your last action is to run the ticket's tests and return izi
-**one line**: `ticket NN → green` (all green) or `ticket NN → FAIL: <short reason>`. NOT "green" until the
-tests are green. izi reads only this line (retry/escalate signal; on FAIL `@linger` fixes it, not you).
+**Return contract (for izi's K=2 fuse):** run the ticket's tests; then, **ONLY if they are green**, your
+**last action** is to append the durable readiness marker —
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable side-effect —
+**not your reply text** — is the completion signal; it survives an empty/dropped final message. The guardrail
+rejects the marker if the ticket's artifact is missing, so never append on a red/unfinished ticket. Then
+return izi **one line**: `ticket NN → green` (all green) or `ticket NN → FAIL: <short reason>`. NOT "green"
+until the tests are green. izi reads the ledger marker (not this line) as the completion signal; the line is
+the retry/escalate hint (on FAIL `@linger` fixes it, not you).
 You **MUST NOT** issue review/gate verdicts (`APPROVE`, "Gate GO", "ready to merge") — that's the fixer/operator;
 self-certification is forbidden. Your output = code + facts (tests passed, numbers), not an acceptance judgement.
 
@@ -652,6 +662,13 @@ count ≠ design `1+Σ`**, a **numbering gap** = dropped scenario, a scenario **
 RED-by-business-reason and step-def resolution stay with `@linger`/`@mills`. Run this **now**, while `@wip`
 is present — after `@linger`'s acceptance the tag is gone and the check no longer applies.
 
+**Self-append the durable readiness marker (final DoD action):** ONLY after the `.feature` scenarios are
+authored, committed and coverage-complete (per the consequent above), append
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — here `green` means "this ticket
+is done"; the RED scenarios legitimately stay `@wip`). This durable side-effect — not your reply — is the
+completion signal; it survives an empty/dropped final message. The guardrail rejects the marker if the
+`.feature` artifact is missing; never append on an incomplete ticket.
+
 Produce exactly your output and return **one line**: `wirth-tester → component-tests RED ready (N scenarios, @wip)`.
 No input (no contract/cases/harness) → STOP, return the reason to izi.
 
@@ -663,7 +680,9 @@ Functional-theoretic verification. `izi` calls you in three contexts:
 1. **fix on a review verdict** (planning): `@mills` returned `blocker` — you fix **locally**;
 2. **implementer FAIL** (implementation): an implementer (`@scaffolder`/`@hughes`/`@wirth-tester`) returned
    `FAIL: <reason>` — you classify and fix its red (the implementer never fixes its own red — you do),
-   then re-verify, and return `green | escalate`;
+   then re-verify; **on green, your last action is to self-append the durable readiness marker**
+   `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — the durable completion
+   signal, not your reply; the guardrail rejects it if the artifact is missing), then return `green | escalate`;
 3. **CI fix + slice acceptance** (implementation): on CI signals after `@hughes`.
 
 You **MUST** classify the error before fixing: **implementation defect** → fix locally + re-verify;
