@@ -217,17 +217,28 @@ outputs: [harness/agents/_shared/{izi,wirth-planner}.md, harness/agents/{claude,
 - [ ] **hunk-хирургия** относительно T04: izi-презентация-хунк отдельно от marker-хунка; сериализация с T04 по одному файлу `izi.md`
 - **verify:** `gen-agents.mjs --check` + `bash harness/smoke/run.sh` PASS. Независим (кроме порядка правки `izi.md` с T04)
 
-### T06 — валидатор биекции module-tree ↔ тикеты
+### T06 — feasibility-валидаторы тикетов на Gate #1 (гейтить, не генерить)
+Ловят механические ошибки ticketer **до реализации** (не в рантайме). Принцип: LLM пишет тикет как сейчас,
+гейт проверяет инвариант. **generate = предотвратить (системный риск), validate = поймать (выброс, безопасно)** —
+кривой валидатор = пропуск, не порча всех тикетов; меньше парсинга (нужны имена узлов, не весь скелет);
+стек-агностик; по грани проекта (уже есть `validate-frd/tickets/plan/layout/constructors`). Поглощает T10/thin-final
+(из манифест-правил → в детерминированный гейт).
 ```yaml
 id: 06
 type: harness-validator
 blocked_by: []
-inputs:  [harness/validate-plan.mjs, harness/lib/validators.mjs]
-outputs: [harness/validate-plan.mjs, harness/lib/validators.mjs]
+inputs:  [harness/validate-plan.mjs, harness/validate-tickets.mjs, harness/lib/validators.mjs]
+outputs: [harness/validate-plan.mjs, harness/validate-tickets.mjs, harness/lib/validators.mjs]
 ```
-- [ ] узел module-tree без тикета **ИЛИ** тикет на >1 узел = blocker на Gate #1 (биекция 1:1)
-- **verify:** `node --test harness/test/validators.test.mjs` — синтетика: узел-сирота → blocker; тикет-монстр (>1 узел) → blocker; чистый план → 0
-- **realizes:** «Валидатор биекции» (секция «Детерминированный генератор тикетов»)
+- [ ] **биекция:** узел module-tree без тикета **ИЛИ** module-тикет на >1 узел = blocker (1:1).
+- [ ] **scaffold-feasibility:** `outputs` scaffold-тикета == известный выход `scaffold.sh` (`cmd/app`, `go.mod`,
+  `internal/<slug>/…`) — не выдуманный `cmd/<svc>`. Убирает T10 by construction.
+- [ ] **module-outputs ⊆ module-tree:** пути `outputs` module-тикета соответствуют файлам его узла.
+- [ ] **тонкий final:** final-тикет — ≤N accept-пунктов **И** нет logic-файлов в `outputs` (только wiring/README/
+  deploy/DoD). Убирает thin-final by construction.
+- **verify:** `node --test harness/test/validators.test.mjs` — синтетика: узел-сирота → blocker; тикет-монстр → blocker;
+  scaffold с `cmd/<svc>` → blocker; толстый final (logic в outputs) → blocker; чистый план → 0.
+- **note:** «scaffold-feasibility» знает выход `scaffold.sh` — держать в одном месте (мета-T10: derive/sync, не хардкод).
 
 ### T07 — mills/design: config-flag / untraced-knob правила
 ```yaml
@@ -313,28 +324,21 @@ advance'ит. Расходятся с фактом → маркер блокир
 - **discovered:** живой прогон 07-07 — T03 поймал ровно класс «объявленный `outputs` ≠ выход роли»: подтверждает
   ценность poka-yoke И вскрывает постановочный рассинхрон ticketer↔scaffold.sh.
 
-### T11 — шаблоны DoD по типу тикета (детерминированный скелет + LLM только на слотах)
-Корень ошибок ticketer: пишет фрихендом И инвариант, И семантику → ошибается на **инварианте** (выдумал
-`cmd/<svc>` вместо `cmd/app`; толстый final). Конвейер = шаблонная API-разработка → форма тикетов инвариантна
-per тип → инвариант надо **генерировать**, не писать. Поглощает T10 + thin-final (станут «by construction»).
+### T11 — (переоформлен) генерацию скелетов ОТКЛОНИЛИ в пользу T06-валидаторов
+Была идея: детерминированный генератор скелетов DoD per тип (`GenTickets`), LLM заполняет только слоты.
+**Отклонена по критике** — генерация покупает «идеальный happy-path» ценой:
+- **систематической ошибки:** кривой шаблон = стабильно-неверные тикеты во ВСЕХ прогонах (незаметно, всё согласованно) —
+  хуже, чем LLM-выброс, который гейт ловит как аномалию;
+- **заёмного детерминизма:** входы (`module-tree.md` LLM-проза, выход `scaffold.sh`) надо парсить — та же хрупкость
+  (ловили в Волне 0 на code-fence); проблему двигаем на слой вниз;
+- **overfit/lock-in** на Go-API-шаблон (другой стек → форк скелетов/`ProbeScaffold`/io-роутера);
+- автоматизируем **лёгкую** половину (форма/пути), а дизайн живёт в **слотах** (остаются на LLM);
+- не проверить, что генератор ПРАВ (сверять не с чем — тикеты прогона были багнутые).
 
-```
-GenTickets(designPkg) -> Result<[Ticket], Error>:
-    | nodes    <- ReadModuleTree(designPkg)      // узлы дерева = module-тикеты
-    | scafOut  <- ProbeScaffold(scaffold.sh)     // фактический выход producer'а (cmd/app, go.mod…)
-    | skeletons = BuildSkeletons(nodes, scafOut) // ФИКС DoD per тип: scaffold|component|module×N|final
-    | tickets   = FillSlots(skeletons)           // LLM пишет ТОЛЬКО слоты (antecedent/consequent/ветки)
-    | ValidateSlots(tickets)                      // имя∈nodes · io==контракт · final тонкий → blocker
-    return Ok(tickets)
-```
-- [ ] `BuildSkeletons` — детерминированно: форма + `outputs` + Verify + Acceptance-скелет per тип. Ошибиться нельзя.
-- [ ] `ProbeScaffold` — `outputs` scaffold-тикета из **реального выхода** `scaffold.sh` (убирает T10 by construction).
-- [ ] `FillSlots` — LLM ticketer только семантика (что модуль делает), не структура.
-- [ ] `ValidateSlots` — гейт: имя ∈ module-tree · `io:` == контракт · final тонкий (≤N accept, нет logic-файлов).
-- **Риск №1:** кривой шаблон = **систематическая** ошибка во ВСЕХ тикетах (незаметна, всё согласованно). →
-  механику выводить из producer'а (`ProbeScaffold`, `ReadModuleTree`), не хардкодить; гонять прогонами.
-- **Прочие риски:** прокрустово ложе (форма из module-tree гнётся) · ошибки мигрируют в слоты (mills+валидаторы
-  остаются) · дрейф шаблон↔producer (derive-at-gen) · генератор=SPOF (юнит-тесты + `validate-tickets` гейтит).
-- **Поглощает:** T10 (scaffold-outputs by construction), thin-final (скелет final тонкий by construction).
-- **discovered:** прогон 07-07/2 — ошибки закрытия были ticketer-feasibility (не исполнителей): scaffold просил
-  невыполнимое, final перегружен. Оба — инвариант, который должен быть генерён, а не написан.
+**Решение: гейтить, а не генерить → см. `T06` (feasibility-валидаторы).** LLM пишет тикет, валидатор ловит
+инвариант-ошибки на Gate #1 (биекция · scaffold-outputs==scaffold.sh · module⊆tree · тонкий final). `validate`
+безопаснее `generate` (кривой валидатор = пропуск, не порча), меньше парсинга, стек-агностик, по грани проекта.
+- [ ] _(опц., позже)_ **генерить ТОЛЬКО scaffold-тикет** — единственный 100% фиксированный (всегда выход
+  `scaffold.sh`); остальное — валидировать (T06). Компромисс: генерация там, где нет семантики.
+- **discovered:** прогон 07-07/2 — ошибки закрытия были ticketer-feasibility (scaffold просил невыполнимое, final
+  перегружен). Лечится дешевле валидаторами (T06), чем генератором.
