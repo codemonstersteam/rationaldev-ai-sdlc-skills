@@ -242,3 +242,99 @@ outputs: [skills/lib/program-design/reference/step-07-infrastructure.md, skills/
 - [ ] mills/design-rule: дизайн **не закрывает** FRD open-question сам (run08: EmptyPolicy материализовал 'empty store semantics')
 - **verify:** `node harness/gen-skill-index.mjs --check` + `bash harness/smoke/run.sh` PASS. **blocked_by:** PR #39 merged (общий §7-контекст в requirements-intake)
 - **realizes:** L130, L131
+
+### T08 — mills plan-review.md durability (зеркало T02+T04 для review-артефакта)
+Обнаружено на **живом прогоне poka-yoke (07-07)**: mills проверил план (вердикт OK в decisions.log, 7/7
+валидаторов), но **не записал файл** `.agent/plan-reviewer/plan-review.md`. `--hard` guardrail требует этот
+файл для @implementer (`rational-guardrail.ts:174`: `!exists(review)||!exists(gate1)`) → блок @scaffolder
+после Gate #1. izi **не знал авто-фикса** → спросил оператора (потеря ~15 мин + ручной ответ). Причина —
+тот же класс, что poka-yoke: **reply-вердикт ≠ durable-артефакт**; mills дропнул файл (на переделегации
+записал). Две слабости → две правки, обе манифест-текст (как T02/T04), разные файлы → без конфликта.
+
+```yaml
+id: 08
+type: role-manifest
+blocked_by: []          # независим; лечь на feat/outputs-poka-yoke (T08b снова правит izi.md → бандл)
+inputs:  [harness/agents/_shared/mills.md, harness/agents/_shared/izi.md]
+outputs: [harness/agents/_shared/{mills,izi}.md, harness/agents/{claude,codex,opencode}/{mills,izi}.md, skills/roles/{mills,izi}/*, harness/instructions/AGENTS.codex.md]
+```
+- [ ] **T08a (producer, как T02):** `mills.md` — рамка «`plan-review.md` — durable completion signal, НЕ вердикт-строка; `--hard` guardrail блокирует @implementer без него; пиши файл **финальным действием** (Write, один раз), до возврата вердикта izi». Сейчас файл в `outputs:`+секция «## Output», но не оформлен как «сигнал, не reply» → дроп.
+- [ ] **T08b (recovery, как T04 genchi-genbutsu):** `izi.md` — блок guardrail «требует `plan-review.md`» **И** в decisions.log есть запись mills (ревью было) → **авто-переделегировать @mills** записать файл, затем продолжить; **не** стопориться, **не** спрашивать оператора.
+- [ ] **T08c (опц.):** сообщение guardrail при блоке — «`plan-review.md` отсутствует → переrun @mills» (recovery очевиден и без T08b).
+- **verify:** `gen-agents --check` + `bash harness/smoke/run.sh` PASS. Живьём — mills надёжно пишет файл; izi не спрашивает оператора на дропнутом review.
+- **discovered:** живой прогон 07-07 (poka-yoke chain). Матрица: producer пишет надёжно (T02 тикеты / **T08a** review) × izi чинит дроп (T04 тикеты / **T08b** review).
+
+### T09 — сторож живого прогона: авто-resume на 504 (СДЕЛАНО, bench-тулза)
+Обнаружено на живом прогоне: провайдер (OpenRouter→апстрим) отдал `504 Upstream idle timeout` → стрим
+izi (GLM-4.7-flash) упал, izi встал ~19 мин, авто-ретрая нет. Лечили ручным нуджем.
+- [x] `experiments/token-bench/runners/watch-izi-resume.sh` — на свежий stream-error в `opencode.log`
+  спит 60с (апстрим оклемается) и будит izi одним нуджем (durable-progress не переделывает готовое).
+  Безопасно: триггер ТОЛЬКО по ошибке в логе + не нуджит при видимом permission-промпте + антидребезг 90с
+  → Gate #1/permission не трогает. Untracked bench-тулза (не устанавливаемый `harness/`).
+- [ ] _(опц.)_ перенести retry на уровень прокси (:4000) — прозрачный ретрай апстрим-504 до возврата в
+  opencode; izi ошибку не видит вовсе. Тяжелее (правка `tokenprox`), но «настоящий» фикс.
+
+### T10 — консистентность scaffold-контракта: outputs ↔ scaffold.sh ↔ poka-yoke ↔ validate-layout ↔ izi
+Обнаружено на **живом прогоне poka-yoke (07-07)**, первое живое срабатывание T03: ticketer положил
+`cmd/services-by-platform/main.go` в `outputs` **scaffold-тикета (01)**. Но `harness/scaffold.sh` делает
+простую детерминированную задачу — clone шаблона + rename **go-module** (`OLDMOD→SVC` во всех .go/go.mod),
+**директорию `cmd/app` НЕ переименовывает** (шаблон = `cmd/app/`); scaffolder манифестом обязан «не трогать
+шаблон, доверять scaffold.sh». → фактический выход `cmd/app/main.go` ≠ объявленный `cmd/services-by-platform/`
+→ poka-yoke справедливо заблокировал маркер ticket-01. **Причина — постановка ticketer**, не дефект scaffolder.
+Модель: scaffolder = generic-скелет (`cmd/app`); slice-переименование `cmd/app→cmd/<slug>` — работа
+**следующего** implementer/assembly-тикета, не scaffold.
+**Инвариант (общий, не только scaffold):** для ЛЮБОГО тикета `outputs` = **ровно те файлы, что реально
+производит роль тикета**. Именно `outputs` сверяет poka-yoke (T03) на записи маркера, и на них же izi
+advance'ит. Расходятся с фактом → маркер блокируется. Значит `outputs` нельзя выдумывать — их выводят из
+детерминированного производителя.
+
+**Кто что делает и как принимают (свести явно):**
+| Звено | Роль/механизм | Контракт |
+|---|---|---|
+| **производит** | `scaffolder` → `sh harness/scaffold.sh <slug>` | clone шаблона + rename **go-module** во всех `.go`/`go.mod` + `go build`. **`cmd/app` НЕ трогает.** scaffolder манифестом «не читать/не менять шаблон, доверять скрипту»; затем build/unit/smoke + self-append маркера (T02). |
+| **объявляет** | `ticketer` → `outputs:` ticket-01 | ДОЛЖНО = выход `scaffold.sh`. Сейчас **выдумывает** `cmd/<svc>` → рассинхрон. |
+| **сверяет наличие** | плагин poka-yoke (T03) | на маркере: каждый путь `outputs` существует+непуст. |
+| **сверяет размещение** | izi → `validate-layout.mjs` | slice-aligned: код в `internal/<slug>/`, нет layer-keyed корней. `cmd/app` не трогает. |
+| **advance'ит** | `izi` (T04) | маркер в `done.log` **И** `validate-layout` чист → следующий тикет. |
+
+**Принцип scaffolder (решает выбор):** scaffolder ставит **генерик-леса** — шаблон + свежий module-path,
+чтобы проект собирался — и **проверяет пригодность к разработке** (build/unit/smoke). Он **НЕ формирует код
+под слайс**: slice-идентичность живёт в `internal/<slug>/`, не в `cmd/`. Значит `cmd/app` **остаётся как есть**.
+
+**Фикс = вариант A (принято).**
+- [x] **Решение: A.** ticketer объявляет `cmd/app/main.go` как есть, rename НЕТ — `cmd/app` валидная конвенция
+  (slice-идентичность в `internal/<slug>/`, не в имени бинаря). Реализовано в `wirth-ticketer.md` (`c125cda`).
+- [ ] **Правило ticketer (обязательно, реализовано):** `outputs` scaffold-тикета = выход `scaffold.sh`/шаблона,
+  не выдумываются. Общее: `outputs` любого тикета = что его роль детерминированно пишет.
+- ~~**B:** `scaffold.sh` сам `mv cmd/app → cmd/<slug>`~~ — **ОТКЛОНЁН по принципу:** scaffolder/скрипт не формируют
+  код под слайс, только ставят леса + проверяют. `mv` под slug = slice-работа, не его.
+- ~~**C:** rename делает later-тикет~~ — не нужен: `cmd/app` не переименовывается вовсе.
+- **verify:** scaffold на bench → `outputs` ticket-01 (`cmd/app/main.go`) == факт == poka-yoke green без ручного фикса.
+- **discovered:** живой прогон 07-07 — T03 поймал ровно класс «объявленный `outputs` ≠ выход роли»: подтверждает
+  ценность poka-yoke И вскрывает постановочный рассинхрон ticketer↔scaffold.sh.
+
+### T11 — шаблоны DoD по типу тикета (детерминированный скелет + LLM только на слотах)
+Корень ошибок ticketer: пишет фрихендом И инвариант, И семантику → ошибается на **инварианте** (выдумал
+`cmd/<svc>` вместо `cmd/app`; толстый final). Конвейер = шаблонная API-разработка → форма тикетов инвариантна
+per тип → инвариант надо **генерировать**, не писать. Поглощает T10 + thin-final (станут «by construction»).
+
+```
+GenTickets(designPkg) -> Result<[Ticket], Error>:
+    | nodes    <- ReadModuleTree(designPkg)      // узлы дерева = module-тикеты
+    | scafOut  <- ProbeScaffold(scaffold.sh)     // фактический выход producer'а (cmd/app, go.mod…)
+    | skeletons = BuildSkeletons(nodes, scafOut) // ФИКС DoD per тип: scaffold|component|module×N|final
+    | tickets   = FillSlots(skeletons)           // LLM пишет ТОЛЬКО слоты (antecedent/consequent/ветки)
+    | ValidateSlots(tickets)                      // имя∈nodes · io==контракт · final тонкий → blocker
+    return Ok(tickets)
+```
+- [ ] `BuildSkeletons` — детерминированно: форма + `outputs` + Verify + Acceptance-скелет per тип. Ошибиться нельзя.
+- [ ] `ProbeScaffold` — `outputs` scaffold-тикета из **реального выхода** `scaffold.sh` (убирает T10 by construction).
+- [ ] `FillSlots` — LLM ticketer только семантика (что модуль делает), не структура.
+- [ ] `ValidateSlots` — гейт: имя ∈ module-tree · `io:` == контракт · final тонкий (≤N accept, нет logic-файлов).
+- **Риск №1:** кривой шаблон = **систематическая** ошибка во ВСЕХ тикетах (незаметна, всё согласованно). →
+  механику выводить из producer'а (`ProbeScaffold`, `ReadModuleTree`), не хардкодить; гонять прогонами.
+- **Прочие риски:** прокрустово ложе (форма из module-tree гнётся) · ошибки мигрируют в слоты (mills+валидаторы
+  остаются) · дрейф шаблон↔producer (derive-at-gen) · генератор=SPOF (юнит-тесты + `validate-tickets` гейтит).
+- **Поглощает:** T10 (scaffold-outputs by construction), thin-final (скелет final тонкий by construction).
+- **discovered:** прогон 07-07/2 — ошибки закрытия были ticketer-feasibility (не исполнителей): scaffold просил
+  невыполнимое, final перегружен. Оба — инвариант, который должен быть генерён, а не написан.
