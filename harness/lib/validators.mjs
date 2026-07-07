@@ -520,10 +520,11 @@ export function validateConstructors(files, domainTypes = null) {
     if (!/return\s+[\w.]*\{\s*\}\s*,/.test(fnBody))
       errors.push(`New${name} без проверки (нет ветки return ${name}{}, err) — фабрика-pass-through не валидирует ` +
         `диапазон; каждое поле обязано проверяться, ни одно не должно пройти без проверки`)
-    // #4 голый литерал X{...} вне тела фабрики
+    // #4 голый НЕПУСТОЙ литерал X{поля...} вне тела фабрики. Пустой X{} — это zero-value на error-пути
+    // (идиома `return X{}, err`), НЕ сборка в обход валидации → не флагаем (иначе ложное срабатывание).
     for (const f of files) {
       const s = fnSpan(f.src, `New${name}`)
-      for (const m of f.src.matchAll(new RegExp(`\\b${name}\\{`, "g"))) {
+      for (const m of f.src.matchAll(new RegExp(`\\b${name}\\{\\s*[^}\\s]`, "g"))) {
         const inside = s && m.index >= s[0] && m.index < s[1]
         if (!inside)
           errors.push(`голый литерал ${name}{...} в ${f.path}:${lineAt(f.src, m.index)} минует фабрику New${name} ` +

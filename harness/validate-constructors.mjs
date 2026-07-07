@@ -46,8 +46,8 @@ if (existsSync(design)) {
     const mt = join(design, slice, "module-tree.md")
     if (!existsSync(mt)) continue
     for (const line of readFileSync(mt, "utf8").split("\n")) {
-      if (!/^\s*\|/.test(line) || !/constructor|subtype/i.test(line)) continue // только строки-таблицы узлов
-      for (const m of line.matchAll(/`New(\w{2,})`/g)) types.add(m[1]) // backtick-узел, тип >1 символа (не плейсхолдер NewT)
+      if (!/constructor|subtype/i.test(line)) continue // узел-конструктор/подтип: строка-таблицы ИЛИ строка code-fence-дерева
+      for (const m of line.matchAll(/\bNew([A-Z]\w+)\b/g)) types.add(m[1]) // NewX (в backtick'ах ИЛИ голый в code-fence-дереве), тип с заглавной >1 символа (не плейсхолдер NewT)
     }
   }
   if (types.size) domainTypes = types
