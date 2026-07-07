@@ -9,9 +9,12 @@
 //   slice: slice-02-catalog
 //   blocked_by: [01, 04]
 //   inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
+//   outputs: [internal/catalog/logic.go, internal/catalog/logic_test.go]  # непустой; артефакты тикета
 //   io: file                # только для type: module
 //   skills: [db-io, db-schema]
 //   ---
+// inputs проверяются на существование (апстрим-артефакты). outputs — НЕ здесь: их производит сам тикет
+// (на Gate #1 их ещё нет), наличие сверяет guardrail-poka-yoke на записи done.log-маркера.
 //
 // Запуск: node harness/validate-tickets.mjs [ticketsDir] [projectRoot]
 // exit 0 = валидны; exit 1 = проблемы (stderr).

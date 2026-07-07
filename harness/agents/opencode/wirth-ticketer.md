@@ -46,10 +46,12 @@ implementer to discover. See `implementation-ticket-writer` → "Integration / f
 
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):
-`id`, `type` (scaffold|component|module), `slice`, `blocked_by: [id,…]`, `inputs: [paths,…]`, `io:` (for
-module), `skills: [...]`. Exactly **one** scaffold ticket (`id: 01`, `blocked_by: []`). `blocked_by`/`inputs`
-**MUST** be real (izi does not compute them, it takes them as-is). `harness/validate-tickets.mjs` and `@mills`
-reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.
+`id`, `type` (scaffold|component|module), `slice`, `blocked_by: [id,…]`, `inputs: [paths,…]`, `outputs:
+[paths,…]` (non-empty — artifacts the ticket produces), `io:` (for module), `skills: [...]`. Exactly **one**
+scaffold ticket (`id: 01`, `blocked_by: []`). `blocked_by`/`inputs`/`outputs` **MUST** be real (izi does not
+compute them, it takes them as-is). `outputs` do **not** exist at Gate #1 (the implementer writes them) — the
+guardrail poka-yoke checks their existence at the `done.log` marker, not here. `harness/validate-tickets.mjs`
+and `@mills` reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.
 
 **Consequent (self-check before returning — slice-aligned paths):** each DoD acceptance line carries an exact
 module path; every `internal/…` path **MUST** root in `internal/<slug>/` of its slice (or `internal/shared/`).

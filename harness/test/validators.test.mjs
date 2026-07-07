@@ -61,8 +61,8 @@ test("validateContractFrozen: AsyncAPI вариант", () => {
 })
 
 // --- validateTicketHeaders (чисто, без fs) ---
-const T = (over = {}) => ({ name: over.name ?? "05-mod.md", data: over.data === null ? null : { id: "05", type: "module", slice: "s1", blocked_by: ["01"], inputs: ["x"], io: "none", skills: [], ...over.data } })
-const SCAFFOLD = { name: "01-scaffold.md", data: { id: "01", type: "scaffold", slice: "s1", blocked_by: [], inputs: [], skills: ["service-scaffold"] } }
+const T = (over = {}) => ({ name: over.name ?? "05-mod.md", data: over.data === null ? null : { id: "05", type: "module", slice: "s1", blocked_by: ["01"], inputs: ["x"], outputs: ["internal/s1/logic.go"], io: "none", skills: [], ...over.data } })
+const SCAFFOLD = { name: "01-scaffold.md", data: { id: "01", type: "scaffold", slice: "s1", blocked_by: [], inputs: [], outputs: ["cmd/app/main.go"], skills: ["service-scaffold"] } }
 
 test("validateTicketHeaders: scaffold + module → нет ошибок", () => {
   assert.deepEqual(validateTicketHeaders([SCAFFOLD, T()]), [])
@@ -76,6 +76,12 @@ test("validateTicketHeaders: битый type → ошибка", () => {
 test("validateTicketHeaders: module без io → ошибка", () => {
   assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { io: undefined } })]).some((e) => /без валидного io/.test(e)))
 })
+test("validateTicketHeaders: тикет без outputs → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { outputs: undefined } })]).some((e) => /outputs должен быть flow/.test(e)))
+})
+test("validateTicketHeaders: пустой outputs → ошибка (poka-yoke нечего проверять)", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { outputs: [] } })]).some((e) => /outputs пуст/.test(e)))
+})
 test("validateTicketHeaders: blocked_by в никуда → ошибка", () => {
   assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { blocked_by: ["99"] } })]).some((e) => /несуществующий тикет/.test(e)))
 })
@@ -84,7 +90,7 @@ test("validateTicketHeaders: два scaffold → ошибка", () => {
 })
 test("validateTicketHeaders: normId 05 == 5 (blocked_by резолвится)", () => {
   const child = T({ data: { blocked_by: ["1"] } })
-  const s = { name: "01.md", data: { id: "01", type: "scaffold", slice: "s", blocked_by: [], inputs: [], skills: ["service-scaffold"] } }
+  const s = { name: "01.md", data: { id: "01", type: "scaffold", slice: "s", blocked_by: [], inputs: [], outputs: ["cmd/app/main.go"], skills: ["service-scaffold"] } }
   assert.deepEqual(validateTicketHeaders([s, child]), [])
 })
 
