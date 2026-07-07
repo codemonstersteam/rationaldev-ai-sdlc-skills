@@ -42,6 +42,14 @@ entry», «sort the catalogue»):
 - **Invariant = subtype, not guard.** An invariant over a valid struct → a subtype constructor
   (`NewFreshEntity`), not a `-> ()` guard. → *Why:* a guard leaves the type unchanged (easy to skip); a
   subtype makes "unchecked" fail to compile.
+- **Valid by construction (HARD — the Go private-constructor analog).** A domain struct **MUST** have
+  **unexported fields** and a single exported factory `NewT(raw) -> Result<T, Error>`. The factory **MUST**
+  validate **every** field against its valid domain/range: a field is **either** its own validated
+  value-object (with its own `NewX`) **or** a primitive explicitly range-checked in the factory — every
+  field **MUST** be validated; no field may pass unchecked. A naked composite literal `T{...}` of a domain
+  type outside its factory **MUST NOT** appear. → *Why:* the type carries the invariant; illegal states are
+  unrepresentable at the package boundary, not re-checked at call sites. A struct with even one unvalidated
+  field is **not** valid by nature.
 - **Two things in one module = composite — split it.** → *Why:* one phrase per module keeps the tree
   readable and each ticket small.
 

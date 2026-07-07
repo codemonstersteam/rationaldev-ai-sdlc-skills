@@ -447,3 +447,89 @@ export function validateMermaid(md) {
   })
   return errors
 }
+
+// --- valid-by-construction (program-design step-03) ------------------------------------------
+// Каждый доменный value-object в Go: НЕэкспортируемые поля + единственная фабрика
+// NewX(raw) -> (X, error), которая проверяет КАЖДОЕ поле; голый литерал X{...} вне NewX запрещён
+// (Go-аналог приватного конструктора). wire-DTO (Raw*/…Request/…Response, поля с json:/yaml:-тегами)
+// исключены — им экспортируемые поля нужны для (де)сериализации.
+// Область — гибрид: domainTypes из module-tree (роли constructor/subtype), иначе эвристика ниже.
+// Приблизительно (regex, не Go-AST): #3 ловит «поле вообще не упомянуто в фабрике», не «проверено криво».
+
+const DTO_NAME = /^Raw|(Request|Response|DTO|Dto)$/
+const INFRA_NAME = /(Store|Client|Publisher|Consumer|Gateway|Repository|Server|Handler|Adapter|Recorder|Logger|Config|Options|Deps|App|Router|Mux)$/
+const structBody = (src, name) => {
+  const m = new RegExp(`type\\s+${name}\\s+struct\\s*\\{`).exec(src)
+  if (!m) return null
+  let i = m.index + m[0].length, depth = 1, start = i
+  for (; i < src.length && depth; i++) { if (src[i] === "{") depth++; else if (src[i] === "}") depth-- }
+  return src.slice(start, i - 1)
+}
+const fieldsOf = (body) => body.split("\n").map((l) => l.replace(/\/\/.*$/, "").trim()).filter(Boolean)
+  .map((l) => {
+    const tag = /`[^`]*\b(json|yaml|xml):/.test(l)
+    const mm = /^([A-Za-z_]\w*)(\s*,\s*[A-Za-z_]\w*)*\s+\S/.exec(l) // "name Type" (не встроенный тип)
+    const names = mm ? l.slice(0, l.search(/\s+\S/)).split(",").map((s) => s.trim()) : [l.split(/\s+/)[0]]
+    return { names, tag, embedded: !mm }
+  })
+const fnSpan = (src, fnName) => {
+  const m = new RegExp(`func\\s+${fnName}\\s*\\(`).exec(src)
+  if (!m) return null
+  let i = src.indexOf("{", m.index); if (i < 0) return null
+  const start = i; let depth = 0
+  for (; i < src.length; i++) { if (src[i] === "{") depth++; else if (src[i] === "}" && --depth === 0) { i++; break } }
+  return [start, i]
+}
+const lineAt = (src, idx) => src.slice(0, idx).split("\n").length
+
+// files: [{ path, src }] (только *.go среза, без *_test.go). domainTypes: Set<string>|null (из module-tree).
+export function validateConstructors(files, domainTypes = null) {
+  const errors = []
+  const all = files.map((f) => f.src).join("\n")
+  const factories = new Set([...all.matchAll(/func\s+New(\w+)\s*\([^)]*\)\s*\(\s*(\w+)/g)]
+    .filter((m) => m[1] === m[2]).map((m) => m[1])) // NewX -> (X, ...)
+  const structNames = [...all.matchAll(/type\s+(\w+)\s+struct\s*\{/g)].map((m) => m[1])
+
+  for (const name of structNames) {
+    const body = structBody(all, name); if (body == null) continue
+    const fields = fieldsOf(body)
+    const hasTag = fields.some((f) => f.tag)
+    // Область (гибрид). module-tree: доверяем ролям узлов (дизайн уже классифицировал). Эвристика (без
+    // module-tree): только структуры, сами объявившие себя value-object'ом (есть NewX), не DTO и не инфра
+    // (*Store/*Client/Deps/*Handler/…) — иначе не знаем намерения и ложно требуем фабрику у wiring/I/O.
+    const inScope = domainTypes ? domainTypes.has(name)
+      : (factories.has(name) && !DTO_NAME.test(name) && !INFRA_NAME.test(name) && !hasTag)
+    if (!inScope) continue
+
+    // #1 поля неэкспортируемые
+    for (const f of fields) for (const n of f.names)
+      if (/^[A-Z]/.test(n))
+        errors.push(`${name}.${n} экспортируемое — доменный value-object обязан инкапсулировать поля (геттер), ` +
+          `иначе снаружи пакета собирается невалидная структура`)
+    // #2 фабрика есть — обязательна ТОЛЬКО когда module-tree назвал тип конструктор-узлом (иначе намерение неясно)
+    if (!factories.has(name)) {
+      if (domainTypes)
+        errors.push(`${name} без фабрики New${name}(raw) -> (${name}, error) — не valid by construction (step-03)`)
+      continue
+    }
+    // #3 фабрика реально валидирует (есть guard с возвратом ошибки), а не pass-through.
+    // Полноту «каждое поле проверено» держит формула юнит-тестов в дизайне (ветвь на поле = unit);
+    // регексом надёжно проверяем лишь наличие проверки как таковой (без ложных срабатываний на wrapper'ах).
+    const span = fnSpan(all, `New${name}`)
+    const fnBody = span ? all.slice(span[0], span[1]) : ""
+    if (!/return\s+[\w.]*\{\s*\}\s*,/.test(fnBody))
+      errors.push(`New${name} без проверки (нет ветки return ${name}{}, err) — фабрика-pass-through не валидирует ` +
+        `диапазон; каждое поле обязано проверяться, ни одно не должно пройти без проверки`)
+    // #4 голый литерал X{...} вне тела фабрики
+    for (const f of files) {
+      const s = fnSpan(f.src, `New${name}`)
+      for (const m of f.src.matchAll(new RegExp(`\\b${name}\\{`, "g"))) {
+        const inside = s && m.index >= s[0] && m.index < s[1]
+        if (!inside)
+          errors.push(`голый литерал ${name}{...} в ${f.path}:${lineAt(f.src, m.index)} минует фабрику New${name} ` +
+            `(строй только через New${name}, иначе инвариант не гарантирован)`)
+      }
+    }
+  }
+  return errors
+}

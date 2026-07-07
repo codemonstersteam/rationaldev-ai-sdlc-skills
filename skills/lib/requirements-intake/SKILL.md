@@ -34,6 +34,11 @@ A BRD is design-ready only when intake has produced all of:
 4. **Domain glossary** (ubiquitous language) — fuzzy terms pinned.
 5. **APIs exposed/consumed → a draft contract** (OpenAPI/AsyncAPI) + the **failure-mode map**.
 6. **NFR / constraints** and an explicit **open-questions** list.
+7. **Data dictionary — the valid domain of every field.** For each `Request`/message field and each
+   domain-entity field: its type, **valid range / enum / format**, required-or-optional, and the
+   `error.code` a violation maps to. → *Why:* `program-design`'s **valid-by-construction** rule (step-03)
+   has the factory validate **every** field against its range — that range **MUST** come from
+   requirements, never be invented at design time.
 
 If any is missing and can't be elicited, you **MUST stop** and ask — don't invent it.
 
@@ -88,6 +93,11 @@ From the use cases + interfaces, draft:
 These are not external preconditions — intake **produces** them. They then satisfy
 `program-design` Step 0.
 
+Each field's valid domain (from the data dictionary, §7) is either an **input-validation Extension** (a
+bad `Request` field → a unit boundary downstream) or a **domain-entity invariant** (→ a subtype
+constructor in `program-design` step-03). Every range you pin here becomes a factory check there — no
+range, no way to be valid by construction.
+
 ### Step 5 — NFR, constraints, open questions
 Record non-functional requirements (load, latency/SLO, security, data classification) and an
 explicit **Open questions** section for every gap the BRD didn't answer. An open question is
@@ -111,6 +121,7 @@ complete" — surface the gap as an open question.
 ## Problem statement        # one phrase
 ## Actors & external systems # + interface per boundary (HTTP/gRPC/broker/CLI)
 ## Use cases                 # Cockburn: actor, pre/postcondition, MSS, Extensions
+## Data dictionary           # per field: type, valid range/enum/format, required?, error.code on violation
 ## Glossary                  # ubiquitous language → link to root CONTEXT.md (or CONTEXT-MAP.md if ≥2 contexts)
 ## Contract (draft)          # OpenAPI/AsyncAPI skeleton from the use cases
 ## Failure-mode map          # → README ## Карта режимов отказа
@@ -123,6 +134,7 @@ complete" — surface the gap as an open question.
 - [ ] problem statement (one phrase) recorded;
 - [ ] every external input has an actor, an interface, and a use case;
 - [ ] each use case has Main Success Scenario + Extensions with outcomes;
+- [ ] data dictionary: every input & domain field has a valid range/enum/format + the `error.code` on violation;
 - [ ] fuzzy terms pinned in the glossary;
 - [ ] draft contract (OpenAPI/AsyncAPI) and `## Карта режимов отказа` derived from the use cases;
 - [ ] NFR and open questions listed;
