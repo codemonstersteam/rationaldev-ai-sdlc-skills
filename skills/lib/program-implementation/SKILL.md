@@ -154,6 +154,7 @@ unformatted=$(gofmt -l .); [ -n "$unformatted" ] && echo "$unformatted" && exit 
 go vet ./...                                                                          # 2. static
 go test -cover ./...                                                                  # 3. unit + coverage report
 ./component-tests/scripts/run-tests.sh healthy                                        # 4. component
+node harness/validate-constructors.mjs                                                # 5. valid-by-construction
 ```
 
 **Green before review:** gofmt empty, vet clean, unit all green. Component: **prior accepted**
@@ -166,6 +167,12 @@ pipeline §6). A red scenario in a prior accepted slice → stop.
 formula's unit-test count (`1 happy + Σ branches`), all green — that is 100% branch coverage of the
 business logic **by construction**. `go test -cover` reports it; head/adapter/I/O have no unit tests and
 legitimately dilute the package %, so gate on the **formula-count match**, not a raw %.
+
+**Valid by construction (gate).** `node harness/validate-constructors.mjs` MUST pass on every
+domain-constructor ticket: each domain value-object (a module-tree constructor/subtype node) has
+**unexported fields** + a single `NewX` factory with a validating guard, and no naked `T{...}` bypasses
+it (`program-design` step-03 · [`reference/valid-by-construction.md`](reference/valid-by-construction.md)).
+Not done until green.
 
 - Unit red: bug in the module → fix the code (not the contract); a genuinely wrong test → fix it,
   but **MUST NOT** weaken/skip/delete a case or relabel a real module failure as a "test bug" to go
