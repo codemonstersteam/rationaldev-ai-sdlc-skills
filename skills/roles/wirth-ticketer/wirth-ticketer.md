@@ -20,11 +20,12 @@ lead slice, `blocked_by: []`, blocks all) → per slice {component RED → modul
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
 `go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures — as the template ships them.
-`scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` may not reshape the
-template. So do **NOT** declare a slice-named `cmd/<slug>/main.go` for the scaffold ticket — the real file is
-`cmd/app/main.go`, and the guardrail poka-yoke will (correctly) block the marker on the mismatch. If the binary
-must be slice-named, that rename is a **later ticket's** explicit `outputs` (with that path in ITS header),
-never the scaffold's. Same rule generally: a ticket's `outputs` = what its role deterministically writes.
+`scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` only erects generic
+scaffolding + verifies it builds — it **never reshapes code for a slice**. So do **NOT** declare a slice-named
+`cmd/<slug>/main.go` for the scaffold ticket — the real file is `cmd/app/main.go`, and the guardrail poka-yoke
+will (correctly) block the marker on the mismatch. **`cmd/app` stays as-is** — slice identity lives in
+`internal/<slug>/`, not in the binary name; there is **no `cmd/` rename** (not by scaffold, not by a later
+ticket). Same rule generally: a ticket's `outputs` = what its role deterministically writes.
 
 **DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
 wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
