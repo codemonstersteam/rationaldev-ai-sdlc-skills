@@ -44,6 +44,20 @@ sh experiments/token-bench/runners/run-claude.sh plain   /tmp/sb-claude-plain
 Раннер `run.sh` сам ставит харнес, вшивает модели по тирам, авто-аппрувит Gate #1, авто-allow'ит
 permission-промпты, пишет «скриншоты» в `<SB>/tmux.log`. Следи: `tmux attach -t bench-opencode`.
 
+## 3b. Ведение прогона агентом (драйв — оператору «чтоб не скучать»)
+При ручном/наблюдаемом прогоне (агент ведёт, оператор акцептует гейты) — отчёты **драйвовые и
+стат-богатые**, каждые ~3 мин + на событиях:
+- **📊-заголовок** + № + время; терсно, эмодзи для сканируемости.
+- **Прогресс-бар пайплайна** до гейта: `✅ triage ✅ intake ⬜ moduledesigner … → 🚦 Gate #1`
+  (считать `role=X` в `.agent/decisions.log`); «сейчас X, дальше Y».
+- **Экономика:** `N вызовов · in M · out K · $` + сплит по моделям. jq-ключи ТОЛЬКО ASCII (кириллица ломает jq).
+- **Здоровье:** свежесть последнего вызова · сторож-504 · ошибок в `opencode.log` · Gate-статус.
+- **Называй впереди точки валидации** («дальше ticketer — проверю cmd/app»; «mills — пишет ли review»).
+- **На Gate #1 — покажи PLAN.md summary** (izi выводит дословно) и жди оператора; гейты НЕ прокликивай.
+- Фон-хартбит: `sleep`-луп в `run_in_background`, ловит permission/poka-yoke/Gate#1-вопрос рано, иначе TICK 180с.
+- Сетевой 504 роняет turn izi → сторож `runners/watch-izi-resume.sh` (короткий однострочный нудж; длинный
+  встаёт QUEUED). Диагностика столла — `~/.local/share/opencode/log/opencode.log`, не по прокси.
+
 ## 4. Оценка и замер
 ```sh
 sh experiments/token-bench/acceptance/check.sh "$SB"        # арбитр: PASS/FAIL
