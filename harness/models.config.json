@@ -31,5 +31,11 @@
       "small": ""
     },
     "roles": {}
+  },
+  "watchdog": {
+    "//": "T09b — 504/сеть-resilience плагина rational-guardrail (opencode --hard). ЕДИНЫЙ источник, из него генерятся 2 таргета: chunkTimeout → prep пишет в opencode.jsonc (provider.options — OpenCode-настройка, ловит тихий hang); nudgeCooldownMs/nudgeText → install кладёт в .opencode/rational.config.json, плагин читает сам (OpenCode их не понимает).",
+    "chunkTimeout": 90000,
+    "nudgeCooldownMs": 30000,
+    "nudgeText": "Провайдер оборвался — продолжи с текущего места, не переделывай"
   }
 }

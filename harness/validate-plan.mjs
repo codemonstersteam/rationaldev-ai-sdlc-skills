@@ -12,7 +12,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
-import { validatePlan, parseDodNumbers } from "./lib/validators.mjs"
+import { validatePlan, validateFeasibility, parseDodNumbers } from "./lib/validators.mjs"
 
 const root = process.argv[3] || process.cwd()
 const explicit = process.argv[2]
@@ -44,9 +44,9 @@ const tickets = ticketFiles.map(({ rel, abs }) => {
 const taskPath = join(root, "TASK.md")
 const dodNumbers = existsSync(taskPath) ? parseDodNumbers(readFileSync(taskPath, "utf8")) : []
 
-const errors = validatePlan(tickets, dodNumbers)
+const errors = [...validatePlan(tickets, dodNumbers), ...validateFeasibility(tickets)]
 if (errors.length) {
-  console.error("validate-plan: ПЛАН НЕЦЕЛОСТЕН (граф/порядок/DoD-замыкание):")
+  console.error("validate-plan: ПЛАН НЕЦЕЛОСТЕН (граф/порядок/DoD-замыкание/feasibility):")
   for (const e of errors) console.error(`  ✗ ${e}`)
   process.exit(1)
 }

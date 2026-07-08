@@ -62,12 +62,19 @@ permission-промпты, пишет «скриншоты» в `<SB>/tmux.log`.
 ```sh
 sh experiments/token-bench/acceptance/check.sh "$SB"        # арбитр: PASS/FAIL
 sh experiments/token-bench/inventory.sh "$SB"               # сколько/каких тестов
-# токены арма:
-jq -s '{calls:length, out:(map(.completion_tokens)|add), in:(map(.input_tokens)|add)}' \
-  experiments/token-bench/proxy/opencode.jsonl
+# токены + РЕАЛЬНАЯ стоимость арма (окно прогона по UTC-старту START):
+jq -s --arg s "$START" 'map(select(.ts>=$s)) | {
+  calls:length, cost_usd:(map(.cost_usd)|add),
+  in:(map(.input_tokens)|add), out:(map(.completion_tokens)|add),
+  cache_read:(map(.cache_read_tokens)|add) }' \
+  experiments/token-bench/proxy/usage.jsonl
 ```
-Стоимость `$` бери из TUI/`/cost` (включает input+кэш — честный сигнал). Время — из таймстемпов
-`ts` в логе прокси (span − максимальный разрыв = активное, без простоя на пополнение кредитов).
+**Стоимость `$` бери из `cost_usd` прокси, НЕ из TUI.** TUI показывает цену только izi-сессии и НЕ
+видит проксированную модель — врёт в разы (наблюдали $0.03 TUI против $4.70 реальных). OpenRouter
+отдаёт фактический `cost` за каждую генерацию, прокси ловит его (`reCostUSD`) в `usage.jsonl.cost_usd`
+— это источник правды; отдельно тянуть прайс из `/api/v1/models` не нужно. Драйвер стоимости —
+**large-модель на планировании** (~80%), не имплементер. jq-ключи только ASCII (кириллица валит jq).
+Время — из таймстемпов `ts` (span − максимальный разрыв = активное, без простоя на пополнение кредитов).
 
 ### 4b. Eval-вердикт траектории (ОБЯЗАТЕЛЬНО, #42)
 Кто/где сломался и почему — не только метрики. Вход — `flow.jsonl` (+`usage.jsonl`) прогона в

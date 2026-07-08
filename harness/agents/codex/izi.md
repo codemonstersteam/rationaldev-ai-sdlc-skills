@@ -178,11 +178,28 @@ paths; this checks the *written* code — the implementer's self-cert is not eno
 
 **You MUST NOT** delegate "assemble everything across all tickets" — atomic, one ticket each.
 
-## Completion
+**When the last ticket is `green` (all markers present, `validate-layout` clean) → you are NOT
+finished: proceed to `## DoD-closure` below. Do NOT stop, do NOT run the tests yourself.**
 
-- `@linger` (after implementation): build → unit → component; green → remove `@wip`. Not fixed in N → escalate.
-  → **Gate #2** (merge, human) → canary trigger.
-- `@michtom`: canary 1→5→25→100% + 4 golden signals. → **Gate #3** (post-canary acceptance, human).
+## DoD-closure — after the LAST ticket, BEFORE Gate #2 (MUST — do not skip, do not self-run)
+
+**Trigger:** every slice ticket has a `green` marker in `.agent/planner/done.log` AND `validate-layout`
+is clean. Implementation is done — but YOU are not: one imperative step remains. You MUST NOT run the
+tests yourself and MUST NOT idle here.
+
+**Delegate `@fagan` — the terminal acceptance inspector** (NOT `@linger`; the acceptor is never the
+author or the fixer — separation of duties). Input = slice path + slug. `@fagan` inspects and returns
+`accepted | FAIL: <item>`: it runs the deterministic DoD gate (`validate-component-tests` re-check +
+`validate-dod --run`: build/test/files/`run-tests` exit/README structure), judges the semantic verdict
+(README faithfulness, no-hardcode), and on both-green **strips `@wip`** (its only write — the acceptance
+signature the implementer was forbidden to touch). It produces nothing else and never repairs.
+
+- `accepted` → **present Gate #2** (merge, human): summarize what was built + the green DoD checklist,
+  then ask the operator to accept. **Do NOT create any gate marker yourself** (same rule as Gate #1).
+- `FAIL: <item>` → route the defect to `@linger` (the fixer, K=2 fuse); on `@linger` green, call
+  `@fagan` again. Never present Gate #2 on red; never let the acceptor fix its own findings.
+
+→ after operator accept → `@michtom`: canary 1→5→25→100% + 4 golden signals → **Gate #3** (human).
 
 ## Escalation handling (Ralph Loop)
 

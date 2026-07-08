@@ -39,6 +39,11 @@ A BRD is design-ready only when intake has produced all of:
    `error.code` a violation maps to. → *Why:* `program-design`'s **valid-by-construction** rule (step-03)
    has the factory validate **every** field against its range — that range **MUST** come from
    requirements, never be invented at design time.
+   This includes **every configuration flag / deployment policy**: a behavior-changing value **MUST** be a
+   declared config field here (valid range + default + `CONFIG_INVALID` on violation), sourced from the
+   **config file / env**. A behavior flag injected via `Deps`/`Dependencies` with no entry here is a
+   violation — an untraced knob or gold-plating; if the policy is genuinely unresolved, it is an **open
+   question** for the operator, not a config knob invented at design time.
 
 If any is missing and can't be elicited, you **MUST stop** and ask — don't invent it.
 

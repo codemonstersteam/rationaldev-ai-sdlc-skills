@@ -362,3 +362,25 @@ test("validateComponentTests: дубль сценария → blocker", () => {
 test("validateComponentTests: пустой (только smoke) → blocker", () => {
   assert.ok(validateComponentTests({ business: [], wip: 0, smoke: 1 }, null).some((e) => /покрытие не реализовано/.test(e)))
 })
+
+// --- validateFeasibility (T06 — чисто) ---
+import { validateFeasibility } from "../lib/validators.mjs"
+const TF = (type, outputs) => ({ name: `t-${type}.md`, data: { type, outputs } })
+test("validateFeasibility: scaffold cmd/app → нет ошибок", () => {
+  assert.deepEqual(validateFeasibility([TF("scaffold", ["go.mod", "cmd/app/main.go", "Dockerfile", "run-tests.sh"])]), [])
+})
+test("validateFeasibility: scaffold выдумал cmd/<slug> → blocker (T10)", () => {
+  assert.ok(validateFeasibility([TF("scaffold", ["cmd/services-by-platform/main.go"])]).some((e) => /scaffold\.sh даёт 'cmd\/app/.test(e)))
+})
+test("validateFeasibility: module — только logic → нет ошибок", () => {
+  assert.deepEqual(validateFeasibility([TF("module", ["internal/s/logic.go", "internal/s/logic_test.go"])]), [])
+})
+test("validateFeasibility: wiring-тикет (register.go) один → нет ошибок", () => {
+  assert.deepEqual(validateFeasibility([TF("module", ["internal/s/register.go", "cmd/app/main.go"])]), [])
+})
+test("validateFeasibility: толстый final (wiring+docs+deploy) → blocker (single-concern)", () => {
+  assert.ok(validateFeasibility([TF("module", ["internal/s/register.go", "README.md", "Dockerfile"])]).some((e) => /смешивает разные шаги/.test(e)))
+})
+test("validateFeasibility: README-тикет один → нет ошибок", () => {
+  assert.deepEqual(validateFeasibility([TF("module", ["README.md"])]), [])
+})

@@ -33,7 +33,8 @@ Functional-theoretic verification. `izi` calls you in three contexts:
    then re-verify; **on green, your last action is to self-append the durable readiness marker**
    `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — the durable completion
    signal, not your reply; the guardrail rejects it if the artifact is missing), then return `green | escalate`;
-3. **CI fix + slice acceptance** (implementation): on CI signals after `@hughes`.
+3. **CI fix** (implementation): on CI signals after `@hughes`, or a defect handed back by `@fagan`
+   (the acceptance inspector) — you fix, you do not accept; acceptance/`@wip`-strip is `@fagan`'s alone.
 
 You **MUST** classify the error before fixing: **implementation defect** → fix locally + re-verify;
 **template/environment defect** (e.g. a `go.mod`/Dockerfile glitch from the stack template) → `escalate`
@@ -48,7 +49,7 @@ skill is spare context = slower and worse.
 | Failure (by CI signal / verdict) | Load EXACTLY |
 |---|---|
 | build/compile, unit fail | `program-implementation` (+ `code-style` if fixing style) |
-| component fail / slice acceptance (`@wip`) | `component-tests` |
+| component fail (a defect `@fagan` bounced back) | `component-tests` |
 | security finding (scan) | `security` |
 | index/commit hygiene (artifact/secret/blob) | `git-conventions` |
 | fix embodies a hard-to-reverse, non-obvious trade-off (record ADR) | `domain-modeling` (`ADR-FORMAT`) |
@@ -70,22 +71,16 @@ PR from `@hughes` + CI signals (unit/component/contract/lint/security);
 ## Classification (mandatory)
 Implementation defect → fix. Plan defect → replan. Three fixes on one symptom → forced replan. Log the decision.
 
-## Test sequence & slice acceptance
+## Test sequence (when fixing)
 Run **sequentially: build → unit (per-module) → component**. Cheap→expensive, local→global; on failure fix
 locally by the specific module's context.
 - **Component tests — only once the slice is fully assembled** (before all modules are built they are
   structurally red, no signal).
-- **Slice acceptance (fixer only):** when the slice's last ticket is green — run the component tests for
-  the slice; on **GREEN remove the `@wip`** tag from its scenarios and accept the work. Removing `@wip` =
-  the acceptance act. The implementer MUST NOT remove `@wip` (anti-gaming). See `component-tests`,
-  `program-implementation`, `docs/04_PLANNING_PIPELINE.md` §6.
-  - **Coverage re-check BEFORE removing `@wip` (MUST — anti-gaming).** The implementer self-certified `green`;
-    an implementer could have dropped a scenario or stripped a `@wip` to fake it. Run
-    `node harness/validate-component-tests.mjs` **while `@wip` is still present** (it verifies scenario count
-    == design `1+Σ`, no numbering gap, every business scenario `@wip`, smoke exists). Non-zero → coverage was
-    tampered/incomplete → **do NOT remove `@wip`, do NOT accept** → fix/escalate. Only a green re-check earns
-    the `@wip` removal. (`validate-component-tests` runs at `@wirth-tester` authoring-time too, but that is
-    BEFORE `@hughes` touches the tree — this is the acceptance-time re-check.)
+- **You fix, you do not accept.** Slice acceptance (the coverage re-check, DoD-closure, and the `@wip`
+  strip that signs it) belongs to `@fagan`, the terminal acceptance inspector — never to you or the
+  implementer (separation of duties; the author cannot sign off his own work). When `@fagan` bounces a
+  defect back, you repair it and re-verify to green; `@fagan` re-inspects and signs. You never strip
+  `@wip`. See `component-tests`, `program-implementation`, `docs/04_PLANNING_PIPELINE.md` §6.
 
 ## Output
 CI fixes **or** a code-review verdict (strict enum + classification — see CLAUDE.md "auto-run between

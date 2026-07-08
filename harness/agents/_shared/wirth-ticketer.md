@@ -41,11 +41,14 @@ You are **ONE stage** of the staged planning pipeline; `izi` calls you directly 
 **In:** the design package of ALL slices (trees, contracts with `io:`, use cases) **+ the FRD/`TASK.md`
 Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<name>/tickets/ticket-N.md` (file
 `ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
-lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module} → infra.
+lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module×N → **wiring → README**} → infra.
+There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
+`@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
-`go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures — as the template ships them.
+`go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures, **and the root
+`Dockerfile`/`docker-compose.yml`/`run-tests.sh` boilerplate** — as the template ships them (@linger just runs them, никто их не пишет позже).
 `scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` only erects generic
 scaffolding + verifies it builds — it **never reshapes code for a slice**. So do **NOT** declare a slice-named
 `cmd/<slug>/main.go` for the scaffold ticket — the real file is `cmd/app/main.go`, and the guardrail poka-yoke
@@ -53,17 +56,25 @@ will (correctly) block the marker on the mismatch. **`cmd/app` stays as-is** —
 `internal/<slug>/`, not in the binary name; there is **no `cmd/` rename** (not by scaffold, not by a later
 ticket). Same rule generally: a ticket's `outputs` = what its role deterministically writes.
 
-**DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
-wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
-and map **every** item → a concrete deliverable + its **exact path** as a `[ ]` acceptance line (root
-`Dockerfile`/`docker-compose.yml` are distinct from `component-tests/`). Do NOT leave DoD gaps for the
-implementer to discover. See `implementation-ticket-writer` → "Integration / final ticket special rule".
+**Module ticket `outputs` mirror the module tree's package granularity (MUST).** A distinct-concern
+module designed as its own sub-package gets outputs under `internal/<slug>/<module>/` (e.g.
+`internal/<slug>/storage/adapter.go`), NOT flattened to `internal/<slug>/adapter.go`. One ticket =
+one module = one package dir; never merge two packages into one ticket nor split one package across tickets.
 
-**Keep the final ticket THIN (MUST — Qwen-sized).** The final carries ONLY wiring + README + deployment files
-+ the DoD-closure checklist — **no behavioral logic, no heavy module**. The config-loader, observability/metrics
-middleware, and every module-tree node are **their own module tickets** (cut earlier), never folded into the
-final. A fat final blows past the implementer's context and drops (run 07-07/2: ticket-11 hit 76–80K tokens,
-3× a thin module → Qwen tool-call dropout). If the final would carry logic or assemble >1 node's worth of code, split it.
+**Close the slice by pipeline STEPS, not a fat «final» ticket (MUST — split-final).** The post-module steps are
+**invariant** for every API slice → cut them as **SEPARATE** tickets, never one heap:
+- **`wiring`** (`type: module`, `io: none`) — `register.go` (Deps + route) + mount in `cmd/app/main.go`
+  (`501` → live endpoint); **exposes the API**. `outputs`: `internal/<slug>/register.go` + `cmd/app/main.go` ONLY.
+- **`README`** (`type: module`, `io: none`) — root `README.md` (API + run + architecture + use-cases +
+  `## Карта режимов отказа`), written from the design (openapi/module-tree/use-case). Independent of wiring
+  (∥). `outputs`: `README.md` ONLY.
+- **DoD-closure + green is NOT a ticket** — it is the **@fagan acceptance step**: remove `@wip`, run
+  build+unit+**component GREEN**, verify **every `TASK §DoD`** item met → Gate #2. Docker/compose/run-tests
+  already exist from scaffold; @fagan **runs** them, does not write them.
+
+**Never bundle wiring+README+deploy in one ticket** — `validate-plan` (feasibility/single-concern) blocks it,
+and a fat ticket blows Qwen's context and drops (run 07-07/2 ticket-11, 07-07/3 ticket-09 dropped ×4). Each
+step = one concern = short implementer turn.
 
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):

@@ -125,7 +125,9 @@ if [ "$HARD" = yes ]; then
       [ "$SCOPE" = global ] && pdir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins" || pdir="$PROJ/.opencode/plugins"
       mkdir -p "$pdir"
       ln -sfn "$ADAPTER/rational-guardrail.ts" "$pdir/rational-guardrail.ts"
-      HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
+      # watchdog-настройки плагина (T09b nudge/cooldown) из ЕДИНОГО источника models.config.json → рядом с плагином
+      command -v jq >/dev/null 2>&1 && jq '.watchdog // {}' "$BUNDLE/harness/models.config.json" > "$(dirname "$pdir")/rational.config.json" 2>/dev/null || true
+      HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts) + watchdog-конфиг"
       ;;
     claude)
       [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
