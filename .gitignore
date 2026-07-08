@@ -22,3 +22,8 @@ Thumbs.db
 # SQLite
 *.db
 *.sqlite
+
+# Сырые прогоны token-bench (raw dumps, могут нести секреты) — не коммитить (RUNBOOK §Save)
+experiments/token-bench/baseline-run*/
+**/flow.jsonl
+**/usage.jsonl
