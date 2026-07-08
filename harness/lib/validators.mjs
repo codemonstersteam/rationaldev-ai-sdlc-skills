@@ -111,6 +111,39 @@ export function validateTicketHeaders(tickets) {
   return errors
 }
 
+// --- T06 feasibility: тикет-контракт выполним конкретной ролью (ловит постановочные ошибки на Gate #1) ---
+// Механизирует манифест-правила (T10 scaffold cmd/app · split-final single-concern) в детерминированный гейт.
+// tickets: [{ name, data }] — data.type, data.outputs. Чисто: без fs.
+// «Тяжёлый» concern пути (не logic-модуль): wiring (register.go) · docs (README) · deploy (Docker/compose/run-tests).
+function heavyConcern(p) {
+  if (/(?:^|\/)register\.go$/.test(p)) return "wiring"
+  if (/(?:^|\/)README(?:\.[a-z]+)?$/i.test(p)) return "docs"
+  if (/(?:^|\/)(?:Dockerfile|docker-compose\.ya?ml|run-tests\.sh)$/.test(p)) return "deploy"
+  return null // logic .go, конфиги, fixtures — не «тяжёлые», не конфликтуют
+}
+export function validateFeasibility(tickets) {
+  const errors = []
+  for (const { name, data } of tickets) {
+    if (!data || !Array.isArray(data.outputs)) continue
+    // (1) scaffold cmd = ТОЛЬКО cmd/app (scaffold.sh не переименовывает cmd-дир; ловит выдуманный cmd/<slug> — T10).
+    if (data.type === "scaffold") {
+      for (const p of data.outputs) {
+        const m = p.match(/(?:^|\/)cmd\/([^/]+)\//)
+        if (m && m[1] !== "app")
+          errors.push(`${name}: scaffold объявляет 'cmd/${m[1]}/' — scaffold.sh даёт 'cmd/app/' (cmd-дир не переименовывает); ` +
+            `slice-имя bin не выдумывать (см. T10)`)
+      }
+      continue // scaffold сеет скелет+boilerplate (в т.ч. Docker) — single-concern к нему не применяем
+    }
+    // (2) single-concern: не мешать wiring/docs/deploy в одном тикете (это и есть «толстый final» — split-final/T12).
+    const heavy = new Set(data.outputs.map(heavyConcern).filter(Boolean))
+    if (heavy.size > 1)
+      errors.push(`${name}: тикет смешивает разные шаги конвейера в outputs (${[...heavy].sort().join("+")}) — ` +
+        `раздели: wiring · README · deploy — свои тикеты, final замыкает @linger (см. split-final)`)
+  }
+  return errors
+}
+
 // Номера пунктов TASK §Definition of done (нумерованный список под заголовком). Чисто.
 // Построчно (не одним regex: `$` под флагом m обрывал бы секцию на первом переносе).
 export function parseDodNumbers(taskText) {
