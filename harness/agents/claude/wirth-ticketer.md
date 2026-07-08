@@ -14,7 +14,7 @@ You are **ONE stage** of the staged planning pipeline; `izi` calls you directly 
 Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<name>/tickets/ticket-N.md` (file
 `ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
 lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module×N → **wiring → README**} → infra.
-There is **NO file-producing «final» ticket** — the slice is closed by the **@linger acceptance step** (remove
+There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
 `@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
@@ -28,6 +28,11 @@ will (correctly) block the marker on the mismatch. **`cmd/app` stays as-is** —
 `internal/<slug>/`, not in the binary name; there is **no `cmd/` rename** (not by scaffold, not by a later
 ticket). Same rule generally: a ticket's `outputs` = what its role deterministically writes.
 
+**Module ticket `outputs` mirror the module tree's package granularity (MUST).** A distinct-concern
+module designed as its own sub-package gets outputs under `internal/<slug>/<module>/` (e.g.
+`internal/<slug>/storage/adapter.go`), NOT flattened to `internal/<slug>/adapter.go`. One ticket =
+one module = one package dir; never merge two packages into one ticket nor split one package across tickets.
+
 **Close the slice by pipeline STEPS, not a fat «final» ticket (MUST — split-final).** The post-module steps are
 **invariant** for every API slice → cut them as **SEPARATE** tickets, never one heap:
 - **`wiring`** (`type: module`, `io: none`) — `register.go` (Deps + route) + mount in `cmd/app/main.go`
@@ -35,9 +40,9 @@ ticket). Same rule generally: a ticket's `outputs` = what its role deterministic
 - **`README`** (`type: module`, `io: none`) — root `README.md` (API + run + architecture + use-cases +
   `## Карта режимов отказа`), written from the design (openapi/module-tree/use-case). Independent of wiring
   (∥). `outputs`: `README.md` ONLY.
-- **DoD-closure + green is NOT a ticket** — it is the **@linger acceptance step**: remove `@wip`, run
+- **DoD-closure + green is NOT a ticket** — it is the **@fagan acceptance step**: remove `@wip`, run
   build+unit+**component GREEN**, verify **every `TASK §DoD`** item met → Gate #2. Docker/compose/run-tests
-  already exist from scaffold; @linger **runs** them, does not write them.
+  already exist from scaffold; @fagan **runs** them, does not write them.
 
 **Never bundle wiring+README+deploy in one ticket** — `validate-plan` (feasibility/single-concern) blocks it,
 and a fat ticket blows Qwen's context and drops (run 07-07/2 ticket-11, 07-07/3 ticket-09 dropped ×4). Each

@@ -64,6 +64,25 @@ services:
   # ... more entries
 ```
 
+## Field constraints (data dictionary) — MANDATORY
+
+Each entry in `services.yaml` MUST satisfy these constraints. They are **part of the requirement**
+— the domain value-objects validate against exactly these rules (no invented ranges, no looser/
+stricter checks). An entry that violates ANY rule is **malformed**.
+
+| field | type | constraint |
+|---|---|---|
+| `platform` | string | non-empty after trim; length `1..64`; charset `[A-Za-z0-9._-]` |
+| `service` | string | non-empty after trim; length `1..128`; charset `[A-Za-z0-9._-]` |
+| `git_url` | string | non-empty; MUST parse as an absolute URL with scheme `http` **or** `https` |
+| `commits_2m` | integer | `>= 0` and `<= 1_000_000` (sanity cap; a snapshot count is never negative) |
+
+**Malformed-entry policy — fail the whole request (atomic).** If **any** entry violates a
+constraint above, the request fails with `error.code = STORE_MALFORMED` and HTTP `500` — the
+service does **NOT** skip bad entries and serve a partial catalogue (consistency over
+availability; a malformed store is an operator error to be fixed, not silently degraded). This is
+the `UC2` malformed case and MUST have a matching failure-mode row + component test.
+
 ## Hard constraints (so the result is verifiable, identical for both harnesses)
 
 - The program MUST be a **proper modular service**, **not one `main.go`**. A thin `main`

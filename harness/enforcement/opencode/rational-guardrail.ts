@@ -14,7 +14,7 @@ const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentT
 const PIPELINE = new Set([
   "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
-  "scaffolder", "hughes", "wirth-tester", "linger", "michtom",
+  "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
 ])
 
 function pickRole(args: unknown): string {
@@ -188,7 +188,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         if (!PIPELINE.has(r)) {
           throw new Error(
             "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
-            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/michtom). " +
+            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). " +
             "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
             "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
           )
