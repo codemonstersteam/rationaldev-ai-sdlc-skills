@@ -378,3 +378,29 @@ advance'ит. Расходятся с фактом → маркер блокир
   `scaffold.sh`); остальное — валидировать (T06). Компромисс: генерация там, где нет семантики.
 - **discovered:** прогон 07-07/2 — ошибки закрытия были ticketer-feasibility (scaffold просил невыполнимое, final
   перегружен). Лечится дешевле валидаторами (T06), чем генератором.
+
+### T12 — split-final: убрать «final»-помойку, замыкать слайс шагами конвейера
+Обнаружено на **07-07/3:** thin-final (правило-проза) сделал модули тонкими, но **final всё равно сгрёб**
+wiring+README+Docker+DoD в один тикет → длинный ход → систематический провайдерский idle-timeout (ticket-09
+дропался ×4). **Прозой не чинится** — нужен структурный слот. Ключ: пост-модульные шаги **инвариантны** для
+любого API-слайса (не суждение) → механические слоты формы, не concern'ы одного тикета.
+```
+closeSlice(modules 03..08) -> Gate#2:
+    | wiring   -> API наружу      // register.go + main.go (включает сервис: 501 → живой эндпоинт)
+    | README   -> docs            // ∥, пишется из дизайна (openapi/module-tree/use-case)
+    | linger   -> замкнуто        // снять @wip + прогнать тесты (build+unit+component GREEN) + сверить DoD-1..8
+    -> Gate #2
+```
+Docker/`compose`/`run-tests.sh` — **в scaffold** (детерминированный boilerplate, класс T10); linger их запускает, не пишет.
+- [ ] **форма бэклога:** слот `final` → **`wiring` + `README`** (отдельные implementer-тикеты, как `module×N`);
+  file-производящий `final` **убрать** — замыкает `linger`-приёмка (уже шаг пайплайна). Правки:
+  `implementation-ticket-writer` (ordering + «Integration/final rule»), `wirth-ticketer` (dep-order + «DoD-closure
+  = @linger, не тикет»), `program-design` step-11 ticket-template.
+- [ ] **scaffold outputs += `Dockerfile`, `docker-compose.yml`, `run-tests.sh`** (boilerplate из шаблона; см. T10).
+- [ ] **`linger.md` — явный DoD-closure:** снять @wip + build+unit+component green + сверить DoD-1..8 → Gate #2.
+- [ ] **T06-чек одноконцерновость:** implementer-тикет не мешает wiring+README+Docker в `outputs`; file-производящего
+  `final` нет → blocker на Gate #1.
+- **механизм:** форма эмитит `wiring`/`README` отдельными слотами → ticketer пишет ТЕЛА, нарезку не решает → куча
+  невозможна by construction. Каждый слот = 1 concern → короткий ход → нет idle-timeout.
+- **verify:** ticketer на дизайне slice-01 → `wiring` и `README` отдельными тонкими тикетами, `final`-помойки нет.
+- **поглощает:** заметку «thin-final недостаточен». Ложится на `feat/outputs-poka-yoke`.
