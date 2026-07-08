@@ -90,7 +90,10 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
 3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip` (`component-tests`) — **precedes every module ticket**;
 4. **module tickets** — one per module-tree node (cutting formula below);
-5. **final** — entrypoint wiring + README + `DoD-N` closure (green comes later, from the fixer).
+5. **wiring** — `register.go` (Deps + route) + mount in `cmd/app/main.go` (`501` → live API — exposes the endpoint);
+6. **README** — root `README.md` from the design (∥ wiring).
+   The slice is then **closed by the `@linger` acceptance step** (remove `@wip` + run build/unit/component green +
+   verify every `TASK §DoD`) — a pipeline step, **NOT a ticket**. No file-producing «final».
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
 executable spec modules are built *against* (RED → GREEN), not a check written after unit tests.
@@ -107,21 +110,22 @@ Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT:
 
 ### Cutting formula (antecedent → consequent)
 
-`T = 1 scaffold + 1 component(RED,@wip) + N + 1 final` — **N = module-tree node count**. Dependency-order
-the module tickets (a module before its consumers) via `blocked_by`.
+`T = 1 scaffold + 1 component(RED,@wip) + N + wiring + README` — **N = module-tree node count**. There is
+**no file-producing `final`** — `@linger`'s acceptance closes DoD (green + verify), not a ticket. Dependency-order
+the module tickets (a module before its consumers) via `blocked_by`; `wiring` blocked_by all modules, `README` ∥.
 
 **One ticket = one contract (MUST):** one antecedent **P** (`Input`+`Deps`) → one consequent **Q**
 (`Result<T,E>`). Two P→Q in a ticket = ≥2 modules → split; "always changes together" is one module (one
 responsibility), never a shared ticket. Acceptance verifies only the ticket's **Q** — unit tests by
 formula (io-testable node) **or** the component scenario(s) it greens (pipe/io node, no units). Green /
-`@wip`-removal is **not** a deliverable — it is the fixer's act (§6). `final` implements no module:
-wiring + README + `DoD-N` only.
+`@wip`-removal is **not** a deliverable — it is the fixer's act (§6). `wiring`/`README` implement no module
+logic; **DoD-closure is `@linger`'s acceptance step, not a ticket** — there is no file-producing `final`.
 
 ## Self-check (before handing to `@mills` — MUST; any No ⇒ fix first)
 
-1. Count == `1+1+N+1` and module tickets ↔ tree nodes are **bijective** (no node unowned, none owning two).
-2. No module ticket carries >1 contract (>1 P→Q).
-3. `final` implements no module logic — only wiring + README + `DoD-N`.
+1. Count == `1+1+N+2` (scaffold+component+N+**wiring**+**README**); module tickets ↔ tree nodes **bijective** (no node unowned, none owning two).
+2. No module ticket carries >1 contract (>1 P→Q); **no ticket bundles wiring+README+deploy** (single-concern — `validate-plan` blocks it).
+3. **No file-producing `final`** — DoD-closure is `@linger`'s acceptance step; `wiring`/`README` carry no module logic.
 4. No ticket delivers "all scenarios green" / "assemble the service"; green is nowhere a deliverable (fixer's, §6).
 5. Each ticket completes from only `{ticket + inputs}` — self-contained, Qwen-sized.
 

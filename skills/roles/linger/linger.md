@@ -58,10 +58,13 @@ Run **sequentially: build → unit (per-module) → component**. Cheap→expensi
 locally by the specific module's context.
 - **Component tests — only once the slice is fully assembled** (before all modules are built they are
   structurally red, no signal).
-- **Slice acceptance (fixer only):** when the slice's last ticket is green — run the component tests for
-  the slice; on **GREEN remove the `@wip`** tag from its scenarios and accept the work. Removing `@wip` =
-  the acceptance act. The implementer MUST NOT remove `@wip` (anti-gaming). See `component-tests`,
-  `program-implementation`, `docs/04_PLANNING_PIPELINE.md` §6.
+- **Slice acceptance = DoD-closure (fixer only, the last step before Gate #2).** When the slice's last ticket
+  (`README`) is green — run the component tests; on **GREEN remove the `@wip`** tag from its scenarios. Removing
+  `@wip` = the acceptance act. The implementer MUST NOT remove `@wip` (anti-gaming). **Then close DoD:** verify
+  **every `TASK §Definition of done` item** is met (build+unit+component green · root `Dockerfile`/`compose`/
+  `run-tests.sh` present and `./run-tests.sh` exits 0 · `README` covers API+run+failure-map). There is **no
+  «final» ticket** — this acceptance step IS the DoD-closure (it produces nothing, only verifies + accepts →
+  Gate #2). See `component-tests`, `program-implementation`, `docs/04_PLANNING_PIPELINE.md` §6.
   - **Coverage re-check BEFORE removing `@wip` (MUST — anti-gaming).** The implementer self-certified `green`;
     an implementer could have dropped a scenario or stripped a `@wip` to fake it. Run
     `node harness/validate-component-tests.mjs` **while `@wip` is still present** (it verifies scenario count
