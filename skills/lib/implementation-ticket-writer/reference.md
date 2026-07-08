@@ -20,9 +20,11 @@ module's rows**. Each ticket carries (below the header):
 **Dependencies:** <which earlier tickets' types/objects it imports>
 **Subagent instruction:** write the unit tests → implement the module → run tests →
   green? mark this ticket done in the plan. Do not touch other modules.
-**Verify:** <unit-test command> for this module; component/smoke (if required) — <the component-test run
-  command AS PROVIDED BY THE SCAFFOLDED TEMPLATE, e.g. from its README/scripts> (do NOT hand-probe Docker).
-**Acceptance:** unit tests green; the linked component scenario(s) move toward green.
+**Verify (module):** `go build` + `go vet` + own unit tests only. A module ticket **MUST NOT** run the
+  component harness or drive scenarios GREEN → the ticket grows past one module and the implementer drowns;
+  component GREEN is the final ticket + fixer (§6).
+**Acceptance:** module builds and vets clean; unit tests green (pipe/I/O: builds clean, no units).
+  Component scenarios green later via the fixer — **MUST NOT** be a module ticket's deliverable.
 ```
 
 **The ticket MUST tell the implementer WHERE and HOW to run tests** (the `Verify` line) — the implementer
@@ -40,11 +42,21 @@ just another module. It **MUST** carry a **DoD-closure checklist**: read the pro
 (from the FRD / `TASK.md`) and map **every** DoD item → a concrete **deliverable + its exact path**, as an
 acceptance checkbox. You **MUST NOT** rely on the implementer to discover DoD gaps (a missed root artifact
 becomes a mid-implementation surprise → wasted fixer round).
+- **Carry the harness context (MUST):** state WHERE the component tests live (e.g.
+  `component-tests/features/`) and the **exact run command** (from the scaffold template's README/`scripts/`)
+  → the implementer runs them from the ticket, not by reading the whole harness to find it (stray reads
+  bloat context → dropout).
 - **Template-agnostic:** take the items from THIS project's DoD — do **not** hardcode a list.
 - **Watch the location trap:** deployment artifacts (root `Dockerfile`, root `docker-compose.yml`) are
   **distinct** from the component-test harness (which lives under `component-tests/`); state the **exact
   target path** for each so the implementer does not confuse them.
 - Every DoD item → its own `[ ]` acceptance line with the path; the ticket is done only when all are checked.
+- **Number-tag each closure line `DoD-<n>` (MUST — not just a path).** `validate-plan.mjs` checks DoD-closure
+  by matching the literal token `DoD-<n>` against the **numbered** `TASK.md §Definition of done` list — a path
+  alone does not satisfy it. So write e.g. `- [ ] DoD-3: root Dockerfile at ./Dockerfile`. (This requires
+  TASK's Definition-of-done to be a **numbered** list; if it isn't, that's an upstream FRD/TASK defect.)
+  The token is the *bridge* between the prose acceptance line and the deterministic gate — omit it and a
+  well-formed ticket still bounces to `@linger` as "DoD-замыкание неполно".
 
 ## Foundations
 

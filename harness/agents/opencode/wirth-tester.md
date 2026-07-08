@@ -52,5 +52,20 @@ Rules:
 - tag slice scenarios **`@wip`**; they are **RED** by business reason (placeholder `501`/module absent) —
   `@hughes` turns them green, and `@linger` removes `@wip` at slice acceptance (**not you**).
 
+**Consequent (output completeness — coverage, self-check before returning):** After writing `.feature` you
+**MUST** run `node harness/validate-component-tests.mjs`. Non-zero exit → your coverage is off (**scenario
+count ≠ design `1+Σ`**, a **numbering gap** = dropped scenario, a scenario **not `@wip`**, or **no smoke**) —
+**fix it at source** before returning; do not hand off tests that miss/invent a case or leak a non-`@wip`
+(premature-green) scenario. This checks **coverage is complete, not that each test is semantically right** —
+RED-by-business-reason and step-def resolution stay with `@linger`/`@mills`. Run this **now**, while `@wip`
+is present — after `@linger`'s acceptance the tag is gone and the check no longer applies.
+
+**Self-append the durable readiness marker (final DoD action):** ONLY after the `.feature` scenarios are
+authored, committed and coverage-complete (per the consequent above), append
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — here `green` means "this ticket
+is done"; the RED scenarios legitimately stay `@wip`). This durable side-effect — not your reply — is the
+completion signal; it survives an empty/dropped final message. The guardrail rejects the marker if the
+`.feature` artifact is missing; never append on an incomplete ticket.
+
 Produce exactly your output and return **one line**: `wirth-tester → component-tests RED ready (N scenarios, @wip)`.
 No input (no contract/cases/harness) → STOP, return the reason to izi.

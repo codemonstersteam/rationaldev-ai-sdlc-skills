@@ -34,6 +34,11 @@ A BRD is design-ready only when intake has produced all of:
 4. **Domain glossary** (ubiquitous language) — fuzzy terms pinned.
 5. **APIs exposed/consumed → a draft contract** (OpenAPI/AsyncAPI) + the **failure-mode map**.
 6. **NFR / constraints** and an explicit **open-questions** list.
+7. **Data dictionary — the valid domain of every field.** For each `Request`/message field and each
+   domain-entity field: its type, **valid range / enum / format**, required-or-optional, and the
+   `error.code` a violation maps to. → *Why:* `program-design`'s **valid-by-construction** rule (step-03)
+   has the factory validate **every** field against its range — that range **MUST** come from
+   requirements, never be invented at design time.
 
 If any is missing and can't be elicited, you **MUST stop** and ask — don't invent it.
 
@@ -61,12 +66,23 @@ This is the rational requirements vehicle: the Main Success Scenario becomes the
 each **Extension** becomes a failure scenario downstream (`component-tests`, `program-design`
 Step 8.6). The use case is the FRD's core.
 
-### Step 3 — sharpen the domain (active, domain-modeling style)
+### Step 3 — sharpen the domain (active — the `domain-modeling` discipline)
 While eliciting, **actively** de-fuzz the language (don't passively accept the BRD's words):
 - **Challenge** a term that conflicts with itself or the code ("you said 'account' — Customer or User?");
 - **Stress-test** with concrete edge-case scenarios that force precise boundaries;
-- **Pin** each resolved term in a glossary (ubiquitous language) at `CONTEXT.md`, inline, the moment it crystallises.
-Record genuinely hard-to-reverse, non-obvious trade-offs as ADRs in `docs/adr/` — sparingly.
+- **Pin** each resolved term inline, the moment it crystallises. Format = the **single source**
+  [`domain-modeling`](../domain-modeling/SKILL.md) → `CONTEXT-FORMAT` (opinionated `_Avoid_`, **only**
+  context-specific terms, tight defs). Do **NOT** re-describe the format here.
+
+**Single vs multi-context (co-location B — knowledge in the design package, NEVER `internal/`):**
+- **Default (single context):** one root `CONTEXT.md` glossary. Stays laconic — no `CONTEXT-MAP`.
+- **≥2 bounded contexts evident:** seed a root **`CONTEXT-MAP.md`** — list the contexts + a **Relationships**
+  section (upstream/downstream, shared types). You **identify** the contexts; the slicer (stage 2) **binds**
+  them to slice slugs and co-locates each `CONTEXT.md` to `docs/design/slice-<slug>/`. Ordering: at intake
+  slices don't exist yet, so per-context files land at slicing — intake produces the map seed, not the folders.
+
+Record genuinely hard-to-reverse, non-obvious trade-offs as ADRs — **sparingly**, by the three-condition rule
+in [`domain-modeling`](../domain-modeling/SKILL.md) → `ADR-FORMAT`; system-wide decisions → root `docs/adr/`.
 
 ### Step 4 — derive the contract and failure-mode map
 From the use cases + interfaces, draft:
@@ -76,6 +92,11 @@ From the use cases + interfaces, draft:
   1:1 from the use-case Extensions.
 These are not external preconditions — intake **produces** them. They then satisfy
 `program-design` Step 0.
+
+Each field's valid domain (from the data dictionary, §7) is either an **input-validation Extension** (a
+bad `Request` field → a unit boundary downstream) or a **domain-entity invariant** (→ a subtype
+constructor in `program-design` step-03). Every range you pin here becomes a factory check there — no
+range, no way to be valid by construction.
 
 ### Step 5 — NFR, constraints, open questions
 Record non-functional requirements (load, latency/SLO, security, data classification) and an
@@ -100,7 +121,8 @@ complete" — surface the gap as an open question.
 ## Problem statement        # one phrase
 ## Actors & external systems # + interface per boundary (HTTP/gRPC/broker/CLI)
 ## Use cases                 # Cockburn: actor, pre/postcondition, MSS, Extensions
-## Glossary                  # ubiquitous language (or link to CONTEXT.md)
+## Data dictionary           # per field: type, valid range/enum/format, required?, error.code on violation
+## Glossary                  # ubiquitous language → link to root CONTEXT.md (or CONTEXT-MAP.md if ≥2 contexts)
 ## Contract (draft)          # OpenAPI/AsyncAPI skeleton from the use cases
 ## Failure-mode map          # → README ## Карта режимов отказа
 ## NFR / constraints
@@ -112,6 +134,7 @@ complete" — surface the gap as an open question.
 - [ ] problem statement (one phrase) recorded;
 - [ ] every external input has an actor, an interface, and a use case;
 - [ ] each use case has Main Success Scenario + Extensions with outcomes;
+- [ ] data dictionary: every input & domain field has a valid range/enum/format + the `error.code` on violation;
 - [ ] fuzzy terms pinned in the glossary;
 - [ ] draft contract (OpenAPI/AsyncAPI) and `## Карта режимов отказа` derived from the use cases;
 - [ ] NFR and open questions listed;

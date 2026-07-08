@@ -63,18 +63,23 @@ orchestrator (`izi`) can route **mechanically** without reading the body. Use **
 id: 05
 type: module            # scaffold | component | module
 slice: slice-02-catalog
-blocked_by: [01, 04]    # ids of prerequisite tickets (may be [])
+blocked_by: [01, 02, 04] # scaffold(01) + component-RED(02, RED-first EDGE) + any module dep(04). May add more.
 inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
-io: none                # REQUIRED for type: module — none|http|llm|queue|db (router key)
-skills: [db-io, db-schema]
+outputs: [internal/catalog/logic.go, internal/catalog/logic_test.go]  # artifacts THIS ticket produces
+io: db                  # REQUIRED for type: module — none|http|llm|queue|db (router key)
+skills: [db-io, db-schema]   # MUST equal io-router(db) — else validate-tickets blocks (over/under-provision)
 ---
 ```
 
 Rules: exactly **one** `scaffold` ticket, and it is `id: 01` with `blocked_by: []` (blocks all others);
-every other ticket lists its real prerequisites in `blocked_by` and its real artifact paths in `inputs`
-(izi passes exactly these — it does not compute dependencies). `io:` is required only for `module`.
-`skills:` is **required on every ticket** and must **exactly equal** the io-router output for its
-`type`/`io`. The ticket **body** below the header follows the template in [`reference.md`](./reference.md).
+every other ticket lists its real prerequisites in `blocked_by`, its real input paths in `inputs`, and
+its real produced-artifact paths in `outputs` (izi passes exactly these — it does not compute them).
+`outputs:` is **required on every ticket and must be non-empty** — the files the ticket produces; unlike
+`inputs` these do **not** exist at Gate #1 (they are what the implementer writes), so the header only
+declares them and the **guardrail poka-yoke verifies their existence when the `done.log` marker is
+written**, not before. `io:` is required only for `module`. `skills:` is **required on every ticket** and
+must **exactly equal** the io-router output for its `type`/`io`. The ticket **body** below the header
+follows the template in [`reference.md`](./reference.md).
 
 ## Ordering & granularity
 
@@ -84,17 +89,41 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 1. **spec** — OpenAPI/AsyncAPI frozen (stages 3–4; usually already done in the design package);
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
 3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip` (`component-tests`) — **precedes every module ticket**;
-4. **module tickets** — one per module, each carrying **its own unit tests by formula** (io-router applied);
-5. **docs** (README) + wiring;
-6. component tests turn **GREEN** as the slice assembles → **fixer** removes `@wip`.
+4. **module tickets** — one per module-tree node (cutting formula below);
+5. **final** — entrypoint wiring + README + `DoD-N` closure (green comes later, from the fixer).
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
 executable spec modules are built *against* (RED → GREEN), not a check written after unit tests.
 
-- **Dependency order** within modules (a module before its consumers); record `blocked_by`.
-- **One ticket = one subagent = one module** (or one small slice). If two modules always change
-  together, they may share a ticket; otherwise split.
-- Unit tests live **inside each module ticket** (per formula); component tests are their own earlier ticket.
+**RED-first is a `blocked_by` EDGE, not just list order (HARD).** «Precedes» above is not enough: every
+`module` ticket **MUST** carry the slice's **component-test ticket in its `blocked_by`** — directly, or
+transitively through another module that already does. The component test is **not** a code prerequisite of
+the module (the reverse is true: the test greens *because of* the module), so it feels wrong to list — but
+RED-first requires this edge in the dependency graph so the RED test exists before any module is built.
+`validate-plan.mjs` checks the **edge** (`module → component`), not the list position — omit it and the plan
+is a **blocker** (this is exactly what bounces to `@linger`; wire the edge here and skip the round).
+Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT: `blocked_by: [01, 02]`
+(scaffold + component), or `[03]` where `03` already carries `02`.
+
+### Cutting formula (antecedent → consequent)
+
+`T = 1 scaffold + 1 component(RED,@wip) + N + 1 final` — **N = module-tree node count**. Dependency-order
+the module tickets (a module before its consumers) via `blocked_by`.
+
+**One ticket = one contract (MUST):** one antecedent **P** (`Input`+`Deps`) → one consequent **Q**
+(`Result<T,E>`). Two P→Q in a ticket = ≥2 modules → split; "always changes together" is one module (one
+responsibility), never a shared ticket. Acceptance verifies only the ticket's **Q** — unit tests by
+formula (io-testable node) **or** the component scenario(s) it greens (pipe/io node, no units). Green /
+`@wip`-removal is **not** a deliverable — it is the fixer's act (§6). `final` implements no module:
+wiring + README + `DoD-N` only.
+
+## Self-check (before handing to `@mills` — MUST; any No ⇒ fix first)
+
+1. Count == `1+1+N+1` and module tickets ↔ tree nodes are **bijective** (no node unowned, none owning two).
+2. No module ticket carries >1 contract (>1 P→Q).
+3. `final` implements no module logic — only wiring + README + `DoD-N`.
+4. No ticket delivers "all scenarios green" / "assemble the service"; green is nowhere a deliverable (fixer's, §6).
+5. Each ticket completes from only `{ticket + inputs}` — self-contained, Qwen-sized.
 
 ## STOP
 

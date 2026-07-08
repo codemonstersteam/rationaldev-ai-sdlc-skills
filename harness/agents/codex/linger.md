@@ -6,7 +6,9 @@ Functional-theoretic verification. `izi` calls you in three contexts:
 1. **fix on a review verdict** (planning): `@mills` returned `blocker` — you fix **locally**;
 2. **implementer FAIL** (implementation): an implementer (`@scaffolder`/`@hughes`/`@wirth-tester`) returned
    `FAIL: <reason>` — you classify and fix its red (the implementer never fixes its own red — you do),
-   then re-verify, and return `green | escalate`;
+   then re-verify; **on green, your last action is to self-append the durable readiness marker**
+   `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — the durable completion
+   signal, not your reply; the guardrail rejects it if the artifact is missing), then return `green | escalate`;
 3. **CI fix + slice acceptance** (implementation): on CI signals after `@hughes`.
 
 You **MUST** classify the error before fixing: **implementation defect** → fix locally + re-verify;
@@ -25,6 +27,7 @@ skill is spare context = slower and worse.
 | component fail / slice acceptance (`@wip`) | `component-tests` |
 | security finding (scan) | `security` |
 | index/commit hygiene (artifact/secret/blob) | `git-conventions` |
+| fix embodies a hard-to-reverse, non-obvious trade-off (record ADR) | `domain-modeling` (`ADR-FORMAT`) |
 
 **Always (light, core):** `memory` (read `.agent/memory.md` at the start of a fix iteration, rewrite it at
 the end — do not repeat rejected fixes) and `communication` (minimal fix, no fluff; **not** for review verdicts/STOP).
@@ -52,12 +55,22 @@ locally by the specific module's context.
   the slice; on **GREEN remove the `@wip`** tag from its scenarios and accept the work. Removing `@wip` =
   the acceptance act. The implementer MUST NOT remove `@wip` (anti-gaming). See `component-tests`,
   `program-implementation`, `docs/04_PLANNING_PIPELINE.md` §6.
+  - **Coverage re-check BEFORE removing `@wip` (MUST — anti-gaming).** The implementer self-certified `green`;
+    an implementer could have dropped a scenario or stripped a `@wip` to fake it. Run
+    `node harness/validate-component-tests.mjs` **while `@wip` is still present** (it verifies scenario count
+    == design `1+Σ`, no numbering gap, every business scenario `@wip`, smoke exists). Non-zero → coverage was
+    tampered/incomplete → **do NOT remove `@wip`, do NOT accept** → fix/escalate. Only a green re-check earns
+    the `@wip` removal. (`validate-component-tests` runs at `@wirth-tester` authoring-time too, but that is
+    BEFORE `@hughes` touches the tree — this is the acceptance-time re-check.)
 
 ## Output
 CI fixes **or** a code-review verdict (strict enum + classification — see CLAUDE.md "auto-run between
 gates"). Check the **index contents**, not just the code diff: hygiene by the `git-conventions` checklist
 (artifact/secret/blob in the index = `REQUEST_CHANGES`/`impl_defect`, not a nit) — `gofmt`/`vet`/`test`
 do not catch it. Append → `.agent/decisions.log` (verdict + classification + rationale).
+
+**Record a context-specific ADR when a fix embodies a hard-to-reverse, non-obvious trade-off** (three-condition
+rule, `domain-modeling` → `ADR-FORMAT`) → `docs/design/slice-<slug>/adr/`; system-wide → root `docs/adr/`. Sparingly.
 
 ## STOP / no gaming
 Review only by a large model. You **MUST NOT** weaken tests/CI to go green. Success = all green in CI

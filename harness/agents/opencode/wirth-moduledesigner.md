@@ -49,8 +49,10 @@ You **MUST end your output** with the sentinel as the last line of `module-tree.
 
 **In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` — module tree
 (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula. Attach the io sub-skill by type
-via `program-design` Step 6. NFR artifacts (if needed): `.agent/planner/network-topology.md` (network paths
-from I/O — security) and `.agent/planner/rollout-plan.md` (SLI/SLO/canary — observability).
+via `program-design` Step 6. You **MUST always emit a baseline** `.agent/planner/rollout-plan.md` (default
+canary window + 4 golden-signal thresholds — so `@michtom` never STOPs for a missing plan); expand it +
+`.agent/planner/network-topology.md` (network paths — security) on real NFR. **Multi-context:** co-locate
+each slice's `CONTEXT.md` into its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).
 
 **Component-scenario design (`component-tests` skill, the "design" half):** from the Cockburn cases and the
 `io:` field derive the **scenario set by the formula** `1 + Σ distinguishable io-adapter branches` — **Cockburn
@@ -68,6 +70,12 @@ Design **against the frozen contract**, not by guessing.
 error (UML stereotypes `<<...>>`, no diagram declaration, invalid statements) — **fix it** using the `c4`
 skill's Mermaid-C4 functions (`Component()`/`Rel()`/`Container_Boundary(){}`), do NOT return a diagram that
 will not render. You draw the C4 → you verify it renders.
+
+**Consequent (output correctness — slice-aligned layout, ALWAYS):** the node→file map roots every path in
+`internal/<slug>/` of the slice (or `internal/shared/` for types genuinely shared by ≥2 slices). After writing
+the design package you **MUST** run `node harness/validate-layout.mjs`. Non-zero exit → you leaked a
+**layer-keyed** root (e.g. `internal/io`) — **fix the map at source** (move modules under `internal/<slug>/`),
+do NOT hand off a layout that loses the slice boundary. You fill the tree → you verify its layout.
 
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or `STOP: <reason>`.
 You **MUST NOT** do other stages or write code.

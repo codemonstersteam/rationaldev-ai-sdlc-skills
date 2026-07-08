@@ -107,8 +107,10 @@ esac
 # резолвятся Node по realpath из бандла (симлинков хватает). Только project-scope (нужен cwd проекта).
 if [ "$SCOPE" != global ]; then
   mkdir -p "$PROJ/harness"
-  for v in validate-frd.mjs validate-slices.mjs validate-mermaid.mjs validate-contract-frozen.mjs validate-tickets.mjs scaffold.sh; do
-    ln -sfn "$BUNDLE/harness/$v" "$PROJ/harness/$v"
+  # ВСЕ validate-*.mjs (glob, не хардкод-список — иначе новые валидаторы не долетают в песочницу),
+  # + scaffold.sh. Их ./lib и ./frontmatter резолвятся Node по realpath из бандла (симлинков хватает).
+  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/scaffold.sh; do
+    [ -e "$v" ] && ln -sfn "$v" "$PROJ/harness/$(basename "$v")"
   done
 fi
 

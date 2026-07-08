@@ -23,6 +23,16 @@ async function run() {
   // B. Прочие роли проходят свободно
   await hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }); pass++
 
+  // B2. Делегация ВНЕ пайплайн-набора (@general / general-purpose) блокируется в источнике (мис-роут)
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("general"), { args: { subagent: "general" } }),
+    /вне пайплайн-набора/,
+  ); pass++
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("general-purpose"), { args: { subagent: "general-purpose" } }),
+    /вне пайплайн-набора/,
+  ); pass++
+
   // C. После апрува implementer проходит
   await mkdir(join(dir, ".agent", "plan-reviewer"), { recursive: true })
   await writeFile(join(dir, ".agent", "plan-reviewer", "plan-review.md"), "OK")
@@ -50,6 +60,23 @@ async function run() {
   await bash("test -f .agent/gates/gate1.approved && echo EXISTS"); pass++
   await bash("ls .agent/gates/gate1.approved 2>/dev/null"); pass++
 
+  // J. poka-yoke: done.log green-маркер принимается ТОЛЬКО если объявленные outputs тикета существуют+непусты
+  const slug = "slice-01-demo"
+  const tdir = join(dir, "docs", "design", slug, "tickets")
+  await mkdir(tdir, { recursive: true })
+  await writeFile(join(tdir, "ticket-05.md"),
+    `---\nid: 05\ntype: module\nslice: ${slug}\nblocked_by: [01]\ninputs: [x]\noutputs: [internal/demo/logic.go]\nio: none\nskills: []\n---\n`)
+  const doneMark = `echo "ticket-05 ${slug} green" >> .agent/planner/done.log`
+  // J1: объявленный output отсутствует → deny
+  await assert.rejects(() => bash(doneMark), /poka-yoke/); pass++
+  // J2: output создан и непуст → маркер разрешён
+  await mkdir(join(dir, "internal", "demo"), { recursive: true })
+  await writeFile(join(dir, "internal", "demo", "logic.go"), "package demo\n")
+  await bash(doneMark); pass++
+  // J3: output существует, но ПУСТ → deny
+  await writeFile(join(dir, "internal", "demo", "logic.go"), "")
+  await assert.rejects(() => bash(doneMark), /poka-yoke/); pass++
+
   // F. Регресс (баг "/"): directory="/" НЕ используется как корень → фоллбэк на cwd, без EROFS-краша.
   const origCwd = process.cwd()
   const cwdTmp = await mkdtemp(join(tmpdir(), "ra-cwd-"))
@@ -71,7 +98,7 @@ async function run() {
   pass++
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/11 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/16 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

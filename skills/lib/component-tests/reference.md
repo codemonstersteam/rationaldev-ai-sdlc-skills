@@ -48,7 +48,7 @@ desire for depth).
 - [ ] happy-path scenarios = endpoints + events.
 - [ ] failure scenarios = Σ failure modes from OpenAPI and README.
 - [ ] all scenarios run in Docker Compose with real dependencies.
-- [ ] no field validation, no business logic, no smoke tests.
+- [ ] no field validation, no business logic, no **product** smoke tests (the required infra-bootstrap `features/smoke.feature` is not one).
 - [ ] **fixtures isolated per slice** (`good-<slice>` / `bad-<slice>`); no cross-slice reuse; integration slice has its own.
 - [ ] **scenario count = formula** (`1 + Σ adapter branches`); extras deleted; boundaries are unit-level, not here; each scenario triggers exactly one contract branch that didn't exist without it.
 - [ ] slice's component scenarios tagged `@wip`; `@wip` removed **only** by the fixer on GREEN at slice completion.

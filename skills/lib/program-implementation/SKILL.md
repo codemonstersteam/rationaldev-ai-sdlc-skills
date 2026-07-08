@@ -38,10 +38,10 @@ slices in one branch; make unrelated "drive-by" improvements; make architecture 
 ### Step 0. Verify handoff (once per package, at start)
 
 Before the first ticket, open `.agent/planner/design/<slug>/backlog.md` **in main**, find
-`## Хендофф-чеклист`. Every item must be `[x]`, including the **last line**:
+`## Handoff checklist`. Every item must be `[x]`, including the **last line**:
 
 ```
-- [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
+- [x] Operator approves the package — @<github-handle>, <YYYY-MM-DD>
 ```
 
 This line is the **only** deterministic sign the package is accepted (merging the design
@@ -51,7 +51,7 @@ missing — you **MUST NOT** start, even if every other item is `[x]`.
 - No checklist → package not ready → stop, report.
 - `[ ]` on the approval line → design PR not merged / line not filled → stop, report.
 - `[ ]` on any other item → planner left it open deliberately; check the slice card's
-  "Решения по дизайну" for the rationale; if none → stop, report.
+  "Design decisions" for the rationale; if none → stop, report.
 - All `[x]` with handle + date → proceed to Step 1.
 
 ### Step 1. Pull main and create a branch
@@ -65,6 +65,7 @@ git checkout -b feat/slice-<name>
 Rule: a new branch is **always** off fresh main — never off yesterday's branch.
 
 ### Step 2. Read the slice spec
+> **Ticket-by-ticket (`@hughes`/`@scaffolder`): read ONLY the ticket + its `inputs:` (durable design → `docs/design/slice-<name>/`), not the whole package below** — the `.agent/planner/design/<slug>/` files in Steps 0/2/6 are the planner's own whole-slice/TBD-pass working set, which a single-ticket harness pass skips.
 
 - `slices/<n>-<name>.md` — module tree, contracts, and the **`## Gherkin-mapping`** table
   (each Gherkin Then-step → call-graph node);
@@ -151,8 +152,9 @@ skipping any means the PR's CI fails:
 ```bash
 unformatted=$(gofmt -l .); [ -n "$unformatted" ] && echo "$unformatted" && exit 1   # 1. format
 go vet ./...                                                                          # 2. static
-go test ./...                                                                         # 3. unit
+go test -cover ./...                                                                  # 3. unit + coverage report
 ./component-tests/scripts/run-tests.sh healthy                                        # 4. component
+node harness/validate-constructors.mjs                                                # 5. valid-by-construction
 ```
 
 **Green before review:** gofmt empty, vet clean, unit all green. Component: **prior accepted**
@@ -161,10 +163,29 @@ assembled — mid-slice they legitimately stay red and **keep the `@wip` tag**. 
 **MUST NOT** remove `@wip` — that is the **fixer's slice-acceptance** (build→unit→component,
 pipeline §6). A red scenario in a prior accepted slice → stop.
 
-- Unit red: bug in the module → fix code (not the contract); bug in the test → fix the test;
-  contract contradicts callers → stop, report (Step 2).
+**Business-logic coverage gate.** Each domain constructor + pure logic function MUST carry its design
+formula's unit-test count (`1 happy + Σ branches`), all green — that is 100% branch coverage of the
+business logic **by construction**. `go test -cover` reports it; head/adapter/I/O have no unit tests and
+legitimately dilute the package %, so gate on the **formula-count match**, not a raw %.
+
+**Valid by construction (gate).** `node harness/validate-constructors.mjs` MUST pass on every
+domain-constructor ticket: each domain value-object (a module-tree constructor/subtype node) has
+**unexported fields** + a single `NewX` factory with a validating guard, and no naked `T{...}` bypasses
+it (`program-design` step-03 · [`reference/valid-by-construction.md`](reference/valid-by-construction.md)).
+Not done until green.
+
+- Unit red: bug in the module → fix the code (not the contract); a genuinely wrong test → fix it,
+  but **MUST NOT** weaken/skip/delete a case or relabel a real module failure as a "test bug" to go
+  green — after the fix the branch/equivalence class is still covered; contract contradicts callers
+  → stop, report (Step 2).
+- **Anti-gaming (units).** You **MUST NOT** `t.Skip`, comment out assertions, or drop the unit-test
+  count below the design formula to go green. A red unit is a real signal — fix the module, not the test.
 - Component red on the current slice: modules done but the slice won't assemble → check head
   + adapter; scenario expects undescribed behavior → stop, planner revisits Step 9.
+- **Component-set sanity (formula).** The slice's `.feature` set MUST be `1 happy + Σ distinguishable
+  adapter branches` (== #adapter `error.code`s). Fewer failure scenarios than the adapter has branches
+  → an uncovered branch in the plan → stop, planner revisits (Step 9); "all green" over a missing
+  scenario is a false pass.
 
 ### Step 5. Tick the ticket in backlog.md
 
@@ -202,17 +223,17 @@ typos **before** they go public (push triggers CI; undoing a pushed message is a
 
 ```bash
 # 1. Head knows no I/O deps — if you see sql/http/amqp/kafka, move it into the I/O object.
-grep -rn "database/sql\|net/http\|\"io\"\|amqp\|kafka" internal/slice/*/head.go
+grep -rn "database/sql\|net/http\|\"io\"\|amqp\|kafka" internal/*/head.go
 
 # 2. Tests don't call the head — its correctness is proven by a component scenario, not a
 #    unit. A Process*/Handle* call in *_test.go → delete the whole test block.
-grep -rn "^func Test" internal/slice/*/*_test.go | grep -iE "Process|Handle|Head|Orchestrat"
+grep -rn "^func Test" internal/*/*_test.go | grep -iE "Process|Handle|Head|Orchestrat"
 
 # 3. No test doubles (stubs/fakes/mocks). Only exception: testClock (time injection).
-grep -rn "^type.*struct{}" internal/slice/*/*_test.go | grep -iv "testclock\|testClock"
+grep -rn "^type.*struct{}" internal/*/*_test.go | grep -iv "testclock\|testClock"
 
 # 4. Deps has no fields for test substitution — each field is one real dependency.
-grep -n "func(" internal/slice/*/register.go
+grep -n "func(" internal/*/register.go
 ```
 
 **Trap:** a head test against real in-memory SQLite still breaks the rule — the head is never
@@ -289,12 +310,12 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for the next
-ticket (a `backlog.md` ticket whose dependencies are done → new branch off fresh main).
+The ticket is **closed** when main's CI is green post-merge. Back to Step 1 for the next ticket (a `backlog.md` ticket whose deps are done → new branch off fresh main).
 
 ## Definition of Done (whole package)
 
 - All `backlog.md` tickets `[x]`; main green.
+- Business logic 100% unit-covered: every domain constructor + pure logic function has its formula's unit tests, all green (head/adapter/I/O not unit-covered — by design).
 - All Gherkin component scenarios green.
 - `.agent/planner/design/<slug>/devlog.md` filled per ticket.
 - **Slice-acceptance is the fixer's:** each slice's component suite green and `@wip` removed — not a per-ticket implementer act.

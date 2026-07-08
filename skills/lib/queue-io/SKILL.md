@@ -14,18 +14,12 @@ Applies to any I/O object hiding a message broker or queue (`io: queue`): a `Pub
 > **Core lesson:** messaging defects (lost/duplicated/reordered/poison messages) are closed in
 > **design** — delivery semantics decided before code — not in coding.
 
-## The I/O object is a pure pipe (no transformations, not unit-tested)
+## The I/O object is a pure pipe, NOT unit-tested — `program-design` Step 6 (empty-pipe rule)
 
-The Publisher/Consumer only **carries data**: take the domain message → hand it to / take it from
-the broker → return the result or a mapped error. **No transformations, no data branching** (the
-only allowed branch is broker error → domain error). Reshaping/validating/computing over the
-payload is a **logic module upstream**, not this object.
-
-**Therefore this object is NOT unit-tested.** Unit-test the **logic module that builds the
-message** — its unit tests assert the exact payload (the contract) that enters the Publisher, and
-we **expect the Publisher to hand it to the broker unchanged.** For a Consumer, unit-test the logic
-that processes the decoded message, not the receive/ack pipe. Success/failure is proven by
-component scenarios. See `program-design` Step 6.
+Carries data only: domain message → broker → result / mapped error (only branch: broker error → domain
+error). Reshaping/validating/computing is a **logic module upstream**. **Therefore NOT unit-tested**:
+unit-test the logic that builds the message (Publisher) or processes the decoded message (Consumer) — the
+receive/ack pipe itself is not unit-tested; the payload is handed to the broker unchanged. Success/failure → component scenarios.
 
 ## Delivery semantics — design parameters, not defaults
 
@@ -60,7 +54,8 @@ failure surface / use-case Extension (`asyncapi-spec`, `cockburn-use-case`).
 
 ## I/O object shape
 
-Autonomous object in `internal/io` hiding the broker connection; each method is a **pipe**:
+Autonomous object in the slice's `internal/<slug>/io.go` hiding the broker connection; each method is
+a **pipe** (one broker connection shared by ≥2 slices → `internal/shared/`, not a layer-keyed `internal/io`):
 
 - **Publisher:** `Publish(msg) -> error` — send one message; map broker error → sentinel; carry the
   **idempotency key**. No success payload beyond ok/err.

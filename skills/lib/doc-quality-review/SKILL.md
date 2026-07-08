@@ -26,7 +26,7 @@ dev docs are used; checks are reworded for a markdown repository.
 2. Go through sections 2–7 in order. In each, mark ✓ or ✗ for every check.
    ✓ = condition met literally. Any doubt = ✗ (don't stretch it).
 3. Each ✗ → take the action from the "if ✗ → action" column. Record it in the edit plan.
-4. At the end, fill the summary table (section 7 → result) and the verdict.
+4. At the end, fill the summary table (section 9 → result) and the verdict.
 5. **MUST NOT** fix it yourself if the edit changes meaning or deletes a fact → STOP, ask.
 
 Per-characteristic verdict scale:

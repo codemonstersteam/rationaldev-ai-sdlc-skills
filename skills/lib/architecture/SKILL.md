@@ -101,7 +101,7 @@ In `plan.md`, section `## Границы изменения`:
 - module-notifications (primary, change within boundaries)
 
 ### Agent-ready check
-- [x] Change fits within 1 module's boundaries
+- [x] Change fits within 1–2 modules' boundaries
 - [x] Module fits in context with tests and contracts
 - [x] No bypassing others' boundaries / direct access to another's DB
 - [x] No new cyclic dependencies introduced

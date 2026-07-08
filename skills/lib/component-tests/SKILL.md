@@ -50,7 +50,10 @@ follows the contract, not the reverse. Failure-mode sources, in priority order:
 
 Component tests verify **outward interface promises**: return codes, schema-typed
 response/report fields, the reaction to each distinguishable integration failure mode.
-They **MUST NOT** re-prove business logic — that's what units in `internal/` do.
+They **MUST NOT** re-prove business logic — that's what units in `internal/` do. They also
+**MUST NOT** assert build or startup — the compiler proves the build, and the infra-bootstrap
+`features/smoke.feature` proves the stack boots. A component scenario asserts a **contract branch**
+(an `error.code` / status / field), **never** "the service starts".
 
 Before adding a fixture or scenario, answer: **which new contract branch does it trigger**
 — a new `error.code`, `exit` value, status field value, response field, output format, or
@@ -59,8 +62,9 @@ data" does not count: the contract distinguishes "blocker / no blocker", not "on
 vs ten". One **minimal** fixture per contract branch is enough.
 
 **Extra scenarios MUST be deleted**, not kept "just in case". The scenario count **MUST**
-match the formula exactly: `N = N_endpoints/subcommands + Σ failure_modes`. Anything above
-the formula signals a fuzzy unit/component boundary.
+match the formula exactly: `N = 1 (happy) + Σ (distinguishable adapter branches)` **per slice**
+(1 slice = 1 endpoint); service-wide = the sum over slices = `N_endpoints + Σ branches`. Anything
+above the formula signals a fuzzy unit/component boundary.
 
 **`Request`-field branches are units, not components (lesson D1).** A choice by option/flag
 (`--out` where to write, `--format` which format) is a pure logic function
@@ -83,6 +87,10 @@ endpoints/events: `N = N_endpoints/events + Σ adapter branches`. Typical result
 per service** — a small, defensible number. (Source: "Testing mythology: component tests",
 codemonsters.team, 2026-04-25.)
 
+**One term, one count.** A *distinguishable adapter branch* ≡ one **failure mode** ≡ one
+consumer-visible `error.code` — the same quantity under three names. **1 slice = 1 endpoint**, so per
+slice the happy term is `1`; service-wide the count sums over slices → `N_endpoints/events + Σ branches`.
+
 **Boundaries are NOT counted here — they are unit tests.** Input-value boundaries, equivalence
 classes, decision tables, and any `Request`-field branch (lesson D1) belong to the **unit** layer
 (`program-design` Step 8), never to component tests. Component tests count **adapter branches
@@ -92,9 +100,8 @@ only**. This split is a hard invariant of the pipeline ([`docs/04_PLANNING_PIPEL
 component scenario whose name is the Extension's wording verbatim (traceability). An Extension that
 is **input validation** (a bad request field) → a **unit** boundary, not a component scenario.
 
-**Gate (per slice):** `#component_failure_scenarios == #distinguishable_adapter_branches`, and each
-maps to one consumer-visible `error.code`. Input-validation Extensions map to unit boundaries
-instead. A scenario without an adapter branch, or an adapter branch without a scenario → a
+**Gate (per slice):** `#component_failure_scenarios == #distinguishable_adapter_branches == #error.codes of the adapter branches`.
+Input-validation Extensions map to unit boundaries instead (their codes are NOT counted here). A scenario without an adapter branch, or an adapter branch without a scenario → a
 mismatch you **MUST** fix. Chain: use case → slice → Gherkin → contract-graph nodes.
 
 ## What counts as an integration
@@ -124,7 +131,7 @@ action (none / alert / escalate). If all four match, the modes collapse into one
 **Step 3.** Derive failure modes: sync → all 5xx by `error.code`; async → README
 `## Карта режимов отказа` rows; fallback → adapter code + TODO.
 **Step 4.** One scenario per failure mode.
-**Step 5.** Verify `N = N_endpoints + N_events + Σ failure_modes`.
+**Step 5.** Verify `N = N_endpoints/events + Σ (adapter branches)`.
 
 > **Fixtures** for each scenario — design them before the `.feature`; procedure and the
 > per-slice isolation rule are in [`reference.md`](./reference.md).
@@ -134,8 +141,10 @@ action (none / alert / escalate). If all four match, the modes collapse into one
 ## What NOT to do (MUST NOT)
 
 Derive failure modes from code as the primary path · generate request-field validation
-scenarios (unit-level) · re-prove business logic · write a launch smoke test (the compiler
-covers that) · add "just in case" scenarios · merge protocol phases into one scenario.
+scenarios (unit-level) · re-prove business logic · write a **product** launch smoke test (a
+business scenario that just asserts the app boots — the compiler + the required infra-bootstrap
+`features/smoke.feature` already cover that; the latter is NOT a "smoke test" in this sense) ·
+add "just in case" scenarios · merge protocol phases into one scenario.
 
 ## STOP rules
 

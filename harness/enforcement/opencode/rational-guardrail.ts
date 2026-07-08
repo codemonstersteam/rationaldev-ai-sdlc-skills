@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { appendFile, writeFile, mkdir, access } from "node:fs/promises"
+import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
+import { createHash } from "node:crypto"
 import { join } from "node:path"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -7,6 +8,14 @@ import { join } from "node:path"
 //   2) Gate #1 — нельзя делегировать implementer без ревью плана и апрува оператора.
 
 const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
+
+// Замкнутый набор пайплайн-ролей. Делегация `task` кому-либо вне набора (@general и пр.) —
+// мис-роутинг: izi должен повторить ТУ ЖЕ стадию или escalate, а не выдумывать агента.
+const PIPELINE = new Set([
+  "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
+  "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
+  "scaffolder", "hughes", "wirth-tester", "linger", "michtom",
+])
 
 function pickRole(args: unknown): string {
   if (!args || typeof args !== "object") return "unknown"
@@ -29,6 +38,65 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
+  }
+
+  // poka-yoke (T03): по id тикета вернуть его объявленные `outputs`, которых НЕТ или которые пусты.
+  // Тикет ищем в docs/design/*/tickets/ticket-<id>.md; `outputs` парсим regex'ом (flow-массив [a, b]).
+  // Тикет/outputs не нашли → [] (НЕ блокируем: ложный blocker роняет прогон; заголовок ловит validate-tickets).
+  const missingOutputs = async (id: string): Promise<string[]> => {
+    let text: string | null = null
+    try {
+      const designDir = join(root, "docs", "design")
+      for (const slice of await readdir(designDir)) {
+        const tdir = join(designDir, slice, "tickets")
+        let files: string[]
+        try { files = await readdir(tdir) } catch { continue }
+        const hit = files.find((f) => new RegExp(`^ticket-0*${id}\\.md$`).test(f))
+        if (hit) { text = await readFile(join(tdir, hit), "utf8"); break }
+      }
+    } catch { return [] }
+    if (!text) return []
+    const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
+    if (!m) return []
+    const paths = m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+    const missing: string[] = []
+    for (const p of paths) {
+      try { const st = await stat(join(root, p)); if (st.isFile() && st.size === 0) missing.push(p) }
+      catch { missing.push(p) }
+    }
+    return missing
+  }
+
+  // Фрейм трассировки (docs/02_MEASUREMENT.md §«что фиксируем»): model + agents_rev + skillset_hash
+  // на каждое агентское действие. Считаем ОДИН раз на init (best-effort), кэшируем модель по роли.
+  const sha12 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 12)
+  let agentsRev = "na"
+  let skillsetHash = "na"
+  const modelCache = new Map<string, string>()
+  const frameInit = (async () => {
+    try { agentsRev = sha12(await readFile(join(root, "AGENTS.md"), "utf8")) } catch {}
+    try {
+      const skillsDir = join(root, ".opencode", "skills")
+      const parts: string[] = []
+      for (const n of (await readdir(skillsDir)).sort()) {
+        try {
+          const t = await readFile(join(skillsDir, n, "SKILL.md"), "utf8")
+          const v = /^version:\s*["']?([^"'\n]+)/m.exec(t)?.[1]?.trim() ?? "?"
+          parts.push(`${n}@${v}`)
+        } catch {}
+      }
+      if (parts.length) skillsetHash = sha12(parts.join(","))
+    } catch {}
+  })()
+  const resolveModel = async (role: string): Promise<string> => {
+    if (modelCache.has(role)) return modelCache.get(role)!
+    let m = "na"
+    try {
+      const t = await readFile(join(root, ".opencode", "agent", role + ".md"), "utf8")
+      m = /^model:\s*["']?([^"'\n]+)/m.exec(t)?.[1]?.trim() ?? "na"
+    } catch {}
+    modelCache.set(role, m)
+    return m
   }
 
   // Строка, по которой ловим попытку агента создать/тронуть маркер Gate #1.
@@ -57,6 +125,22 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
             "(Чтение-проверка `ls`/`test -f` разрешена.)",
           )
         }
+
+        // (0b) poka-yoke: маркер готовности `ticket-NN <slice> green` в done.log принимается ТОЛЬКО если
+        // объявленные в заголовке тикета `outputs` реально существуют и непусты. Ловит «зелёный без
+        // артефакта» на записи маркера (дёшево), а не на приёмке (@linger, дорого). run08: /health опущен.
+        const doneWrite = />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd)
+        const mk = /\bticket-0*(\d+)\b[^\n]*\bgreen\b/.exec(cmd)
+        if (doneWrite && mk) {
+          const miss = await missingOutputs(mk[1])
+          if (miss.length) {
+            throw new Error(
+              "[rational-guardrail] poka-yoke: ticket-" + mk[1] + " помечается `green`, но его объявленные " +
+              "`outputs` отсутствуют/пусты: " + miss.join(", ") + ". Маркер НЕ записан — доведи артефакт(ы) до " +
+              "непустого состояния или не пиши `green`. (Проверка существования, НЕ build.)",
+            )
+          }
+        }
       }
       if (tool === "write" || tool === "edit") {
         const p = String((args as any).filePath ?? (args as any).path ?? "")
@@ -70,6 +154,21 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
       if (tool !== "task") return
       const role = pickRole(output?.args ?? input?.args)
+
+      // (1) Замкнутый набор: делегация вне пайплайн-ролей запрещена (ловит @general/мис-роут в источнике).
+      // "unknown" (роль не резолвится из args) — НЕ блокируем, чтобы не давать ложных срабатываний.
+      if (role !== "unknown") {
+        const r = role.toLowerCase().replace(/^@/, "").trim()
+        if (!PIPELINE.has(r)) {
+          throw new Error(
+            "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
+            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/michtom). " +
+            "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
+            "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
+          )
+        }
+      }
+
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
       if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") return
       if (!(await exists(review)) || !(await exists(gate1))) {
@@ -109,7 +208,9 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
         const role = pickRole(input?.args)
         const ts = new Date().toISOString()
         const title = String(output?.title ?? output?.metadata?.title ?? "").slice(0, 120)
-        await appendFile(logPath, `${ts}\trole=${role}\tvia=opencode-plugin\t${title}\n`)
+        await frameInit
+        const model = await resolveModel(role)
+        await appendFile(logPath, `${ts}\trole=${role}\tmodel=${model}\tagents_rev=${agentsRev}\tskillset_hash=${skillsetHash}\tvia=opencode-plugin\t${title}\n`)
       } catch {
         // Аудит best-effort: сбой записи (например EROFS) НЕ валит делегирование.
       }

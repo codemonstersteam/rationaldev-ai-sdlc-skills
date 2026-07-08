@@ -7,9 +7,9 @@ mode: subagent
 temperature: 0.3
 steps: 20
 description: "Stage 0: BRD → FRD (actors, Cockburn use cases, glossary, draft contract, failure-mode map). One request = one use case; failures are Extensions. Keywords: requirements, FRD, intake, Cockburn."
-skills: [requirements-intake]
+skills: [requirements-intake, domain-modeling]
 inputs: [requirements]
-outputs: [.agent/planner/frd.md, api-specification, CONTEXT.md]
+outputs: [.agent/planner/frd.md, api-specification, CONTEXT.md, CONTEXT-MAP.md]
 permission:
   read: allow
   grep: allow
@@ -33,13 +33,16 @@ permission:
     "requirements/**": allow
     "api-specification/**": allow
     "CONTEXT.md": allow
+    "CONTEXT-MAP.md": allow
     "*": deny
 ---
 
 # intake — pipeline stage (izi: Wirth)
 
 You are **ONE stage** of the staged planning pipeline; `izi` calls you directly (depth 1).
-**Load ONLY the `requirements-intake` skill** (small fresh context, fast).
+**Load the `requirements-intake` skill** (entry — small fresh context, fast); pull in **`domain-modeling`
+on demand** for the CONTEXT/ADR **format** (its body loads only when you actually pin a term or seed a
+`CONTEXT-MAP` — allowlist, not preload).
 
 **In:** BRD (`TASK.md`). **Out:** `.agent/planner/frd.md` + a draft contract + glossary.
 

@@ -2,93 +2,80 @@
 
 ### Step 12. Fill in the handoff checklist
 
-**In:** the finished design package and backlog. **Out:** the `[x]`-filled handoff checklist in `backlog.md` + an open design PR.
+**In:** the finished design package + backlog. **Out:** the `[x]`-filled handoff checklist in `backlog.md` + an open design PR.
 
 #### Conformance-gate (STOP before handoff)
 
-Before filling the checklist — mechanically run **all** the skill's hard rules; any violation =
-**STOP**, return to the right step, handoff forbidden.
+Mechanically run **all** the skill's hard rules first; any violation = **STOP**, return to the step, handoff forbidden.
+→ *Why:* the implementer builds straight from the package — a rule broken here becomes wrong code, not a review comment.
 
-1. **Cross-cutting infrastructure has its own card and contract.** A cross-slice node (shared
-   egress, shared `Request` fields/flags, `infrastructure.md`) **must** have a design card and a
-   contract and pass every reconciliation — it doesn't "fall between the slices". A cross-slice
-   node without a card/contract → STOP (the direct root of D1: the shared egress had no card → no
-   conformance checks ran on it).
-2. **Consolidated checklist of hard rules** — run over all slices: single `Request` (Step 3);
-   one data argument (Step 3); I/O isolation, no raw `*sql.DB`/`*http.Client` (Step 5/6); no
-   test-only I/O method (Step 3); branch = logic, not a component scenario (Step 3/8.1); C4 by
-   levels (Step 3); error dictionary (Step 4); UC↔scenario traceability,
-   `#component_failure_scenarios == #distinguishable_I/O-adapter_branches`, input-validation
-   Extensions → units (Step 8.6); every module contract carries `io:` (Step 5); Gherkin-mapping
-   (Step 8.4); contracts graph (Step 9).
-3. **Asymmetry.** Conformance is checked by `plan-reviewer` against this skill as the reference
-   standard — not just Step 12's self-fill.
+- **Cross-cutting infrastructure has its own card + contract.** A cross-slice node (shared egress,
+  shared `Request` flags, `infrastructure.md`) must have a design card, a contract, and pass every
+  reconciliation. → *Why:* a shared node with no card runs no conformance checks — the direct root of defect D1.
+- **Asymmetry.** `plan-reviewer` checks conformance against this skill as the reference standard — not Step 12's self-fill. → *Why:* the author of a plan is blind to its own gaps.
+- **Anti-gaming.** You **MUST NOT** tick `[x]` without an existing artifact. → *Why:* a green checklist over a missing file is a silent lie the implementer trusts.
 
-**Anti-gaming:** you **MUST NOT** tick `[x]` without an existing artifact.
+#### The approval marker (the implementer's start signal)
 
-The last step before opening the design PR. The checklist goes at the top of
-`.agent/planner/design/<slug>/backlog.md` (section `## Хендофф`). The planner fills **all** the
-`[x]` ticks themselves — including the last approval line — verifying that the corresponding
-artifact actually exists and contains what's required.
-
-**Format of the operator approval mark.** The planner fills the last line with the operator's
-handle and the **design-PR creation date** in a strict format:
+The checklist sits at the top of `.agent/planner/design/<slug>/backlog.md` under `## Handoff checklist`.
+The planner fills **every** `[x]`, including the last line, in a strict format:
 
 ```
-- [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
+- [x] Operator approves the package — @<github-handle>, <YYYY-MM-DD>
 ```
+(e.g. design PR created 2026-05-10: `- [x] Operator approves the package — @maxmorev, 2026-05-10`).
 
-For example (design PR created 2026-05-10): `- [x] Оператор аппрувит пакет — @maxmorev, 2026-05-10`.
+**Merging the design PR into `main` = the operator approving the package.** Agree → merge, the pre-filled
+`[x]` stays in `main`; disagree → leave the PR open with comments, the planner reworks and bumps the date.
+There is **no** separate "flip the tick after merge" ceremony.
+→ *Why:* this line is the **only** deterministic sign the implementer reads for "package accepted" (`program-implementation` Step 0). `[ ]` or missing in `main` → the implementer does not start. While review drags, return it to `[ ]` so a casual reader isn't misled; on the final push before merge — `[x]` again.
 
-**Semantics: merging the design PR into main = the operator approving the package.** The
-operator expresses agreement with the design by the act of merging the PR: if they agree — they
-merge, and the pre-filled `[x]` line stays in main; if they disagree — they leave the PR open
-with comments, the planner reassembles the package and, if needed, updates the line's date to
-the next push date. There is **no** separate "operator flips the tick after merge" ceremony.
+#### Handoff checklist (grouped by concern — each group states its *why*)
 
-This line is the only deterministic sign by which the implementer recognizes "package accepted"
-in main (see `program-implementation` Step 0). If the line in main is `[ ]` or missing — the
-implementer doesn't start.
-
-If the operator demands substantial changes and review drags on — the planner may temporarily
-return the line to `[ ]` while the package is reworked, so a casual reader isn't misled. At the
-moment of the final push before merge — `[x]` again.
+Copy into `backlog.md`. All lines shown `[x]` = the norm for a merge-ready PR; an item left `[ ]` = an
+explicit divergence, described in the slice card's `## Design decisions` so the operator sees it.
 
 ```
-## Хендофф-чеклист (заполняет проектировщик полностью; merge PR = аппрув оператора)
+## Handoff checklist (planner fills fully; merging the PR = operator approval)
 
-- [x] OpenAPI / AsyncAPI зафиксирован, все эндпоинты slice'ов в нём описаны
-- [x] OpenAPI / AsyncAPI содержит 5xx-ответы с `error.code` для каждого режима отказа
-- [x] README содержит таблицу «Карта режимов отказа» (HTTP-статус / тип события / заголовки, действие клиента, действие оператора)
-- [x] **Компонентные сценарии Gherkin для эндпоинтов всех slice'ов написаны, закоммичены, стабильны (один happy + сценарий на каждый различимый режим отказа)**
-- [x] Папка .agent/planner/design/<slug>/ создана и полна
-- [x] intent.md — задача в одну фразу
-- [x] slices.md — таблица срезов с типом входа, идентификатором, назначением
-- [x] messages.md — все структуры данных и Result<T, Error>
-- [x] Для каждого slice'а есть отдельный файл с деревом модулей
-- [x] У каждого slice'а описан головной модуль (оркестратор пайпа)
-- [x] У головного модуля каждого slice'а зафиксирован псевдокод пайпа исполнения (5–10 шагов)
-- [x] **Раскладка каждого slice'а по конвенции: head.go (голова `Process<Slice>`), adapter.go / logic.go / domain.go / errors.go / register.go; голова экспортируется напрямую, не за обёрткой (Шаг 3)**
-- [x] У каждого модуля логики описаны антецедент и консеквент
-- [x] У каждого I/O-модуля slice'а описан контракт и режимы отказа
-- [x] **У каждого модуля Input — одна доменная структура / DTO / void; deps вынесены отдельной строкой `Dependencies:` (Шаг 5). Узлов с 2+ data-аргументами в графе нет**
-- [x] **I/O-зависимости (БД, HTTP, брокер, файловая система) инкапсулированы в автономный объект `Store`/`Client`/`Publisher`/`Consumer`/`FileStore` (Шаг 6). Сырых `*sql.DB`, `*http.Client`, broker-conn в `Dependencies:` контрактов модулей и в `Deps` головного модуля нет — они скрыты внутри I/O-объекта (Шаг 5, чек-лист `Dependencies:`)**
-- [x] **Карточка каждого slice'а содержит таблицу `## Gherkin-mapping`: каждый Then-шаг каждого сценария slice'а привязан к узлу графа или маппингу адаптера (Шаг 8.4)**
-- [x] **contracts-graph.md существует, граф каждого slice'а согласован (все стрелки помечены `[x]`, в т.ч. пункт 5 о покрытии Gherkin-сценариев)**
-- [x] **`c4.md` есть: C2 (контейнер) + C3 (дерево модулей) на Mermaid; C3 совпадает с деревом Шага 3; C1 — на лэндинге (Шаг 3 «C4 по уровням»)**
-- [x] **Системный use case по Коберну зафиксирован; `#Extensions == #сценариев_отказа == #кодов_ошибок` среза (Шаг 8.6, gate-сверка в обе стороны)**
-- [x] **Модель ошибок в `messages.md`: словарь кодов + маппинг код→exit/HTTP + правило «деградация видна» (Шаг 4)**
-- [x] **Единый `Request` на срез; флаги = поля `Request`; нет side-инъекций мимо `Request`; нет test-only метода I/O; развилки по полю `Request` — в юнитах, не в компонентных сценариях (Шаг 3, урок D1)**
-- [x] **Сквозная инфраструктура (общий egress / флаги / `infrastructure.md`) имеет свою design-карту и контракт и прошла все сверки (Conformance-gate п.1)**
-- [x] **Доки пакета созданы по скиллу `documentation` (процедуры A/B/C), не свободной прозой мимо скилла (doc-gate)**
-- [x] Для конструкторов доменных структур и чистых функций логики посчитаны юнит-тесты по формуле
-- [x] **В таблице юнит-тестов каждой карточки слайса нет головного модуля, нет I/O-модулей и нет ингресс-адаптера: все три — трубы, проверяются только компонентными сценариями (Шаг 8.1)**
-- [x] infrastructure.md — описан инфраструктурный модуль приложения
-- [x] backlog.md — тикеты по одному на slice, с зависимостями
-- [x] Оператор аппрувит пакет — @<github-handle>, <YYYY-MM-DD>
+# Contract & failure map — the implementer builds against a FROZEN contract; a missing failure code = an unhandled error path
+- [x] OpenAPI / AsyncAPI frozen; every slice endpoint described in it
+- [x] contract has 5xx responses with `error.code` for every failure mode
+- [x] README has the "Failure-mode map" table (status / event type, client action, operator action)
+- [x] Gherkin component scenarios for all slice endpoints written, committed, stable (1 happy + 1 per distinguishable failure mode)
+
+# Design package present — the implementer reads THESE, not the code
+- [x] `.agent/planner/design/<slug>/` created and complete
+- [x] intent.md — the task in one phrase
+- [x] slices.md — slice table (input type, id, purpose)
+- [x] messages.md — all data structures + `Result<T, Error>`
+- [x] a per-slice module-tree file for every slice
+
+# Module discipline — a violated node is leaky or untestable downstream
+- [x] every slice has a head module (pipe orchestrator) with 5–10-step pipe pseudocode
+- [x] slice layout by convention: head.go (`Process<Slice>`), adapter.go / logic.go / domain.go / errors.go / register.go; head exported directly, not behind a wrapper (Step 3)
+- [x] every logic module has antecedent + consequent; every I/O module has a contract + failure modes
+- [x] every module Input = one domain struct / DTO / void; deps on a separate `Dependencies:` line (Step 5); no node with 2+ data args
+- [x] I/O isolated in an autonomous `Store`/`Client`/`Publisher`/`Consumer`/`FileStore` (Step 6); no raw `*sql.DB`/`*http.Client`/broker-conn in any `Dependencies:` or the head's `Deps`
+- [x] single `Request` per slice; flags = `Request` fields; no side-injection past `Request`; no test-only I/O method; a branch on a field = a unit, not a component scenario (Step 3, lesson D1)
+
+# Testing design — the wrong test level = false confidence or bloat
+- [x] unit tests counted by formula for domain constructors + pure logic functions
+- [x] the unit-test table of every slice card has NO head, NO I/O module, NO ingress adapter — all three are pipes, proven only by component scenarios (Step 8.1)
+
+# Traceability — an unmapped requirement is a silent gap
+- [x] every slice card has a `## Gherkin-mapping` table: each `Then` → a graph node or an adapter mapping (Step 8.4)
+- [x] contracts-graph.md exists; every slice graph reconciled (all arrows `[x]`, incl. Gherkin coverage)
+- [x] system Cockburn use case fixed; `#Extensions == #failure-scenarios == #error-codes` per slice (Step 8.6, both directions)
+- [x] error model in messages.md: code dictionary + code→exit/HTTP mapping + "degradation is visible" rule (Step 4)
+
+# Docs, C4 & cross-cutting — the reviewer/operator needs the map, and shared nodes must not fall between slices
+- [x] c4.md present: C2 (container) + C3 (module tree) in Mermaid; C3 == the Step-3 tree; C1 on the landing (Step 3)
+- [x] package docs authored by the `documentation` skill (procedures A/B/C), not free prose (doc-gate)
+- [x] cross-cutting infrastructure (shared egress / flags / infrastructure.md) has its own card + contract, all reconciliations passed (Conformance-gate #1)
+- [x] infrastructure.md — the app infrastructure module described
+
+# Backlog & approval — the last line is the implementer's start signal
+- [x] backlog.md — one ticket per slice, with dependencies
+- [x] Operator approves the package — @<github-handle>, <YYYY-MM-DD>
 ```
-
-All lines in the template above are shown as `[x]` — the norm for a merge-ready design PR. If
-some item stays unclosed at push time (an explicit sub-optimal choice, a divergence from the
-skill, etc.) — leave it `[ ]` and describe it in the slice card's `## Решения по дизайну`
-section, so the operator sees it during review.

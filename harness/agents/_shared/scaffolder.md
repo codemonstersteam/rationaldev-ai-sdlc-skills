@@ -8,8 +8,8 @@ temperature: 0.1
 steps: 25
 description: "Scaffolder (Qwen): on a scaffold ticket runs harness/scaffold.sh (git-clone template + rename + build), then TWO verification scripts (go build/test + smoke) — green → done, red → FAIL (the FIXER fixes it, not this role). Does NOT read the template, does NOT fix, does NOT write tests — saves tokens. Keywords: scaffold, template, skeleton, build, health."
 skills: [service-scaffold]
-inputs: [docs/design, api-specification]
-outputs: [pr, .agent/decisions.log]
+inputs: [docs/design, api-specification, gate1]
+outputs: [working-tree, .agent/decisions.log]
 permission:
   read: allow
   grep: allow
@@ -41,3 +41,8 @@ permission:
 ## Return (one line)
 `scaffolder → skeleton green (build+unit+smoke)` · `scaffolder → FAIL: <reason>` · `STOP: <reason>` (no script/template).
 Append the line to `.agent/decisions.log`. izi decides retry (K=2) / route to `@linger` / escalate.
+
+**On green — self-append the durable readiness marker (final DoD action):** ONLY after build+unit+smoke are
+green, append `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable
+side-effect — not your reply — is the completion signal; it survives an empty/dropped final message. The
+guardrail rejects the marker if the scaffold artifact is missing; never append on a red/STOP ticket.
