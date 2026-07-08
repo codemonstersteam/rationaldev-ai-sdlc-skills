@@ -44,9 +44,16 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   // таймаут/тихий hang — последний ловится, если в конфиге выставлен chunkTimeout/timeout) — нативно будим izi:
   // clearPrompt (сбрасывает залипший QUEUED-ввод — дыра сайдкара) → appendPrompt(нудж) → submitPrompt.
   // Дебаунс ПО СЕССИИ (не глобальный cooldown — иначе новый тикет/сессия глохнет, как ловили на 07-07/3).
-  const NUDGE = "Провайдер оборвался — продолжи с текущего места, не переделывай"
+  // watchdog-настройки из ЕДИНОГО источника (models.config.json → install кладёт .opencode/rational.config.json).
+  // Нет файла → дефолты. OpenCode их не знает — потому отдельный plugin-конфиг, не opencode.jsonc.
+  let NUDGE = "Провайдер оборвался — продолжи с текущего места, не переделывай"
+  let NUDGE_COOLDOWN_MS = 30_000
+  try {
+    const wc = JSON.parse(await readFile(join(root, ".opencode", "rational.config.json"), "utf8"))
+    if (typeof wc?.nudgeText === "string" && wc.nudgeText) NUDGE = wc.nudgeText
+    if (Number.isFinite(wc?.nudgeCooldownMs)) NUDGE_COOLDOWN_MS = wc.nudgeCooldownMs
+  } catch { /* нет конфига → дефолты */ }
   const lastNudge = new Map<string, number>()
-  const NUDGE_COOLDOWN_MS = 30_000
   const wakeIzi = async (sid: string) => {
     if (!client?.tui) return // headless / нет TUI — тихо
     const now = Date.now()

@@ -31,12 +31,16 @@ cp "$BENCH/spec/task.md" "$SB/TASK.md"
 CFG="$HOME/.config/opencode/opencode.jsonc"
 mkdir -p "$(dirname "$CFG")"
 [ -f "$CFG" ] && [ ! -f "$CFG.bak-before-rational-test" ] && cp "$CFG" "$CFG.bak-before-rational-test" || true
+# ЕДИНЫЙ источник — harness/models.config.json: дефолт-модель (tiers.large) + watchdog.chunkTimeout.
+MODELS="$BUNDLE/harness/models.config.json"
+MODEL="$(jq -r '.opencode.tiers.large // "openrouter/z-ai/glm-5.2"' "$MODELS")"
+CHUNK="$(jq -r '.watchdog.chunkTimeout // 90000' "$MODELS")"
 cat > "$CFG" <<JSON
 {
   "\$schema": "https://opencode.ai/config.json",
-  "model": "openrouter/z-ai/glm-5.2",
+  "model": "$MODEL",
   "provider": { "openrouter": { "options": {
-    "baseURL": "http://localhost:4000/api/v1", "apiKey": "$KEY", "chunkTimeout": 90000 } } }
+    "baseURL": "http://localhost:4000/api/v1", "apiKey": "$KEY", "chunkTimeout": $CHUNK } } }
 }
 JSON
 

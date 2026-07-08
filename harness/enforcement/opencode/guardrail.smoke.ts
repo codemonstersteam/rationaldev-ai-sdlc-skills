@@ -118,8 +118,17 @@ async function run() {
   const h5: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
   await h5.event({ event: { type: "session.error", properties: {} } }); pass++
 
+  // L. (T09b) watchdog-конфиг .opencode/rational.config.json переопределяет дефолты (развязка end-to-end)
+  await mkdir(join(dir, ".opencode"), { recursive: true })
+  await writeFile(join(dir, ".opencode", "rational.config.json"), JSON.stringify({ nudgeText: "CUSTOM-NUDGE", nudgeCooldownMs: 5 }))
+  const c2 = { text: "" }
+  const mc2 = { tui: { clearPrompt: async () => {}, appendPrompt: async ({ body }: any) => { c2.text = body.text }, submitPrompt: async () => {} } }
+  const h6: any = await RationalGuardrail({ directory: dir, worktree: dir, client: mc2 } as any)
+  await h6.event({ event: { type: "session.error", properties: { sessionID: "x" } } })
+  assert.equal(c2.text, "CUSTOM-NUDGE"); pass++
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/22 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/23 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
