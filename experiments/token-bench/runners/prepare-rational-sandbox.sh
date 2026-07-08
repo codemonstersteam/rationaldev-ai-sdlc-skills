@@ -36,7 +36,7 @@ cat > "$CFG" <<JSON
   "\$schema": "https://opencode.ai/config.json",
   "model": "openrouter/z-ai/glm-5.2",
   "provider": { "openrouter": { "options": {
-    "baseURL": "http://localhost:4000/api/v1", "apiKey": "$KEY" } } }
+    "baseURL": "http://localhost:4000/api/v1", "apiKey": "$KEY", "chunkTimeout": 90000 } } }
 }
 JSON
 
