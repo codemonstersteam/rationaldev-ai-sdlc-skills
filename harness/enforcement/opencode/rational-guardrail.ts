@@ -24,7 +24,7 @@ function pickRole(args: unknown): string {
   return "unknown"
 }
 
-export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
+export const RationalGuardrail: Plugin = async ({ directory, worktree, client }: any) => {
   // Резолв корня проекта: пропускаем "/" (под headless `opencode run` directory/worktree
   // может быть "/" — read-only → EROFS и ложная блокировка) и пустые; фоллбэк на
   // process.cwd() (каталог запуска opencode = каталог проекта).
@@ -38,6 +38,25 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
+  }
+
+  // (T09b) 504/сеть-resilience В ПЛАГИНЕ (замена tmux-сайдкара): на session.error (провайдер оборвался/
+  // таймаут/тихий hang — последний ловится, если в конфиге выставлен chunkTimeout/timeout) — нативно будим izi:
+  // clearPrompt (сбрасывает залипший QUEUED-ввод — дыра сайдкара) → appendPrompt(нудж) → submitPrompt.
+  // Дебаунс ПО СЕССИИ (не глобальный cooldown — иначе новый тикет/сессия глохнет, как ловили на 07-07/3).
+  const NUDGE = "Провайдер оборвался — продолжи с текущего места, не переделывай"
+  const lastNudge = new Map<string, number>()
+  const NUDGE_COOLDOWN_MS = 30_000
+  const wakeIzi = async (sid: string) => {
+    if (!client?.tui) return // headless / нет TUI — тихо
+    const now = Date.now()
+    if (now - (lastNudge.get(sid) ?? 0) < NUDGE_COOLDOWN_MS) return
+    lastNudge.set(sid, now)
+    try {
+      await client.tui.clearPrompt()
+      await client.tui.appendPrompt({ body: { text: NUDGE } })
+      await client.tui.submitPrompt()
+    } catch { /* best-effort: TUI недоступен */ }
   }
 
   // poka-yoke (T03): по id тикета вернуть его объявленные `outputs`, которых НЕТ или которые пусты.
@@ -214,6 +233,16 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
       } catch {
         // Аудит best-effort: сбой записи (например EROFS) НЕ валит делегирование.
       }
+    },
+
+    // (T09b) session.error → нативно будим izi (замена tmux-сторожа watch-izi-resume.sh). Триггер по
+    // ошибке сессии (провайдер оборвался / таймаут / тихий hang — если в конфиге выставлен chunkTimeout).
+    // Дебаунс по сессии; впрыск через client.tui (clearPrompt+append+submit) — не tmux → нет QUEUED.
+    event: async ({ event }: any) => {
+      if (event?.type !== "session.error") return
+      const p = event?.properties ?? {}
+      const sid = String(p.sessionID ?? p.info?.id ?? p.error?.data?.sessionID ?? "global")
+      await wakeIzi(sid)
     },
   }
 }

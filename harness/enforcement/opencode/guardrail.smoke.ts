@@ -97,8 +97,29 @@ async function run() {
   await h3["tool.execute.after"](task("wirth-planner"), { title: "best-effort" })
   pass++
 
+  // K. (T09b) session.error → нативно будим izi (clearPrompt+append+submit); дебаунс ПО СЕССИИ.
+  const calls = { clear: 0, append: 0, submit: 0, text: "" }
+  const mockClient = { tui: {
+    clearPrompt: async () => { calls.clear++ },
+    appendPrompt: async ({ body }: any) => { calls.append++; calls.text = body.text },
+    submitPrompt: async () => { calls.submit++ },
+  } }
+  const h4: any = await RationalGuardrail({ directory: dir, worktree: dir, client: mockClient } as any)
+  await h4.event({ event: { type: "session.error", properties: { sessionID: "s1" } } })
+  assert.equal(calls.clear, 1); assert.equal(calls.append, 1); assert.equal(calls.submit, 1); pass++
+  assert.match(calls.text, /продолжи/); pass++
+  await h4.event({ event: { type: "session.idle", properties: {} } })          // не session.error → игнор
+  assert.equal(calls.append, 1); pass++
+  await h4.event({ event: { type: "session.error", properties: { sessionID: "s1" } } })  // дебаунс той же сессии
+  assert.equal(calls.append, 1); pass++
+  await h4.event({ event: { type: "session.error", properties: { sessionID: "s2" } } })  // другая сессия → будит
+  assert.equal(calls.append, 2); pass++
+  // headless (нет client.tui) — не падает
+  const h5: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
+  await h5.event({ event: { type: "session.error", properties: {} } }); pass++
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/16 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/22 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
