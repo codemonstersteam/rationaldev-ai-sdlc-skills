@@ -104,10 +104,14 @@ Read `.agent/plan-reviewer/round` (no file → round `0`). Before the verdict, r
   (izi takes it to Gate #1 — the operator decides: accept with tech-debt / reformulate / stop).
 - **One** auto fix-round per cycle maximum; a second → escalate to the human.
 
-## Output → `.agent/plan-reviewer/plan-review.md`
-Verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket semantic walk**
-(`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append →
-`.agent/decisions.log`. izi reads only the verdict line.
+## Output → `.agent/plan-reviewer/plan-review.md` (durable completion signal — MUST, not your reply)
+**Write this FILE as your final action, before returning the verdict line to izi.** The FILE — not your
+one-line reply — is the completion signal: on `OK` the `--hard` guardrail **rejects @implementer delegation
+unless `.agent/plan-reviewer/plan-review.md` exists**, so a verdict without the file **stalls the pipeline**
+(izi cannot pass Gate #1). Write it once, then return the verdict line. Never report `OK` without the file on disk.
+Contents: verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket
+semantic walk** (`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append
+the verdict → `.agent/decisions.log`. izi reads the verdict line from the reply, but **advances only on the FILE**.
 
 ## STOP
 Input incomplete (no `PLAN.md`) → return `STOP: <reason>` to izi (counts as a round). Round ≥ 1 with a blocker → `escalate`.

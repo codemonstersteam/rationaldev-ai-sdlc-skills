@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { appendFile, writeFile, mkdir, access, readFile, readdir } from "node:fs/promises"
+import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 
@@ -38,6 +38,33 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
+  }
+
+  // poka-yoke (T03): по id тикета вернуть его объявленные `outputs`, которых НЕТ или которые пусты.
+  // Тикет ищем в docs/design/*/tickets/ticket-<id>.md; `outputs` парсим regex'ом (flow-массив [a, b]).
+  // Тикет/outputs не нашли → [] (НЕ блокируем: ложный blocker роняет прогон; заголовок ловит validate-tickets).
+  const missingOutputs = async (id: string): Promise<string[]> => {
+    let text: string | null = null
+    try {
+      const designDir = join(root, "docs", "design")
+      for (const slice of await readdir(designDir)) {
+        const tdir = join(designDir, slice, "tickets")
+        let files: string[]
+        try { files = await readdir(tdir) } catch { continue }
+        const hit = files.find((f) => new RegExp(`^ticket-0*${id}\\.md$`).test(f))
+        if (hit) { text = await readFile(join(tdir, hit), "utf8"); break }
+      }
+    } catch { return [] }
+    if (!text) return []
+    const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
+    if (!m) return []
+    const paths = m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+    const missing: string[] = []
+    for (const p of paths) {
+      try { const st = await stat(join(root, p)); if (st.isFile() && st.size === 0) missing.push(p) }
+      catch { missing.push(p) }
+    }
+    return missing
   }
 
   // Фрейм трассировки (docs/02_MEASUREMENT.md §«что фиксируем»): model + agents_rev + skillset_hash
@@ -97,6 +124,22 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree }) => {
             "вне сессии. Создавать/писать его агенту запрещено — на Gate #1 задай question и жди. " +
             "(Чтение-проверка `ls`/`test -f` разрешена.)",
           )
+        }
+
+        // (0b) poka-yoke: маркер готовности `ticket-NN <slice> green` в done.log принимается ТОЛЬКО если
+        // объявленные в заголовке тикета `outputs` реально существуют и непусты. Ловит «зелёный без
+        // артефакта» на записи маркера (дёшево), а не на приёмке (@linger, дорого). run08: /health опущен.
+        const doneWrite = />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd)
+        const mk = /\bticket-0*(\d+)\b[^\n]*\bgreen\b/.exec(cmd)
+        if (doneWrite && mk) {
+          const miss = await missingOutputs(mk[1])
+          if (miss.length) {
+            throw new Error(
+              "[rational-guardrail] poka-yoke: ticket-" + mk[1] + " помечается `green`, но его объявленные " +
+              "`outputs` отсутствуют/пусты: " + miss.join(", ") + ". Маркер НЕ записан — доведи артефакт(ы) до " +
+              "непустого состояния или не пиши `green`. (Проверка существования, НЕ build.)",
+            )
+          }
         }
       }
       if (tool === "write" || tool === "edit") {

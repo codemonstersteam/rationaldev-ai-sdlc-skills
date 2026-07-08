@@ -83,6 +83,10 @@ export function validateTicketHeaders(tickets) {
     if (!TICKET_TYPES.has(data.type)) errors.push(`${name}: type='${data.type ?? "—"}' (ожидается scaffold|component|module)`)
     if (!Array.isArray(data.blocked_by)) errors.push(`${name}: blocked_by должен быть flow-списком [id, …] (можно [])`)
     if (!Array.isArray(data.inputs)) errors.push(`${name}: inputs должен быть flow-списком путей [a, b]`)
+    // outputs: артефакты, которые ПРОИЗВОДИТ тикет (машиночитаемо). Существование — не здесь: на Gate #1
+    // их ещё нет, наличие сверяет guardrail-poka-yoke на done-маркере. Здесь только структура: непустой список.
+    if (!Array.isArray(data.outputs)) errors.push(`${name}: outputs должен быть flow-списком путей [a, b] — артефакты, которые тикет производит (poka-yoke сверяет их наличие на done-маркере)`)
+    else if (data.outputs.length === 0) errors.push(`${name}: outputs пуст — тикет обязан объявить ≥1 производимый артефакт (иначе poka-yoke нечего проверять)`)
     if (data.type === "module" && !IO_KINDS.has(data.io)) errors.push(`${name}: type: module без валидного io: (none|http|llm|queue|db)`)
     // «Имплементер получает ровно нужный скилл»: skills: тикета обязан совпадать
     // с выводом io-роутера для его type/io — ни лишних, ни недостающих.

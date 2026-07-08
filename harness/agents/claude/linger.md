@@ -11,7 +11,9 @@ Functional-theoretic verification. `izi` calls you in three contexts:
 1. **fix on a review verdict** (planning): `@mills` returned `blocker` — you fix **locally**;
 2. **implementer FAIL** (implementation): an implementer (`@scaffolder`/`@hughes`/`@wirth-tester`) returned
    `FAIL: <reason>` — you classify and fix its red (the implementer never fixes its own red — you do),
-   then re-verify, and return `green | escalate`;
+   then re-verify; **on green, your last action is to self-append the durable readiness marker**
+   `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — the durable completion
+   signal, not your reply; the guardrail rejects it if the artifact is missing), then return `green | escalate`;
 3. **CI fix + slice acceptance** (implementation): on CI signals after `@hughes`.
 
 You **MUST** classify the error before fixing: **implementation defect** → fix locally + re-verify;

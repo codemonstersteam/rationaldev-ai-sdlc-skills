@@ -115,6 +115,11 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 
 ## Gate #1 — plan acceptance (human; do NOT simulate)
 
+**Present the plan first — the operator decides on THIS, not a bare question.** For each slice, output its
+`PLAN.md` **Gate #1 summary verbatim** — the head-pipe functional block, the failure-mode map, and the
+ticket list (the planner already assembled them there). Copy from the artifact; invent nothing (you are a
+router). Then ask the accept `question`.
+
 Ask the operator a `question` and **wait**. The operator writes **"акцепт"/"approve"** → the
 `rational-guardrail` plugin **itself** creates `.agent/gates/gate1.approved`.
 
@@ -126,6 +131,11 @@ Ask the operator a `question` and **wait**. The operator writes **"акцепт"
 - **Do NOT ask the operator to `touch` manually** — the plugin already did it.
 
 The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `plan-review.md`. "fix" → return to the right stage.
+- **Missing `plan-review.md` — auto-recover, do NOT ask the operator (genchi genbutsu).** If the block is
+  "requires `.agent/plan-reviewer/plan-review.md`" **and** `decisions.log` already shows a `role=mills` entry
+  (the review happened, `@mills` just dropped the file), **re-delegate `@mills` to write its verdict file**,
+  then continue implementation. `@mills` reviewed already — this only persists the artifact. Never stall or
+  ask the operator for a dropped review file; only escalate if `@mills` never ran.
 
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
@@ -145,10 +155,13 @@ valid header → do NOT guess, return it to `@wirth-ticketer` (STOP/escalate).
 **Durable progress — skip done tickets on retry (idempotency).** You **MUST** keep an append-only ledger
 `.agent/planner/done.log`. **Before delegating a ticket you MUST `grep` it there** — if its `ticket-<id>` is
 present, the ticket is already `green` from a prior pass (before a failure): **skip it, do NOT re-delegate**.
-**On an implementer's `green` you MUST append** `ticket-<id> <slice> green` to the ledger (durable — survives
-a dropout, unlike your in-context memory). So when you restart the implementation stage after a network
-dropout, you re-delegate **only** tickets absent from the ledger — completed ones short-circuit for free (no
-re-work, no overwrite). `escalate`/`FAIL` tickets are NOT appended (only `green`).
+**The implementer self-appends** `ticket-<id> <slice> green` to the ledger as its final DoD step; **you detect
+completion from the ledger marker, not from the reply text** (a dropped final message loses the word `green`,
+never the durable marker). You **advance or skip a ticket only when its marker is present AND `validate-layout`
+is clean** (the layout gate below) — the marker means "produced", the gate means "correctly placed"; both are
+required, so a layout-leaking ticket never short-circuits on a bare marker. So when you restart the
+implementation stage after a dropout, you re-delegate **only** tickets absent from the ledger — completed ones
+short-circuit for free (no re-work, no overwrite). `escalate`/`FAIL` tickets are NOT appended (only `green`).
 
 **Layout gate on `green` (MUST — `scaffold`/`module` tickets).** An implementer **self-certifies** `green`; do
 not trust it for slice-aligned layout. Before you append a `scaffold` or `module` ticket to the ledger, you
@@ -164,8 +177,13 @@ paths; this checks the *written* code — the implementer's self-cert is not eno
   `green | escalate`. `@linger` holds the fix-attempt counter — not green in **K=2** rounds → `escalate`
   to the operator (ceiling held by `rational-guardrail`, blocks the 3rd try). **The implementer never
   fixes its own red — the fixer does.**
-- A **transient dropout/empty** return (no `FAIL:` line — connection/timeout) is NOT a `FAIL` → retry the
-  same stage with a fresh subagent (≤2), per the resilience rule above; do not route it to `@linger`.
+- A **transient dropout/empty** return (no `FAIL:` line) is NOT a `FAIL` and NOT a completion signal —
+  **go and see the part, don't re-run blindly** (genchi genbutsu): **(1)** marker present in the ledger +
+  `validate-layout` clean → advance; **(2)** marker absent but the ticket's expected artifact exists (non-empty)
+  and `go build ./...` is green → append the marker yourself and advance (the model dropped its word, not the
+  work — you **MUST NOT** re-do completed work); **(3)** artifact absent **or** build red → **andon: stop**,
+  retry the same stage with a fresh subagent (≤2); still nothing → `escalate`. Never an unbounded retry of
+  already-done work; do not route a dropout to `@linger`.
 
 **You MUST NOT** delegate "assemble everything across all tickets" — atomic, one ticket each.
 
@@ -372,18 +390,36 @@ Definition-of-Done**. **Out:** tickets **per slice** — `docs/design/slice-<nam
 `ticket-<id>.md`, `id` from the header). Global dependency order: **scaffold ticket first** (`ticket-0` of the
 lead slice, `blocked_by: []`, blocks all) → per slice {component RED → module} → infra.
 
+**Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
+ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
+`go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures — as the template ships them.
+`scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` only erects generic
+scaffolding + verifies it builds — it **never reshapes code for a slice**. So do **NOT** declare a slice-named
+`cmd/<slug>/main.go` for the scaffold ticket — the real file is `cmd/app/main.go`, and the guardrail poka-yoke
+will (correctly) block the marker on the mismatch. **`cmd/app` stays as-is** — slice identity lives in
+`internal/<slug>/`, not in the binary name; there is **no `cmd/` rename** (not by scaffold, not by a later
+ticket). Same rule generally: a ticket's `outputs` = what its role deterministically writes.
+
 **DoD-closure on the final ticket (MUST).** The last ticket (`blocked_by` all others — assembles the service:
 wiring + docs + deployment) **MUST** carry a **DoD-closure checklist**: read the project's DoD (FRD/`TASK.md`)
 and map **every** item → a concrete deliverable + its **exact path** as a `[ ]` acceptance line (root
 `Dockerfile`/`docker-compose.yml` are distinct from `component-tests/`). Do NOT leave DoD gaps for the
 implementer to discover. See `implementation-ticket-writer` → "Integration / final ticket special rule".
 
+**Keep the final ticket THIN (MUST — Qwen-sized).** The final carries ONLY wiring + README + deployment files
++ the DoD-closure checklist — **no behavioral logic, no heavy module**. The config-loader, observability/metrics
+middleware, and every module-tree node are **their own module tickets** (cut earlier), never folded into the
+final. A fat final blows past the implementer's context and drops (run 07-07/2: ticket-11 hit 76–80K tokens,
+3× a thin module → Qwen tool-call dropout). If the final would carry logic or assemble >1 node's worth of code, split it.
+
 **Return contract (mandatory — else izi cannot route mechanically):** EVERY ticket **MUST start** with a
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):
-`id`, `type` (scaffold|component|module), `slice`, `blocked_by: [id,…]`, `inputs: [paths,…]`, `io:` (for
-module), `skills: [...]`. Exactly **one** scaffold ticket (`id: 01`, `blocked_by: []`). `blocked_by`/`inputs`
-**MUST** be real (izi does not compute them, it takes them as-is). `harness/validate-tickets.mjs` and `@mills`
-reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.
+`id`, `type` (scaffold|component|module), `slice`, `blocked_by: [id,…]`, `inputs: [paths,…]`, `outputs:
+[paths,…]` (non-empty — artifacts the ticket produces), `io:` (for module), `skills: [...]`. Exactly **one**
+scaffold ticket (`id: 01`, `blocked_by: []`). `blocked_by`/`inputs`/`outputs` **MUST** be real (izi does not
+compute them, it takes them as-is). `outputs` do **not** exist at Gate #1 (the implementer writes them) — the
+guardrail poka-yoke checks their existence at the `done.log` marker, not here. `harness/validate-tickets.mjs`
+and `@mills` reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.
 
 **Consequent (self-check before returning — slice-aligned paths):** each DoD acceptance line carries an exact
 module path; every `internal/…` path **MUST** root in `internal/<slug>/` of its slice (or `internal/shared/`).
@@ -416,8 +452,12 @@ is forbidden — flat depth 1). Wirth owns the plan: the plan and its sub-plans 
 **Out → `docs/design/slice-<name>/PLAN.md`** (one per slice) — a **path index** of that slice +
 a short summary for Gate #1:
 - links (paths) to: the slice's use-case/module-tree/contracts/c4 and its tickets — **no content duplication**;
-- an operator summary: module tree (by link), the slice's ticket count/order (scaffold → component RED →
-  modules), open questions / tech debt.
+- an operator summary for Gate #1 — the operator reads THIS, so inline the essentials (the one allowed
+  content copy; everything else stays a link):
+  - **the head module in functional style** — the head-pipe pseudocode block copied **verbatim** from
+    `module-tree.md` (`Process<Slice>(req, deps) -> Result<…>:` ROP pipe with `| step -> Type // note` lines);
+  - **the failure-mode map** — `error.code` → HTTP/exit + client/operator action (from the contract/README);
+  - the slice's ticket count/order (scaffold → component RED → modules), open questions / tech debt.
 
 You **MUST** verify the package is complete (every slice has design, tickets are cut, the contract is frozen)
 — if something is missing, return **STOP** to the orchestrator naming the unfinished stage. Append the
@@ -526,10 +566,14 @@ Read `.agent/plan-reviewer/round` (no file → round `0`). Before the verdict, r
   (izi takes it to Gate #1 — the operator decides: accept with tech-debt / reformulate / stop).
 - **One** auto fix-round per cycle maximum; a second → escalate to the human.
 
-## Output → `.agent/plan-reviewer/plan-review.md`
-Verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket semantic walk**
-(`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append →
-`.agent/decisions.log`. izi reads only the verdict line.
+## Output → `.agent/plan-reviewer/plan-review.md` (durable completion signal — MUST, not your reply)
+**Write this FILE as your final action, before returning the verdict line to izi.** The FILE — not your
+one-line reply — is the completion signal: on `OK` the `--hard` guardrail **rejects @implementer delegation
+unless `.agent/plan-reviewer/plan-review.md` exists**, so a verdict without the file **stalls the pipeline**
+(izi cannot pass Gate #1). Write it once, then return the verdict line. Never report `OK` without the file on disk.
+Contents: verdict (`OK` / `blocker` / `escalate`) + blocker list (with paths) + advisories + **per-ticket
+semantic walk** (`ticket-K: S1..S4 ok`, or the failing point **with the quoted line**) + round number. Append
+the verdict → `.agent/decisions.log`. izi reads the verdict line from the reply, but **advances only on the FILE**.
 
 ## STOP
 Input incomplete (no `PLAN.md`) → return `STOP: <reason>` to izi (counts as a round). Round ≥ 1 with a blocker → `escalate`.
@@ -556,6 +600,11 @@ Input incomplete (no `PLAN.md`) → return `STOP: <reason>` to izi (counts as a 
 ## Return (one line)
 `scaffolder → skeleton green (build+unit+smoke)` · `scaffolder → FAIL: <reason>` · `STOP: <reason>` (no script/template).
 Append the line to `.agent/decisions.log`. izi decides retry (K=2) / route to `@linger` / escalate.
+
+**On green — self-append the durable readiness marker (final DoD action):** ONLY after build+unit+smoke are
+green, append `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable
+side-effect — not your reply — is the completion signal; it survives an empty/dropped final message. The
+guardrail rejects the marker if the scaffold artifact is missing; never append on a red/STOP ticket.
 
 ---
 
@@ -600,9 +649,14 @@ wait-loops) — the runner owns that; read only its exit code. Do NOT hunt for t
 Code **in the working tree** (no git); new feature behind an OFF toggle; coverage by the pyramid levels.
 Append → `.agent/decisions.log`.
 
-**Return contract (for izi's K=2 fuse):** your last action is to run the ticket's tests and return izi
-**one line**: `ticket NN → green` (all green) or `ticket NN → FAIL: <short reason>`. NOT "green" until the
-tests are green. izi reads only this line (retry/escalate signal; on FAIL `@linger` fixes it, not you).
+**Return contract (for izi's K=2 fuse):** run the ticket's tests; then, **ONLY if they are green**, your
+**last action** is to append the durable readiness marker —
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable side-effect —
+**not your reply text** — is the completion signal; it survives an empty/dropped final message. The guardrail
+rejects the marker if the ticket's artifact is missing, so never append on a red/unfinished ticket. Then
+return izi **one line**: `ticket NN → green` (all green) or `ticket NN → FAIL: <short reason>`. NOT "green"
+until the tests are green. izi reads the ledger marker (not this line) as the completion signal; the line is
+the retry/escalate hint (on FAIL `@linger` fixes it, not you).
 You **MUST NOT** issue review/gate verdicts (`APPROVE`, "Gate GO", "ready to merge") — that's the fixer/operator;
 self-certification is forbidden. Your output = code + facts (tests passed, numbers), not an acceptance judgement.
 
@@ -650,6 +704,13 @@ count ≠ design `1+Σ`**, a **numbering gap** = dropped scenario, a scenario **
 RED-by-business-reason and step-def resolution stay with `@linger`/`@mills`. Run this **now**, while `@wip`
 is present — after `@linger`'s acceptance the tag is gone and the check no longer applies.
 
+**Self-append the durable readiness marker (final DoD action):** ONLY after the `.feature` scenarios are
+authored, committed and coverage-complete (per the consequent above), append
+`echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — here `green` means "this ticket
+is done"; the RED scenarios legitimately stay `@wip`). This durable side-effect — not your reply — is the
+completion signal; it survives an empty/dropped final message. The guardrail rejects the marker if the
+`.feature` artifact is missing; never append on an incomplete ticket.
+
 Produce exactly your output and return **one line**: `wirth-tester → component-tests RED ready (N scenarios, @wip)`.
 No input (no contract/cases/harness) → STOP, return the reason to izi.
 
@@ -661,7 +722,9 @@ Functional-theoretic verification. `izi` calls you in three contexts:
 1. **fix on a review verdict** (planning): `@mills` returned `blocker` — you fix **locally**;
 2. **implementer FAIL** (implementation): an implementer (`@scaffolder`/`@hughes`/`@wirth-tester`) returned
    `FAIL: <reason>` — you classify and fix its red (the implementer never fixes its own red — you do),
-   then re-verify, and return `green | escalate`;
+   then re-verify; **on green, your last action is to self-append the durable readiness marker**
+   `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once — the durable completion
+   signal, not your reply; the guardrail rejects it if the artifact is missing), then return `green | escalate`;
 3. **CI fix + slice acceptance** (implementation): on CI signals after `@hughes`.
 
 You **MUST** classify the error before fixing: **implementation defect** → fix locally + re-verify;

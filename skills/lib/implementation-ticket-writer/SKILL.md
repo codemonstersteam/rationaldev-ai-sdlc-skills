@@ -65,16 +65,21 @@ type: module            # scaffold | component | module
 slice: slice-02-catalog
 blocked_by: [01, 02, 04] # scaffold(01) + component-RED(02, RED-first EDGE) + any module dep(04). May add more.
 inputs: [docs/design/slice-02-catalog/contracts.md, api-specification/openapi.yaml]
+outputs: [internal/catalog/logic.go, internal/catalog/logic_test.go]  # artifacts THIS ticket produces
 io: db                  # REQUIRED for type: module — none|http|llm|queue|db (router key)
 skills: [db-io, db-schema]   # MUST equal io-router(db) — else validate-tickets blocks (over/under-provision)
 ---
 ```
 
 Rules: exactly **one** `scaffold` ticket, and it is `id: 01` with `blocked_by: []` (blocks all others);
-every other ticket lists its real prerequisites in `blocked_by` and its real artifact paths in `inputs`
-(izi passes exactly these — it does not compute dependencies). `io:` is required only for `module`.
-`skills:` is **required on every ticket** and must **exactly equal** the io-router output for its
-`type`/`io`. The ticket **body** below the header follows the template in [`reference.md`](./reference.md).
+every other ticket lists its real prerequisites in `blocked_by`, its real input paths in `inputs`, and
+its real produced-artifact paths in `outputs` (izi passes exactly these — it does not compute them).
+`outputs:` is **required on every ticket and must be non-empty** — the files the ticket produces; unlike
+`inputs` these do **not** exist at Gate #1 (they are what the implementer writes), so the header only
+declares them and the **guardrail poka-yoke verifies their existence when the `done.log` marker is
+written**, not before. `io:` is required only for `module`. `skills:` is **required on every ticket** and
+must **exactly equal** the io-router output for its `type`/`io`. The ticket **body** below the header
+follows the template in [`reference.md`](./reference.md).
 
 ## Ordering & granularity
 

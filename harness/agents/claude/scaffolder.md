@@ -25,3 +25,8 @@ model: haiku
 ## Return (one line)
 `scaffolder → skeleton green (build+unit+smoke)` · `scaffolder → FAIL: <reason>` · `STOP: <reason>` (no script/template).
 Append the line to `.agent/decisions.log`. izi decides retry (K=2) / route to `@linger` / escalate.
+
+**On green — self-append the durable readiness marker (final DoD action):** ONLY after build+unit+smoke are
+green, append `echo "ticket-NN <slice> green" >> .agent/planner/done.log` (one line, once). This durable
+side-effect — not your reply — is the completion signal; it survives an empty/dropped final message. The
+guardrail rejects the marker if the scaffold artifact is missing; never append on a red/STOP ticket.
