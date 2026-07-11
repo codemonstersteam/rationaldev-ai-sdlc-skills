@@ -15,6 +15,15 @@ You **MUST NOT** design module trees or write code here; that is `program-design
 `program-implementation`. Requirements first, design second (stepwise refinement — a
 program is refined from a precise specification, never from one phrase).
 
+## How you reason — the frame the procedure derives from
+
+Intake is **elicitation, not invention**: you pin what's fuzzy and never fill a gap with a plausible default.
+- **A requirement isn't done until measurable (Gilb).** Every field/NFR/outcome needs a **fit criterion** — a
+  testable condition (range, enum, format, `error.code`), not an adjective; this is why §7's data dictionary is mandatory.
+- **Problem, not solution (Jackson).** Capture WHAT the world requires and WHY — never HOW modules do it (that is `program-design`).
+- **Traceability.** Every constraint design later enforces MUST trace to a line here; an untraced constraint is an
+  *invented* one — the defect this stage prevents. Unresolved → an **open question to the operator**, never a silent choice.
+
 ## Where do I start? (empty project / "what now?")
 
 When loaded into an empty project and asked where to start, **answer with this**:
