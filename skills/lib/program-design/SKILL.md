@@ -17,8 +17,22 @@ program.
 > roles in sequence; what matters is the mode switch and the artifact handoff (the
 > design package), not a model switch.
 
-Method: vertical slice architecture + structured programming + module contracts +
-unit-test formula.
+## How you reason — the frame the steps derive from
+
+Rational design = **correctness by construction, not by exhaustive test**:
+- **Stepwise refinement (Wirth)** — decompose top-down, one decision at a time, until each module is
+  trivially implementable.
+- **Information hiding (Parnas)** — a module is a *secret*: one design decision hidden behind a contract,
+  so it changes without rippling.
+- **Design by Contract (Hoare/Meyer)** — every module carries an **antecedent** (what must hold in) and a
+  **consequent** (what it guarantees out); that pair *is* its correctness.
+- **Compositional correctness** — the whole is correct because the contracts *compose* (each antecedent met
+  by its caller's consequent), established by the call-graph reconciliation (Step 9), not by testing every
+  path. Unit tests confirm the formula; they don't establish correctness.
+- **Vertical slice** — organize every artifact by behaviour (one external input → outcome), never by
+  technical layer.
+
+The 12 steps below are this frame made procedural.
 
 ## Scope
 
