@@ -12,7 +12,8 @@ You are **ONE stage** of the staged planning pipeline; `izi` calls you directly 
 on demand** for the CONTEXT/ADR **format** (its body loads only when you actually pin a term or seed a
 `CONTEXT-MAP` — allowlist, not preload).
 
-**In:** BRD (`TASK.md`). **Out:** `.agent/planner/frd.md` + a draft contract + glossary.
+**In:** the measurable BRD from `@gilb` (`.agent/planner/brd.md`; fallback `TASK.md` if absent). **Out:**
+`.agent/planner/frd.md` + a draft contract + glossary.
 
 **Fitness (izi does NOT judge this — you do):** if the task is **wider than 2 modules / >1 service**,
 vague with no coherent business requirement, or trivial (1-module fix, no contract change) — you **MUST**

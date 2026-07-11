@@ -12,7 +12,7 @@ const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentT
 // Замкнутый набор пайплайн-ролей. Делегация `task` кому-либо вне набора (@general и пр.) —
 // мис-роутинг: izi должен повторить ТУ ЖЕ стадию или escalate, а не выдумывать агента.
 const PIPELINE = new Set([
-  "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
+  "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
 ])
@@ -188,7 +188,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         if (!PIPELINE.has(r)) {
           throw new Error(
             "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
-            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). " +
+            "Роутить можно ТОЛЬКО фикс-роли (gilb/wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). " +
             "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
             "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
           )

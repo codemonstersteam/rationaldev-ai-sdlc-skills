@@ -95,10 +95,26 @@ reading artifacts. Do NOT retell contents; a silent `task` is bad.
   A missing artifact (checked by its exact path, per above) counts as a failure → retry the stage.
 - Short form: `STOP:` → operator; empty/error/no-artifact-at-exact-path → retry (≤2) → escalate. Never hang.
 
+## FRONT DOOR — BR → measurable BRD (FIRST, before triage)
+
+A raw **business requirement (BR)** must be made **measurable** before anything is planned. On a new task,
+BEFORE triage:
+
+1. Delegate `@gilb` (input: `TASK.md` / the operator's requirement). It writes `.agent/planner/brd.md`
+   and returns either `BRD draft, N open questions` or `BRD agent-ready (size: …)`.
+2. **Open questions → present them to the operator** (batch, verbatim from `.agent/planner/brd.md`
+   `## Open questions`) and **wait**. You RELAY — you do NOT answer them yourself (you are a router, not
+   the analyst). Feed the operator's answers back by re-delegating `@gilb`. Repeat until `agent-ready`.
+3. `agent-ready` → route by the reported **size**: `one-slice`/`multi-slice` → STEP 0 triage below;
+   `epic` → the epic path (STOP as today — not yet implemented).
+
+From here on `.agent/planner/brd.md` is the **requirement of record** — triage and `@wirth-intake` read
+it, not the raw prompt. (A prompt that is already a complete spec → `@gilb` returns `agent-ready` at once.)
+
 ## STEP 0 — TRIAGE & ROUTING (you do NOT classify)
 
-**First**, delegate `@wirth-triage` (input: `TASK.md`). It (GLM) returns `level=…`. **Announce the verdict
-to the operator** and route by the FIXED table (mechanics, not judgement):
+**First**, delegate `@wirth-triage` (input: `.agent/planner/brd.md`). It (GLM) returns `level=…`. **Announce
+the verdict to the operator** and route by the FIXED table (mechanics, not judgement):
 
 | `level` | You do |
 |---|---|
@@ -109,7 +125,7 @@ to the operator** and route by the FIXED table (mechanics, not judgement):
 
 ## PLANNING — `modular` path (all stages = Wirth on GLM, each a fresh subagent)
 
-1. `@wirth-intake` (input: `TASK.md`) → `.agent/planner/frd.md`. Intake decides fit/STOP itself and
+1. `@wirth-intake` (input: `.agent/planner/brd.md`) → `.agent/planner/frd.md`. Intake decides fit/STOP itself and
    returns a verdict line; you do not assess it — on `STOP` pass it to the operator.
 2. `@wirth-slicer` (input: `frd.md`) → `.agent/planner/slices.md`; **returns the slice list as a line** — iterate over it.
 3. **LOOP over slices** from slicer's status line (pass 1 — design): `@wirth-usecase` (S + frd) → `docs/design/<S>/use-case.md`.

@@ -20,19 +20,19 @@ if ($LASTEXITCODE -ne 0) { Fail "skill-index устарел" }; Ok
 # --- Claude: раскладка ---
 $P = Join-Path $Tmp 'claude'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" claude -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 16) { Fail "claude: ролей не 16" }; Ok
+if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 17) { Fail "claude: ролей не 17" }; Ok
 if (-not (Test-Path "$P/.claude/skills/memory/SKILL.md")) { Fail "claude: нет скилла memory" }; Ok
 if (-not (Test-Path "$P/CLAUDE.md")) { Fail "claude: нет CLAUDE.md" }; Ok
 
 # --- OpenCode / Codex: раскладка ---
 $P = Join-Path $Tmp 'opencode'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" opencode -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 16) { Fail "opencode: агентов не 16" }; Ok
+if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 17) { Fail "opencode: агентов не 17" }; Ok
 if (-not (Test-Path "$P/AGENTS.md")) { Fail "opencode: нет AGENTS.md" }; Ok
 
 $P = Join-Path $Tmp 'codex'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 16) { Fail "codex: ролей не 16" }; Ok
+if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 17) { Fail "codex: ролей не 17" }; Ok
 if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Hughes' -Quiet)) { Fail "codex: в AGENTS.md нет блоков ролей" }; Ok
 
 # --- Недеструктивность: существующий AGENTS.md ---
