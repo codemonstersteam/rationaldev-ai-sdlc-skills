@@ -70,6 +70,12 @@ What no exit code can assert — read and judge (`doc-quality-review` for the RE
   `error.code` set the code emits** (not an invented table);
 - **config is file/env-driven — no hardcoded port/path/constant** (a literal like `8080` is acceptable
   only as a *documented default*, never a magic constant) — a judgement, not a grep.
+- **no artifact claims a state that contradicts the green reality.** `validate-dod` lists stale-marker
+  candidates (`placeholder`/`not implemented`/`stub`/`WIP` in README·`*.feature`·docs). For each, judge:
+  does it **lie** about the now-working service (`placeholder 501` on a green endpoint · «сервис не
+  реализован» in a passing scenario → **reject**, the text must be fixed) or is it **honest** scope/
+  tech-debt (`TODO: caching later` · «pagination — out of scope» → ok)? A green build carrying "not
+  done" prose is a reject — grep found the word, you decide if it lies.
 Any doubt → reject with the specific gap; never sign on "probably fine".
 
 ## Sign or reject

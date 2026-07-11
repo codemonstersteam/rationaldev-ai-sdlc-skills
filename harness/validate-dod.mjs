@@ -60,6 +60,37 @@ export function missingReadmeSections(readmeText) {
   return README_SECTIONS.filter(([, re]) => !re.test(readmeText)).map(([label]) => label)
 }
 
+// стейл-маркеры: текст, УТВЕРЖДАЮЩИЙ незавершённость. После зелёного DoD такой текст либо врёт
+// (`placeholder`/`not implemented` на работающем сервисе), либо честный tech-debt (`TODO: кэш потом`).
+// grep находит СЛОВА (дёшево, детерминировано); ВРЁТ-ли-оно решает @fagan (семантика).
+export const STALE_STATE = [   // «сейчас не готово» — после green это подозрение
+  ["placeholder", /placeholder|заглушк/i],
+  ["not-implemented", /not[ -]?implemented|не реализован|не готов/i],
+  ["stub", /\bstub(bed)?\b/i],
+  ["WIP", /\bWIP\b|work in progress/i],
+]
+export const STALE_FUTURE = [  // будущая работа — обычно честно
+  ["TODO", /\bTODO\b/], ["FIXME", /\bFIXME\b/], ["XXX", /\bXXX\b/],
+]
+
+// Скан доставленных артефактов (README, *.feature, docs/*.md) на стейл-маркеры. Чистого текста нет —
+// читает файлы; возвращает [{file,line,cls,label,text}]. cls: state (подозрение) | future (обычно ок).
+export function staleMarkerHits(root, files) {
+  // только ДОСТАВЛЯЕМОЕ: README · *.feature · top-level docs/*.md. НЕ docs/design/** (планёрный
+  // пакет легитимно полон слов placeholder/RED/@wip — это дизайн-вокабуляр, не ложь о продукте).
+  const targets = files.filter((f) => /^README\.md$/i.test(f) || /\.feature$/i.test(f) || /^docs\/[^/]*\.md$/i.test(f))
+  const hits = []
+  for (const rel of targets) {
+    let text
+    try { text = readFileSync(join(root, rel), "utf8") } catch { continue }
+    text.split("\n").forEach((ln, i) => {
+      for (const [label, re] of STALE_STATE)  if (re.test(ln)) hits.push({ file: rel, line: i + 1, cls: "state",  label, text: ln.trim().slice(0, 100) })
+      for (const [label, re] of STALE_FUTURE) if (re.test(ln)) hits.push({ file: rel, line: i + 1, cls: "future", label, text: ln.trim().slice(0, 100) })
+    })
+  }
+  return hits
+}
+
 // ── исполнение (impure) ─────────────────────────────────────────────────────
 function run(cmd, cwd) {                        // → {ok, out}; НЕ бросает
   try { return { ok: true, out: execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"] }).toString() } }
@@ -99,6 +130,14 @@ if (invokedDirectly) {
     const rt = files.find((f) => /(^|\/)run-tests\.sh$/i.test(f))
     if (!rt) fails.push("--run: run-tests.sh не найден")
     else { const r = run(`sh ${JSON.stringify(rt)}`, root); if (!r.ok) fails.push("run-tests.sh exit≠0:\n" + r.out.trim().slice(-800)) }
+  }
+
+  // 5) стейл-маркеры (НЕ фатально — кандидаты для семантического вердикта @fagan)
+  const stale = staleMarkerHits(root, files)
+  if (stale.length) {
+    console.log(`validate-dod: ⚠ ${stale.length} стейл-маркер(ов) — @fagan: суди, противоречат ли ЗЕЛЁНОМУ состоянию:`)
+    for (const h of stale) console.log(`  ? [${h.cls}] ${h.file}:${h.line} «${h.text}»`)
+    console.log("  → state-маркер на работающем сервисе (напр. «placeholder 501») = врёт → reject; честный tech-debt/scope = ок.")
   }
 
   if (fails.length) {

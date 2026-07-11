@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { collectFiles, missingArtifacts, missingReadmeSections } from "../validate-dod.mjs"
+import { collectFiles, missingArtifacts, missingReadmeSections, staleMarkerHits } from "../validate-dod.mjs"
 
 let pass = 0
 const dir = await mkdtemp(join(tmpdir(), "dod-smoke-"))
@@ -46,5 +46,21 @@ assert.ok(miss.includes("OpenAPI contract") && miss.includes("run-tests.sh"), `m
 // F. пустой сервис → все 6 артефактов отсутствуют
 assert.equal(missingArtifacts([]).length, 6); pass++
 
+// G. стейл-маркеры: state-маркер в .feature ловится как cls=state, TODO в README как future
+await writeFile(join(dir, "component-tests", "features", "list.feature"),
+  "Feature: x\n  # сервис не реализован (placeholder 501) → RED\n")
+await writeFile(join(dir, "README.md"),
+  "# svc\n## API\nGET /x\n## Run\n## Карта режимов отказа\nTODO: добавить кэш потом\n")
+const hits = staleMarkerHits(dir, collectFiles(dir))
+const state = hits.filter((h) => h.cls === "state")
+const future = hits.filter((h) => h.cls === "future")
+assert.ok(state.some((h) => /\.feature$/.test(h.file) && h.label === "placeholder"), `state-hit не найден: ${JSON.stringify(hits)}`); pass++
+assert.ok(state.some((h) => h.label === "not-implemented"), "«не реализован» → not-implemented"); pass++
+assert.ok(future.some((h) => h.label === "TODO" && /README/.test(h.file)), "TODO в README → future"); pass++
+
+// H. чистый артефакт без маркеров → пусто
+await writeFile(join(dir, "component-tests", "features", "clean.feature"), "Feature: clean\n  Scenario: ok\n")
+assert.equal(staleMarkerHits(dir, ["component-tests/features/clean.feature"]).length, 0); pass++
+
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/7 — validate-dod smoke`)
+console.log(`PASS ${pass}/11 — validate-dod smoke`)
