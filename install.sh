@@ -136,17 +136,19 @@ if [ "$HARD" = yes ]; then
       mkdir -p "$cbase/hooks"
       ln -sfn "$ADAPTER/gate-check.mjs"   "$cbase/hooks/gate-check.mjs"
       ln -sfn "$ADAPTER/gate-bash.mjs"    "$cbase/hooks/gate-bash.mjs"
+      ln -sfn "$ADAPTER/gate-approve.mjs" "$cbase/hooks/gate-approve.mjs"
       ln -sfn "$ADAPTER/log-decision.mjs" "$cbase/hooks/log-decision.mjs"
       # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом на случай location-based резолва
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
-      gc="node \"$cbase/hooks/gate-check.mjs\""; gb="node \"$cbase/hooks/gate-bash.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
+      gc="node \"$cbase/hooks/gate-check.mjs\""; gb="node \"$cbase/hooks/gate-bash.mjs\""; ga="node \"$cbase/hooks/gate-approve.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
       sjson='{
   "hooks": {
     "PreToolUse": [
       { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] },
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
     ],
-    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ]
+    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
   }
 }'
       if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then

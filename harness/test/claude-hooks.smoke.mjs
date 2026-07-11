@@ -3,6 +3,7 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
+import { existsSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -46,5 +47,17 @@ assert.equal(runHook("gate-bash.mjs", green, { CLAUDE_PROJECT_DIR: dir }), 0, "g
 // fail-open: битый JSON не блокирует
 assert.equal(spawnSync("node", [join(HOOKS, "gate-bash.mjs")], { input: "not json" }).status, 0, "битый JSON → fail-open"); pass++
 
+// gate-approve: UserPromptSubmit ставит маркер Gate #1 на «акцепт» (паритет с opencode chat.message)
+const adir = await mkdtemp(join(tmpdir(), "claude-approve-"))
+const marker = join(adir, ".agent", "gates", "gate1.approved")
+runHook("gate-approve.mjs", { prompt: "ну что, поехали дальше" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(!existsSync(marker), "не-акцепт → маркера нет"); pass++
+runHook("gate-approve.mjs", { prompt: "акцепт, план ок" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(existsSync(marker), "«акцепт» → маркер создан"); pass++
+const first = readFileSync(marker, "utf8")
+runHook("gate-approve.mjs", { prompt: "approve again" }, { CLAUDE_PROJECT_DIR: adir })
+assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобберит первый акцепт"); pass++
+await rm(adir, { recursive: true, force: true })
+
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/11 — claude hooks smoke (closed-set + Gate #1 + poka-yoke + gate-write)`)
+console.log(`PASS ${pass}/14 — claude hooks smoke (closed-set + Gate #1 + poka-yoke + gate-write + approve)`)

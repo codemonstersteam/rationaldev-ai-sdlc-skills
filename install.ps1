@@ -119,11 +119,13 @@ if (-not $Soft) {
       New-Item -ItemType Directory -Force -Path $hooks | Out-Null
       Copy-Item (Join-Path $adapter 'gate-check.mjs')   (Join-Path $hooks 'gate-check.mjs') -Force
       Copy-Item (Join-Path $adapter 'gate-bash.mjs')    (Join-Path $hooks 'gate-bash.mjs') -Force
+      Copy-Item (Join-Path $adapter 'gate-approve.mjs') (Join-Path $hooks 'gate-approve.mjs') -Force
       Copy-Item (Join-Path $adapter 'log-decision.mjs') (Join-Path $hooks 'log-decision.mjs') -Force
       # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом (copy → нужен реальный файл в destination)
       Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path $cbase 'shared.mjs') -Force
       $gc = 'node "' + (Join-Path $hooks 'gate-check.mjs') + '"'
       $gb = 'node "' + (Join-Path $hooks 'gate-bash.mjs') + '"'
+      $ga = 'node "' + (Join-Path $hooks 'gate-approve.mjs') + '"'
       $ld = 'node "' + (Join-Path $hooks 'log-decision.mjs') + '"'
       $settings = [ordered]@{ hooks = [ordered]@{
         PreToolUse  = @(
@@ -131,6 +133,7 @@ if (-not $Soft) {
           @{ matcher = 'Bash'; hooks = @(@{ type = 'command'; command = $gb }) }
         )
         PostToolUse = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $ld }) })
+        UserPromptSubmit = @(@{ hooks = @(@{ type = 'command'; command = $ga }) })
       } }
       $json = $settings | ConvertTo-Json -Depth 8
       $sjPath = Join-Path $cbase 'settings.json'
