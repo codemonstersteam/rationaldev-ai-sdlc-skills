@@ -125,6 +125,8 @@ if [ "$HARD" = yes ]; then
       [ "$SCOPE" = global ] && pdir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins" || pdir="$PROJ/.opencode/plugins"
       mkdir -p "$pdir"
       ln -sfn "$ADAPTER/rational-guardrail.ts" "$pdir/rational-guardrail.ts"
+      # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом, чтобы резолвилась и при location-based загрузке
+      ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$(dirname "$pdir")/shared.mjs"
       # watchdog-настройки плагина (T09b nudge/cooldown) из ЕДИНОГО источника models.config.json → рядом с плагином
       command -v jq >/dev/null 2>&1 && jq '.watchdog // {}' "$BUNDLE/harness/models.config.json" > "$(dirname "$pdir")/rational.config.json" 2>/dev/null || true
       HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts) + watchdog-конфиг"
@@ -133,11 +135,17 @@ if [ "$HARD" = yes ]; then
       [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
       mkdir -p "$cbase/hooks"
       ln -sfn "$ADAPTER/gate-check.mjs"   "$cbase/hooks/gate-check.mjs"
+      ln -sfn "$ADAPTER/gate-bash.mjs"    "$cbase/hooks/gate-bash.mjs"
       ln -sfn "$ADAPTER/log-decision.mjs" "$cbase/hooks/log-decision.mjs"
-      gc="node \"$cbase/hooks/gate-check.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
+      # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом на случай location-based резолва
+      ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
+      gc="node \"$cbase/hooks/gate-check.mjs\""; gb="node \"$cbase/hooks/gate-bash.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
       sjson='{
   "hooks": {
-    "PreToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] } ],
+    "PreToolUse": [
+      { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] },
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
+    ],
     "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ]
   }
 }'

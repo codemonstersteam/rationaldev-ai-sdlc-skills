@@ -1,45 +1,48 @@
 #!/usr/bin/env node
-// Claude Code PreToolUse-хук на инструмент Task. Кросс-платформенный (Node, без POSIX-утилит:
-// работает под Windows/PowerShell, macOS, Linux одинаково).
-// Жёсткий Gate #1: блокирует делегирование роли implementer, пока план не принят.
-// Вход: JSON на stdin (tool_name, tool_input{subagent_type,...}). cwd = каталог проекта.
-// Выход: exit 2 → Claude блокирует вызов и показывает stderr модели.
-//
-// Fail-open: любая инфра-ошибка (не разобрался JSON, нет stdin) НЕ должна рубить делегацию —
-// иначе агент не сможет даже сохранить план. Жёсткий стоп — только осознанный (implementer без гейта).
+// Claude Code PreToolUse-хук на инструмент Task. Кросс-платформенный (Node, без POSIX-утилит).
+// Enforce-ит две вещи (общая логика — ../shared.mjs, ЕДИНый источник с opencode-плагином):
+//   1) closed-set: делегация роли ВНЕ пайплайн-набора (@general/мис-роут) → блок;
+//   2) Gate #1: делегация реализатора (hughes/wirth-tester/scaffolder) без plan-review.md + gate1.approved → блок.
+// Вход: JSON на stdin (tool_input{subagent_type,…}). Выход: exit 2 → Claude блокирует вызов, показывает stderr.
+// Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-
-const ROLE_KEYS = ["subagent_type", "subagentType", "subagent", "agent", "agentType"]
-
-function pickRole(input) {
-  const ti = input?.tool_input ?? input?.toolInput ?? input?.args ?? {}
-  for (const k of ROLE_KEYS) if (typeof ti?.[k] === "string") return ti[k]
-  return ""
-}
+import { pickRole, inPipeline, isImplementer, normRole } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
   for await (const c of process.stdin) chunks.push(c)
   return Buffer.concat(chunks).toString("utf8")
 }
+const block = (msg) => { process.stderr.write("[rational-guardrail] " + msg + "\n"); process.exit(2) }
 
 try {
   const raw = await readStdin()
   let input = {}
   try { input = JSON.parse(raw) } catch { process.exit(0) } // не наш формат → не мешаем
-  const role = pickRole(input)
-  if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") process.exit(0)
+  const ti = input?.tool_input ?? input?.toolInput ?? input?.args ?? {}
+  const role = pickRole(ti)
+  if (role === "unknown") process.exit(0) // роль не резолвится → без ложных срабатываний
 
+  // (1) closed-set — роутить можно ТОЛЬКО пайплайн-роли.
+  if (!inPipeline(role)) {
+    block(
+      "Делегация вне пайплайн-набора запрещена: '" + role + "'. Роутить можно ТОЛЬКО фикс-роли " +
+      "(gilb/wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). Неполный выход стадии → " +
+      "повтори ТУ ЖЕ стадию (≤2) или escalate. Авторство тикетов — исключительно @wirth-ticketer.",
+    )
+  }
+
+  // (2) Gate #1 — реализаторы заблокированы до апрува плана.
+  if (!isImplementer(role)) process.exit(0)
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const review = join(root, ".agent", "plan-reviewer", "plan-review.md")
   const gate1 = join(root, ".agent", "gates", "gate1.approved")
   if (!existsSync(review) || !existsSync(gate1)) {
-    process.stderr.write(
-      "[rational-guardrail] Gate #1 не пройден: нужны .agent/plan-reviewer/plan-review.md и " +
-      ".agent/gates/gate1.approved перед делегированием реализации (hughes/wirth-tester).\n",
+    block(
+      "Gate #1 не пройден: нужны .agent/plan-reviewer/plan-review.md и .agent/gates/gate1.approved " +
+      "перед делегированием реализации (" + normRole(role) + ").",
     )
-    process.exit(2)
   }
   process.exit(0)
 } catch {

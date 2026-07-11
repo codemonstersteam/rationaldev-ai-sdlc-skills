@@ -1,0 +1,50 @@
+// Смоук claude-хуков enforcement (gate-check / gate-bash) — паритет с opencode-плагином.
+// Запуск: node harness/test/claude-hooks.smoke.mjs
+import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const HOOKS = join(dirname(fileURLToPath(import.meta.url)), "..", "enforcement", "claude")
+// exit-код хука на данном stdin-JSON (2 = блок, 0 = пропуск). env — доп. переменные (CLAUDE_PROJECT_DIR).
+const runHook = (file, payload, env = {}) => {
+  const r = spawnSync("node", [join(HOOKS, file)], { input: JSON.stringify(payload), env: { ...process.env, ...env } })
+  return r.status
+}
+const task = (role) => ({ tool_input: { subagent_type: role } })
+const bash = (command) => ({ tool_input: { command } })
+
+let pass = 0
+const dir = await mkdtemp(join(tmpdir(), "claude-hooks-"))
+
+// gate-check: closed-set
+assert.equal(runHook("gate-check.mjs", task("general")), 2, "@general вне набора → блок"); pass++
+assert.equal(runHook("gate-check.mjs", task("gilb")), 0, "@gilb в наборе → пропуск"); pass++
+assert.equal(runHook("gate-check.mjs", task("fagan")), 0, "@fagan в наборе → пропуск"); pass++
+// gate-check: Gate #1 (implementer без апрува)
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: dir }), 2, "@hughes без Gate #1 → блок"); pass++
+// не-implementer в наборе проходит даже без Gate #1
+assert.equal(runHook("gate-check.mjs", task("mills"), { CLAUDE_PROJECT_DIR: dir }), 0, "@mills без Gate #1 → пропуск"); pass++
+
+// gate-bash: само-запись маркера
+assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate1.approved")), 2, "touch gate1 → блок"); pass++
+assert.equal(runHook("gate-bash.mjs", bash("echo x > .agent/gates/gate1.approved")), 2, "> gate1 → блок"); pass++
+assert.equal(runHook("gate-bash.mjs", bash("ls .agent/gates/gate1.approved")), 0, "ls gate1 (чтение) → пропуск"); pass++
+
+// gate-bash: poka-yoke green-маркер
+await mkdir(join(dir, "docs", "design", "slice-x", "tickets"), { recursive: true })
+await writeFile(join(dir, "docs", "design", "slice-x", "tickets", "ticket-05.md"),
+  "---\nid: 05\ntype: module\noutputs: [internal/x/logic.go]\n---\n")
+const green = bash('echo "ticket-05 slice-x green" >> .agent/planner/done.log')
+assert.equal(runHook("gate-bash.mjs", green, { CLAUDE_PROJECT_DIR: dir }), 2, "green без output → блок"); pass++
+await mkdir(join(dir, "internal", "x"), { recursive: true })
+await writeFile(join(dir, "internal", "x", "logic.go"), "package x\n")
+assert.equal(runHook("gate-bash.mjs", green, { CLAUDE_PROJECT_DIR: dir }), 0, "green с непустым output → пропуск"); pass++
+
+// fail-open: битый JSON не блокирует
+assert.equal(spawnSync("node", [join(HOOKS, "gate-bash.mjs")], { input: "not json" }).status, 0, "битый JSON → fail-open"); pass++
+
+await rm(dir, { recursive: true, force: true })
+console.log(`PASS ${pass}/11 — claude hooks smoke (closed-set + Gate #1 + poka-yoke + gate-write)`)

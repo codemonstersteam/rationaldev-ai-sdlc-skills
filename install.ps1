@@ -109,6 +109,8 @@ if (-not $Soft) {
       $pdir = if ($Global) { Join-Path $env:APPDATA 'opencode/plugins' } else { Join-Path $Project '.opencode/plugins' }
       New-Item -ItemType Directory -Force -Path $pdir | Out-Null
       Copy-Item (Join-Path $adapter 'rational-guardrail.ts') (Join-Path $pdir 'rational-guardrail.ts') -Force
+      # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом (copy → нужен реальный файл в destination)
+      Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path (Split-Path $pdir) 'shared.mjs') -Force
       $hardMsg = "on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
     }
     'claude' {
@@ -116,11 +118,18 @@ if (-not $Soft) {
       $hooks = Join-Path $cbase 'hooks'
       New-Item -ItemType Directory -Force -Path $hooks | Out-Null
       Copy-Item (Join-Path $adapter 'gate-check.mjs')   (Join-Path $hooks 'gate-check.mjs') -Force
+      Copy-Item (Join-Path $adapter 'gate-bash.mjs')    (Join-Path $hooks 'gate-bash.mjs') -Force
       Copy-Item (Join-Path $adapter 'log-decision.mjs') (Join-Path $hooks 'log-decision.mjs') -Force
+      # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом (copy → нужен реальный файл в destination)
+      Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path $cbase 'shared.mjs') -Force
       $gc = 'node "' + (Join-Path $hooks 'gate-check.mjs') + '"'
+      $gb = 'node "' + (Join-Path $hooks 'gate-bash.mjs') + '"'
       $ld = 'node "' + (Join-Path $hooks 'log-decision.mjs') + '"'
       $settings = [ordered]@{ hooks = [ordered]@{
-        PreToolUse  = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) })
+        PreToolUse  = @(
+          @{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) },
+          @{ matcher = 'Bash'; hooks = @(@{ type = 'command'; command = $gb }) }
+        )
         PostToolUse = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $ld }) })
       } }
       $json = $settings | ConvertTo-Json -Depth 8
