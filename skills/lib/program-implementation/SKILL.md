@@ -84,12 +84,13 @@ single-argument rule — `Input (data):` listing entities joined by "and"/","). 
 to the planner's Step 3/9. Don't patch code to fit the graph ad hoc — fix the spec, then
 continue.
 
-### Step 3. Implement by formula (bottom-up: leaves → root)
+### Step 3. Implement by formula — functional core, imperative shell (bottom-up: leaves → root)
 
 1. **Messages:** `Request` (public fields, no rules) and domain structs (`Command`,
    `Entity`) with **unexported fields**.
 2. **Domain constructors** `NewT(raw) -> (T, error)` — check the antecedent; invalid data →
-   error, struct not built. This is the slice's **only** validation point.
+   error, struct not built. This is **valid-by-construction** — unexported fields + a single
+   factory make illegal states unrepresentable, so this is the slice's **only** validation point.
 3. **Logic modules** — pure functions over already-validated structs.
 4. **I/O modules** — one per external operation (DB read/write, broker publish, REST call).
    Each is an **autonomous object encapsulating its dependency**; the head knows only its
