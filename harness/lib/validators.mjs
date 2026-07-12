@@ -94,9 +94,12 @@ export function validateTicketHeaders(tickets) {
       errors.push(`${name}: skills должен быть flow-списком [a, b] (можно [])`)
     } else {
       const exp = expectedTicketSkills(data.type, data.io)
-      if (exp && !sameSet(data.skills, exp)) {
+      // cli-io — INGRESS-адаптер двери (Ports & Adapters), ОРТОГОНАЛЕН outbound io-роутеру: у CLI-ingress
+      // io:none (нет исходящей интеграции), но нужен cli-io. Снимаем его перед сверкой — io-роутер держит остальное.
+      const actual = data.skills.filter((s) => s !== "cli-io")
+      if (exp && !sameSet(actual, exp)) {
         errors.push(`${name}: skills=[${data.skills.join(", ")}] ≠ io-роутер [${exp.join(", ")}] ` +
-          `(type=${data.type}, io=${data.io ?? "—"}) — имплементер должен получить РОВНО нужные скиллы`)
+          `(type=${data.type}, io=${data.io ?? "—"}) — имплементер должен получить РОВНО нужные скиллы (cli-io — доп. ingress-скилл)`)
       }
     }
   }

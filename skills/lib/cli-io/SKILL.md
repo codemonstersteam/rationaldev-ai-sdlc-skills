@@ -87,7 +87,7 @@ Scaffold: **`template-go-cli`** (`github.com/codemonstersteam/template-go-cli`) 
 ingress already wires the door; tickets fill the domain. The shape you complete:
 
 ```
-cmd/<tool>/main.go        cobra root + `run <config>` (+ --json / --verbose / --version)
+cmd/app/main.go        cobra root + `run <config>` (+ --json / --verbose / --version)
 internal/<slug>/
   cli/      Parse(args) → Input DTO        ← the door: flags/args → one flat DTO
   head.go   Head(deps, in) Result          ← ROP pipe: NewX(in) → logic → build report
