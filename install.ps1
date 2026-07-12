@@ -127,7 +127,13 @@ if (-not $Soft) {
       $gb = 'node "' + (Join-Path $hooks 'gate-bash.mjs') + '"'
       $ga = 'node "' + (Join-Path $hooks 'gate-approve.mjs') + '"'
       $ld = 'node "' + (Join-Path $hooks 'log-decision.mjs') + '"'
-      $settings = [ordered]@{ hooks = [ordered]@{
+      # permissions: авто-приём правок файлов + харнес-команды; хуки (PreToolUse) имеют приоритет (deny держит гейты).
+      $settings = [ordered]@{
+        permissions = [ordered]@{
+          defaultMode = 'acceptEdits'
+          allow = @('Bash(go build)','Bash(go build *)','Bash(go test *)','Bash(go vet *)','Bash(go mod *)','Bash(go run *)','Bash(gofmt *)','Bash(node *)','Bash(sh *)','Bash(bash *)','Bash(docker *)','Bash(docker compose *)','Bash(git *)','Bash(perl *)','Bash(tar *)')
+        }
+        hooks = [ordered]@{
         PreToolUse  = @(
           @{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) },
           @{ matcher = 'Bash'; hooks = @(@{ type = 'command'; command = $gb }) }

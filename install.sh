@@ -142,7 +142,17 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
       # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
       gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
+      # permissions: авто-приём правок файлов В ПРОЕКТЕ (defaultMode acceptEdits) + харнес-команды без промпта.
+      # Хуки (PreToolUse) имеют ПРИОРИТЕТ: gate-check/gate-bash exit 2 блокируют даже при allow — гейты держат.
       sjson='{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(go build)", "Bash(go build *)", "Bash(go test *)", "Bash(go vet *)", "Bash(go mod *)", "Bash(go run *)",
+      "Bash(gofmt *)", "Bash(node *)", "Bash(sh *)", "Bash(bash *)",
+      "Bash(docker *)", "Bash(docker compose *)", "Bash(git *)", "Bash(perl *)", "Bash(tar *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] },
