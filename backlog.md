@@ -110,7 +110,11 @@ dropout-митигейта выше.
 - [x] ~~**Ф1a** опубликовать `template-go-cli` на GitHub~~ — `codemonstersteam/template-go-cli` (PRIVATE).
 - [x] ~~**Ф2** sub-skill `cli-io`~~ — создан (driving adapter / Ports&Adapters).
 - [x] ~~**Ф3-NEW** target-profiles.json + skill + validate-dod/contract-frozen/scaffold делегируют профилю~~ — сделано.
-- [ ] **Ф3-B** ролевые правки «делегируй профилю»: `apidesigner`(контракт из профиля) · `moduledesigner`(ingress=profile.ingress) · `gilb`/`intake`(ставят `.agent/planner/target`) · `scaffolder`(clone profile.template). → затем прогон `pinout-openapi`.
+- [x] ~~**Ф3-B** ролевые правки «делегируй профилю»~~ — сделано; прогон pinout-openapi подтвердил CLI-путь (target=cli, контракт=config+report schema, http-io только на реальном outbound).
+- [ ] **Ф3-C** (трения из боевого прогона pinout, 12-07):
+  - **io-router/validate-tickets не знает `cli-io` как ingress-скилл** — заблокировал `skills=[cli-io]` в шапке cli-ingress-тикета (io:none → skills=[] строго). Ticketer обошёл «body-guidance», но @hughes не подхватит cli-io через шапку. Фикс: допустить `cli-io` (и ingress-адаптеры вообще) для ingress-модуля в io-router + validate-tickets.
+  - **`cmd/app/` vs `cmd/tool/`** — validate-plan poka-yoke форсит `cmd/app/` (сервис), а `template-go-cli` кладёт `cmd/tool/`. Мисматч ломает scaffold/wiring. Фикс: cmd-каталог из профиля (service→`cmd/app`, cli→`cmd/<tool>`) в target-profiles.json + validate-plan.
+  - (мелко) DoD-closure-гейт скипнулся: TASK §DoD — буллеты, не нумерованные. Апстрим-формат TASK, не дефект.
 
 **Level 1 — PIPELINE как первоклассное понятие (future, prereq для не-go-backend):**
 - [ ] Поднять «pipeline» в first-class: `harness/pipelines.json` (KIND → список стадий) · `triage`/`gilb` классифицируют **вид** дисциплины → izi исполняет выбранный пайплайн (сейчас — один захардкоженный modular-путь).
