@@ -98,18 +98,24 @@ dropout-митигейта выше.
 - [ ] **P2** `agent-ready-gate`, `epic-decomposition` (роль Witt)
 - [ ] **P3 (опц., только под нагрузку)** `load-capacity`, `high-availability`
 
-### CLI target shape — харнес умеет строить не только HTTP-сервисы, но и CLI
-Харнес зашит под Go **API-сервисы** (шаблон `template-go-api`, apidesigner→OpenAPI, validate-dod→GET/openapi).
-Задачи-**CLI** (напр. `pinout-openapi`) не проходят. Реврейм: **CLI = ещё один ingress-адаптер** (`cli-io`,
-как `http-io`/`queue-io`) — минимальные args → тот же Request DTO → тот же pure core → exit-code+stdout.
-Ядро/DTO/дизайн — не меняются; apidesigner-мода **не нужна** (лёгкая ветка). Работы:
-- [ ] **Ф0** research CLI best-practices (clig.dev/12-factor/cobra), критично отфильтровать под тонкий-адаптер.
-- [ ] **Ф1** `template-go-cli` — **fillable-скелет** (структура + placeholder `NOT_IMPLEMENTED` + component-test
-  инфра + `smoke.feature`; домен/логика — placeholder, который FILL-ят, не toy, который delete-ят). База —
-  `pinout-asyncapi` (боевой cobra-CLI). **Образец архитектуры (args→DTO→core→exit) → в скилле `cli-io`, НЕ в коде шаблона.**
-- [ ] **Ф1a** ⭐ **опубликовать `template-go-cli` на GitHub рядом с `template-go-api`** (scaffold.sh клонит по git).
-- [ ] **Ф2** sub-skill `cli-io` (параллельно http-io/queue-io/db-io) + образец паттерна в его reference.
-- [ ] **Ф3** shape-aware: scaffold.sh выбор шаблона по shape · apidesigner лёгкая ветка (cli→config-schema+report-schema+exit-table) · validate-dod/contract-frozen принимают CLI · shape-детект в gilb/triage.
+### Deliverable shapes — двухуровневая модель (pipeline = vertical slice + target-profile внутри)
+**Уровни (не конкуренты — разные слои):**
+- **PIPELINE = vertical slice по ДИСЦИПЛИНЕ** (go-backend · prototype · flutter-ui · …). izi/triage: KIND → выбрать пайплайн (композицию стадий). Верхний уровень.
+- **target-profile = кноб near-sibling-вариации ВНУТРИ пайплайна** (go-backend: shape ∈ {service, cli} — 4 края: контракт · ingress · шаблон · DoD/ctest).
+- **ROLES + SKILLS = общая библиотека** — оба уровня переиспользуют.
+
+**go-backend / cli (near-sibling через target-profile):**
+- [x] ~~**Ф0** research CLI best-practices~~ — сделано (заметка для cli-io).
+- [x] ~~**Ф1** `template-go-cli` fillable-скелет~~ — собран (образец паттерна в скилле, не в коде).
+- [x] ~~**Ф1a** опубликовать `template-go-cli` на GitHub~~ — `codemonstersteam/template-go-cli` (PRIVATE).
+- [x] ~~**Ф2** sub-skill `cli-io`~~ — создан (driving adapter / Ports&Adapters).
+- [x] ~~**Ф3-NEW** target-profiles.json + skill + validate-dod/contract-frozen/scaffold делегируют профилю~~ — сделано.
+- [ ] **Ф3-B** ролевые правки «делегируй профилю»: `apidesigner`(контракт из профиля) · `moduledesigner`(ingress=profile.ingress) · `gilb`/`intake`(ставят `.agent/planner/target`) · `scaffolder`(clone profile.template). → затем прогон `pinout-openapi`.
+
+**Level 1 — PIPELINE как первоклассное понятие (future, prereq для не-go-backend):**
+- [ ] Поднять «pipeline» в first-class: `harness/pipelines.json` (KIND → список стадий) · `triage`/`gilb` классифицируют **вид** дисциплины → izi исполняет выбранный пайплайн (сейчас — один захардкоженный modular-путь).
+- [ ] **prototype pipeline** — кликабельный мок (Vite/static), лёгкая дисциплина: gilb → (лёгкий intake) → wireframe/clickable → операторская приёмка. Переиспользует `gilb`. Нет frozen-контракта / module-tree / godog.
+- [ ] **flutter-ui pipeline** — Dart/widget-дисциплина: intake(UI) → screen/flow → widget-tree → state (BLoC) → widget-tests → сборка. Переиспользует `gilb`/`mills`/`fagan`/`linger` + новые стадии/скиллы (`flutter-scaffold`, widget-io). Потребляет API, не отдаёт.
 
 ### Gilb — фронтдор требований (БТ → BRD), НОВАЯ РОЛЬ
 Точка входа конвейера **до** planner. Пользователь грузит сырое **БТ** → `izi` доводит его до
