@@ -4,7 +4,7 @@ import { createHash } from "node:crypto"
 import { join } from "node:path"
 // ЕДИНЫЙ источник enforcement-логики (общий с claude-хуками) — не расходиться.
 import {
-  PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId,
+  PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
   parseTicketOutputs, isOperatorApproval,
 } from "../shared.mjs"
 
@@ -23,6 +23,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   const logPath = join(agentDir, "decisions.log")
   const gate1 = join(agentDir, "gates", "gate1.approved")
   const review = join(agentDir, "plan-reviewer", "plan-review.md")
+  const brd = join(agentDir, "planner", "brd.md")
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
@@ -171,6 +172,15 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
             "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
           )
         }
+      }
+
+      // (1.5) Фронтдор (poka-yoke): пока нет brd.md, роутить можно ТОЛЬКО @gilb. Проза в izi.md не держит.
+      if (role !== "unknown" && requiresFrontDoor(role) && !(await exists(brd))) {
+        throw new Error(
+          "[rational-guardrail] Фронтдор не пройден: пока нет .agent/planner/brd.md, ЕДИНственная " +
+          "разрешённая делегация — @gilb (сырое BR → измеримый BRD + грил открытых вопросов). " +
+          "Триаж/планирование/реализация заблокированы до этого. СНАЧАЛА делегируй @gilb.",
+        )
       }
 
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.

@@ -15,6 +15,15 @@ export const PIPELINE = new Set([
 // Реализаторы, заблокированные до Gate #1 (нужны plan-review.md + gate1.approved).
 export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder"])
 
+// Маркер прохождения фронтдора: @gilb пишет измеримый BRD сюда. Пока файла нет — грил не пройден.
+export const BRD_MARK = ".agent/planner/brd.md"
+
+// Фронтдор (poka-yoke). Пока нет brd.md, ЕДИНственная разрешённая делегация — @gilb: он превращает
+// сырое BR в измеримый BRD и грилит открытые вопросы. Всё остальное (триаж/планирование/реализация) —
+// заблокировано. Проза в izi.md не держит (модель рационализирует «триаж — вход конвейера»); держит хук.
+// izi — не цель делегации (он роутер), поэтому в проверке участвует только целевая роль.
+export const requiresFrontDoor = (role) => normRole(role) !== "gilb"
+
 // Ключи, под которыми раннеры кладут имя роли в аргументы task-инструмента.
 export const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
 

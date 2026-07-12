@@ -76,17 +76,22 @@ grep -q "PreToolUse" "$P/.claude/settings.json" || fail "claude --hard: settings
 # OpenCode-плагин: детерминированный смоук (Gate #1 + decisions.log)
 node "$REPO/harness/enforcement/opencode/guardrail.smoke.ts" >/dev/null || fail "opencode guardrail smoke упал"; ok
 
-# Claude gate-check: implementer без апрува → блок (exit != 0)
-D="$TMP/gate-block"; mkdir -p "$D"
+# Claude gate-check: фронтдор — без brd.md роутить можно ТОЛЬКО @gilb
+D="$TMP/frontdoor"; mkdir -p "$D"
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"wirth-triage"}}' | node "$GC" 2>/dev/null ); then fail "фронтдор не заблокировал триаж без brd.md"; fi; ok
+( cd "$D" && printf '{"tool_input":{"subagent_type":"gilb"}}' | node "$GC" ) || fail "фронтдор заблокировал @gilb (он и есть грил)"; ok
+
+# Claude gate-check: implementer без апрува → блок (exit != 0) — brd.md уже есть, ловим Gate #1
+D="$TMP/gate-block"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
 if ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" 2>/dev/null ); then fail "gate не заблокировал implementer без апрува"; fi; ok
 
-# Claude gate-check: implementer с апрувом → проход
-D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates"
-: > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"
+# Claude gate-check: implementer с апрувом → проход (brd.md + plan-review + gate1)
+D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates" "$D/.agent/planner"
+: > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" ) || fail "gate заблокировал при апруве"; ok
 
-# Claude gate-check: не-implementer проходит свободно
-D="$TMP/gate-planner"; mkdir -p "$D"
+# Claude gate-check: не-implementer после фронтдора проходит свободно (brd.md есть)
+D="$TMP/gate-planner"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"wirth-planner"}}' | node "$GC" ) || fail "gate заблокировал planner"; ok
 
 # Claude log-decision: дописывает decisions.log

@@ -20,14 +20,20 @@ const bash = (command) => ({ tool_input: { command } })
 let pass = 0
 const dir = await mkdtemp(join(tmpdir(), "claude-hooks-"))
 
-// gate-check: closed-set
+// gate-check: closed-set (проверяется ПЕРВЫМ — до фронтдора)
 assert.equal(runHook("gate-check.mjs", task("general")), 2, "@general вне набора → блок"); pass++
-assert.equal(runHook("gate-check.mjs", task("gilb")), 0, "@gilb в наборе → пропуск"); pass++
-assert.equal(runHook("gate-check.mjs", task("fagan")), 0, "@fagan в наборе → пропуск"); pass++
-// gate-check: Gate #1 (implementer без апрува)
-assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: dir }), 2, "@hughes без Gate #1 → блок"); pass++
-// не-implementer в наборе проходит даже без Gate #1
-assert.equal(runHook("gate-check.mjs", task("mills"), { CLAUDE_PROJECT_DIR: dir }), 0, "@mills без Gate #1 → пропуск"); pass++
+
+// gate-check: фронтдор (poka-yoke) — пока нет brd.md, роутить можно ТОЛЬКО @gilb
+assert.equal(runHook("gate-check.mjs", task("gilb"), { CLAUDE_PROJECT_DIR: dir }), 0, "@gilb без brd.md → пропуск (он и есть грил)"); pass++
+assert.equal(runHook("gate-check.mjs", task("wirth-triage"), { CLAUDE_PROJECT_DIR: dir }), 2, "@wirth-triage без brd.md → блок (фронтдор)"); pass++
+assert.equal(runHook("gate-check.mjs", task("mills"), { CLAUDE_PROJECT_DIR: dir }), 2, "@mills без brd.md → блок (фронтдор)"); pass++
+
+// после грила (brd.md есть) пайплайн открыт; реализаторы всё ещё ждут Gate #1
+await mkdir(join(dir, ".agent", "planner"), { recursive: true })
+await writeFile(join(dir, ".agent", "planner", "brd.md"), "# BRD\n")
+assert.equal(runHook("gate-check.mjs", task("wirth-triage"), { CLAUDE_PROJECT_DIR: dir }), 0, "@wirth-triage с brd.md → пропуск"); pass++
+assert.equal(runHook("gate-check.mjs", task("mills"), { CLAUDE_PROJECT_DIR: dir }), 0, "@mills с brd.md → пропуск (не реализатор)"); pass++
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: dir }), 2, "@hughes с brd.md, но без Gate #1 → блок"); pass++
 
 // gate-bash: само-запись маркера
 assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate1.approved")), 2, "touch gate1 → блок"); pass++
@@ -60,4 +66,4 @@ assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобб�
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/14 — claude hooks smoke (closed-set + Gate #1 + poka-yoke + gate-write + approve)`)
+console.log(`PASS ${pass}/16 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + approve)`)

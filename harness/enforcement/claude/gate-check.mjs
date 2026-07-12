@@ -7,7 +7,7 @@
 // Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { pickRole, inPipeline, isImplementer, normRole } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -33,9 +33,19 @@ try {
     )
   }
 
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
+
+  // (1.5) Фронтдор — пока нет brd.md, роутить можно ТОЛЬКО @gilb (poka-yoke, не проза).
+  if (requiresFrontDoor(role) && !existsSync(join(root, ".agent", "planner", "brd.md"))) {
+    block(
+      "Фронтдор не пройден: пока нет .agent/planner/brd.md, ЕДИНственная разрешённая делегация — @gilb " +
+      "(сырое BR → измеримый BRD + грил открытых вопросов). Триаж/планирование/реализация заблокированы " +
+      "до этого. Ты ушёл в '" + normRole(role) + "' в обход грила — СНАЧАЛА делегируй @gilb.",
+    )
+  }
+
   // (2) Gate #1 — реализаторы заблокированы до апрува плана.
   if (!isImplementer(role)) process.exit(0)
-  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const review = join(root, ".agent", "plan-reviewer", "plan-review.md")
   const gate1 = join(root, ".agent", "gates", "gate1.approved")
   if (!existsSync(review) || !existsSync(gate1)) {
