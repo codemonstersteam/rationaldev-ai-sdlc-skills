@@ -140,7 +140,8 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$ADAPTER/log-decision.mjs" "$cbase/hooks/log-decision.mjs"
       # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом на случай location-based резолва
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
-      gc="node \"$cbase/hooks/gate-check.mjs\""; gb="node \"$cbase/hooks/gate-bash.mjs\""; ga="node \"$cbase/hooks/gate-approve.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
+      # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
+      gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
       sjson='{
   "hooks": {
     "PreToolUse": [

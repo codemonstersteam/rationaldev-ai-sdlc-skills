@@ -31,6 +31,10 @@ sh "$REPO/install.sh" claude "$P" --no-input >/dev/null
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
 # назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
 grep -q '^model:' "$P/.claude/agents/wirth-planner.md" || fail "claude: модель из конфига не проставлена"; ok
+# --hard: сгенерированный settings.json — ВАЛИДНЫЙ JSON (регресс: кавычки вокруг пути в command не экранировались)
+sh "$REPO/install.sh" claude "$P" --no-input --hard >/dev/null
+node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$P/.claude/settings.json" 2>/dev/null || fail "claude --hard: settings.json — битый JSON"; ok
+[ -f "$P/.claude/hooks/gate-approve.mjs" ] || fail "claude --hard: нет gate-approve хука"; ok
 
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"
