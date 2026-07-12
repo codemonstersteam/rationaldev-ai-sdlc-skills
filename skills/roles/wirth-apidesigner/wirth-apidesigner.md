@@ -28,6 +28,12 @@ You are **ONE stage**; `izi` calls you directly (depth 1).
 - **Structural completeness is the precondition of freezing**: `paths` (≥1), `responses`,
   `components/schemas` (DTO + Error). An incomplete contract cannot be a promise, so it cannot be frozen.
 
+**Contract artifact by target shape (delegate to the profile).** Read `.agent/planner/target`, freeze what
+`harness/target-profiles.json` names: `service` → `api-specification/openapi.yaml` `x-frozen` (as below);
+`cli` → `api-specification/config.schema.json` (input-DTO/config as JSON Schema) + `report.schema.json`
+(stdout report as JSON Schema) + the **exit-code table** in the README failure-map. Same boundary promise,
+only the serialization differs (see `cli-io`) — **no OpenAPI for a CLI**.
+
 **Called ONCE per service** (not per-slice): in — the use cases of **ALL slices** (`docs/design/*/use-case.md`)
 + the failure-map. **Out:** ONE contract `api-specification/openapi.yaml` (and/or `asyncapi.yaml`) covering
 every external input of the service — **FROZEN** (contract-first). One file per service: you **MUST NOT**

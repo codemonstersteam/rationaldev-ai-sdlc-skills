@@ -30,6 +30,9 @@ There is **NO file-producing «final» ticket** — the slice is closed by the *
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
 `go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures, **and the root
 `Dockerfile`/`docker-compose.yml`/`run-tests.sh` boilerplate** — as the template ships them (@linger just runs them, никто их не пишет позже).
+**The template is the target-profile's, chosen by `.agent/planner/target`:** `service` → `template-go-api`
+(the paths above); `cli` → `template-go-cli` (`cmd/<tool>/main.go`, `internal/<slug>/{cli,head,errors,…}`,
+one-shot `component-tests`). Declare the scaffold `outputs` from the shape's template, not a hardcoded one.
 `scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` only erects generic
 scaffolding + verifies it builds — it **never reshapes code for a slice**. So do **NOT** declare a slice-named
 `cmd/<slug>/main.go` for the scaffold ticket — the real file is `cmd/app/main.go`, and the guardrail poka-yoke

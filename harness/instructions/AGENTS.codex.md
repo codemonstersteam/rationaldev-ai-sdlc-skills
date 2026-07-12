@@ -270,6 +270,9 @@ You are **ONE stage**, the first one (stage 0, before `@wirth-intake`); `izi` ca
 - **NFRs as measurable targets** — each with a Scale + fit criterion (p99 latency, throughput, limits);
   never "fast".
 - **Open questions** — the gaps you could NOT resolve from the BR; each is for the operator.
+- **`.agent/planner/target`** — one word (`service` | `cli` | `library`): the deliverable **shape**, decided
+  from the BR. Downstream stages and validators delegate to `harness/target-profiles.json` by this marker;
+  omit → the pipeline defaults to `service`. Shape is a requirement property — pinned here, not guessed later.
 
 ## Idempotency — check FIRST
 izi may restart this stage. If `.agent/planner/brd.md` already exists, is measurable (every field row
@@ -474,6 +477,12 @@ You are **ONE stage**; `izi` calls you directly (depth 1).
 - **Structural completeness is the precondition of freezing**: `paths` (≥1), `responses`,
   `components/schemas` (DTO + Error). An incomplete contract cannot be a promise, so it cannot be frozen.
 
+**Contract artifact by target shape (delegate to the profile).** Read `.agent/planner/target`, freeze what
+`harness/target-profiles.json` names: `service` → `api-specification/openapi.yaml` `x-frozen` (as below);
+`cli` → `api-specification/config.schema.json` (input-DTO/config as JSON Schema) + `report.schema.json`
+(stdout report as JSON Schema) + the **exit-code table** in the README failure-map. Same boundary promise,
+only the serialization differs (see `cli-io`) — **no OpenAPI for a CLI**.
+
 **Called ONCE per service** (not per-slice): in — the use cases of **ALL slices** (`docs/design/*/use-case.md`)
 + the failure-map. **Out:** ONE contract `api-specification/openapi.yaml` (and/or `asyncapi.yaml`) covering
 every external input of the service — **FROZEN** (contract-first). One file per service: you **MUST NOT**
@@ -536,6 +545,11 @@ with its own secret is its **own Go sub-package** under the slice: `internal/<sl
 not a file flattened into one heap. The root stays `<slug>`, so slices never share a layer root; only
 concerns with no independent secret collapse into files of one package.
 
+**Ingress door by target shape (delegate to the profile).** The slice's ingress module uses the
+`ingress_skill` of `harness/target-profiles.json` for `.agent/planner/target`: `service` → HTTP handler
+(`http-io`); `cli` → cobra adapter (`cli-io`). The outcome serializes per shape — HTTP status | exit code.
+The core (DTO/domain/logic/head) is **shape-agnostic** — only the door changes.
+
 **Consequent — verify the layout:** the node→file map roots every path in `internal/<slug>/` (or
 `internal/shared/` for types genuinely shared by ≥2 slices). After writing the package run
 `node harness/validate-layout.mjs`. Non-zero → a **layer-keyed** root leaked (e.g. `internal/io`): fix
@@ -590,6 +604,9 @@ There is **NO file-producing «final» ticket** — the slice is closed by the *
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
 `go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures, **and the root
 `Dockerfile`/`docker-compose.yml`/`run-tests.sh` boilerplate** — as the template ships them (@linger just runs them, никто их не пишет позже).
+**The template is the target-profile's, chosen by `.agent/planner/target`:** `service` → `template-go-api`
+(the paths above); `cli` → `template-go-cli` (`cmd/<tool>/main.go`, `internal/<slug>/{cli,head,errors,…}`,
+one-shot `component-tests`). Declare the scaffold `outputs` from the shape's template, not a hardcoded one.
 `scaffold.sh` renames the **go-module**, NOT the `cmd/` directory, and `@scaffolder` only erects generic
 scaffolding + verifies it builds — it **never reshapes code for a slice**. So do **NOT** declare a slice-named
 `cmd/<slug>/main.go` for the scaffold ticket — the real file is `cmd/app/main.go`, and the guardrail poka-yoke
@@ -819,6 +836,8 @@ accepts. Reading the template, diagnosing, or fixing is another role's altitude 
 ## Steps
 1. **slug** — from `info.title` in `api-specification/openapi.yaml` (kebab-case), else the ticket.
 2. **`sh harness/scaffold.sh <slug>`** (clone + rename go-module + build). Trust it. exit≠0 → `FAIL: scaffold.sh <tail>`.
+   `scaffold.sh` clones the **target-profile's** template by the `.agent/planner/target` marker (`service` →
+   `template-go-api`; `cli` → `template-go-cli`) — you pass **no** template, it resolves. Same three commands.
 3. Run two checks, read only the exit code:
    - `go build ./... && go test ./...`
    - `sh component-tests/scripts/run-tests.sh` (smoke: `/health`=200 + `smoke.feature`; placeholder `501` is normal).

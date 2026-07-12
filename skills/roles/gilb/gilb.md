@@ -44,6 +44,9 @@ You are **ONE stage**, the first one (stage 0, before `@wirth-intake`); `izi` ca
 - **NFRs as measurable targets** — each with a Scale + fit criterion (p99 latency, throughput, limits);
   never "fast".
 - **Open questions** — the gaps you could NOT resolve from the BR; each is for the operator.
+- **`.agent/planner/target`** — one word (`service` | `cli` | `library`): the deliverable **shape**, decided
+  from the BR. Downstream stages and validators delegate to `harness/target-profiles.json` by this marker;
+  omit → the pipeline defaults to `service`. Shape is a requirement property — pinned here, not guessed later.
 
 ## Idempotency — check FIRST
 izi may restart this stage. If `.agent/planner/brd.md` already exists, is measurable (every field row

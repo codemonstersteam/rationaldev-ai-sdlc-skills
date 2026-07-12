@@ -47,6 +47,11 @@ with its own secret is its **own Go sub-package** under the slice: `internal/<sl
 not a file flattened into one heap. The root stays `<slug>`, so slices never share a layer root; only
 concerns with no independent secret collapse into files of one package.
 
+**Ingress door by target shape (delegate to the profile).** The slice's ingress module uses the
+`ingress_skill` of `harness/target-profiles.json` for `.agent/planner/target`: `service` → HTTP handler
+(`http-io`); `cli` → cobra adapter (`cli-io`). The outcome serializes per shape — HTTP status | exit code.
+The core (DTO/domain/logic/head) is **shape-agnostic** — only the door changes.
+
 **Consequent — verify the layout:** the node→file map roots every path in `internal/<slug>/` (or
 `internal/shared/` for types genuinely shared by ≥2 slices). After writing the package run
 `node harness/validate-layout.mjs`. Non-zero → a **layer-keyed** root leaked (e.g. `internal/io`): fix

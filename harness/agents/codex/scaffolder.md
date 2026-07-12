@@ -22,6 +22,8 @@ accepts. Reading the template, diagnosing, or fixing is another role's altitude 
 ## Steps
 1. **slug** — from `info.title` in `api-specification/openapi.yaml` (kebab-case), else the ticket.
 2. **`sh harness/scaffold.sh <slug>`** (clone + rename go-module + build). Trust it. exit≠0 → `FAIL: scaffold.sh <tail>`.
+   `scaffold.sh` clones the **target-profile's** template by the `.agent/planner/target` marker (`service` →
+   `template-go-api`; `cli` → `template-go-cli`) — you pass **no** template, it resolves. Same three commands.
 3. Run two checks, read only the exit code:
    - `go build ./... && go test ./...`
    - `sh component-tests/scripts/run-tests.sh` (smoke: `/health`=200 + `smoke.feature`; placeholder `501` is normal).
