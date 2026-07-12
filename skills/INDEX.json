@@ -205,6 +205,13 @@
       "description": "Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-tests — realize half) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP."
     },
     {
+      "name": "target-profiles",
+      "path": "skills/lib/target-profiles/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "How the pipeline builds different deliverable SHAPES (HTTP service, CLI tool, …) without branching every stage on the shape. Each shape is a target profile — one cohesive vertical that owns its contract kind, ingress adapter, scaffold template, DoD checks and component-test flavour. Stages DELEGATE to the active profile; they never say \"if cli\". Adding a shape = one profile, zero stage edits. Data — harness/target-profiles.json. Use when a stage's behaviour depends on whether the deliverable is a service or a CLI. Keywords - target shape, profile, service, CLI, Strategy, open-closed, vertical slice."
+    },
+    {
       "name": "tmux-test-runner",
       "path": "skills/lib/tmux-test-runner/SKILL.md",
       "version": "0.3",

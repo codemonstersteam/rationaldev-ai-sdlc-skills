@@ -9,8 +9,21 @@
 # exit 0 = накатан + go build зелёный; 1 = входная ошибка; 2 = build красный.
 set -eu
 SVC="${1:?usage: scaffold.sh <service-name> [template-repo-dir]}"
-TPL="${2:-$HOME/IdeaProjects/codemonstersdev/template-go-api}"
 DEST="$(pwd)"
+# Шаблон: явный 2-й арг > ПРОФИЛЬ ФОРМЫ (target-profiles.json по маркеру .agent/planner/target) > дефолт.
+# Делегируем target-профилю — не хардкодим форму (см. skill target-profiles). jq рядом с scaffold.sh (симлинк install).
+PROFILES="$(dirname "$0")/target-profiles.json"
+if [ -n "${2:-}" ]; then
+  TPL="$2"
+elif [ -f "$PROFILES" ] && command -v jq >/dev/null 2>&1; then
+  SHAPE="$(tr -d '[:space:]' < "$DEST/.agent/planner/target" 2>/dev/null || true)"
+  [ -n "$SHAPE" ] || SHAPE="$(jq -r '.default' "$PROFILES")"
+  TNAME="$(jq -r --arg s "$SHAPE" '.profiles[$s].template // .profiles[.default].template' "$PROFILES")"
+  TPL="$HOME/IdeaProjects/codemonstersdev/$TNAME"
+  echo "scaffold: форма '$SHAPE' → шаблон $TNAME"
+else
+  TPL="$HOME/IdeaProjects/codemonstersdev/template-go-api"
+fi
 git -C "$TPL" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "scaffold: $TPL не git-репозиторий"; exit 1; }
 OLDMOD="$(awk '/^module /{print $2; exit}' "$TPL/go.mod" 2>/dev/null || true)"
 [ -n "$OLDMOD" ] || { echo "scaffold: в шаблоне нет 'module' в go.mod"; exit 1; }
@@ -25,8 +38,8 @@ git -C "$TPL" archive HEAD | tar -x -C "$TMP"
 for item in "$TMP"/* "$TMP"/.[!.]*; do
   [ -e "$item" ] || continue
   n="$(basename "$item")"
-  if [ "$n" = "api-specification" ] && [ -f "$DEST/api-specification/openapi.yaml" ]; then
-    echo "scaffold: сохраняю замороженный api-specification/ (не перезаписываю)"; continue
+  if [ "$n" = "api-specification" ] && [ -d "$DEST/api-specification" ] && [ -n "$(ls -A "$DEST/api-specification" 2>/dev/null)" ]; then
+    echo "scaffold: сохраняю замороженный контракт api-specification/ (openapi | config+report schema — не перезаписываю)"; continue
   fi
   cp -R "$item" "$DEST/"
 done

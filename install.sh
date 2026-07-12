@@ -109,7 +109,7 @@ if [ "$SCOPE" != global ]; then
   mkdir -p "$PROJ/harness"
   # ВСЕ validate-*.mjs (glob, не хардкод-список — иначе новые валидаторы не долетают в песочницу),
   # + scaffold.sh. Их ./lib и ./frontmatter резолвятся Node по realpath из бандла (симлинков хватает).
-  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/scaffold.sh; do
+  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/scaffold.sh "$BUNDLE"/harness/target-profiles.json; do
     [ -e "$v" ] && ln -sfn "$v" "$PROJ/harness/$(basename "$v")"
   done
 fi
