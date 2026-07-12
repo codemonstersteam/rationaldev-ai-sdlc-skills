@@ -98,6 +98,19 @@ dropout-митигейта выше.
 - [ ] **P2** `agent-ready-gate`, `epic-decomposition` (роль Witt)
 - [ ] **P3 (опц., только под нагрузку)** `load-capacity`, `high-availability`
 
+### CLI target shape — харнес умеет строить не только HTTP-сервисы, но и CLI
+Харнес зашит под Go **API-сервисы** (шаблон `template-go-api`, apidesigner→OpenAPI, validate-dod→GET/openapi).
+Задачи-**CLI** (напр. `pinout-openapi`) не проходят. Реврейм: **CLI = ещё один ingress-адаптер** (`cli-io`,
+как `http-io`/`queue-io`) — минимальные args → тот же Request DTO → тот же pure core → exit-code+stdout.
+Ядро/DTO/дизайн — не меняются; apidesigner-мода **не нужна** (лёгкая ветка). Работы:
+- [ ] **Ф0** research CLI best-practices (clig.dev/12-factor/cobra), критично отфильтровать под тонкий-адаптер.
+- [ ] **Ф1** `template-go-cli` — **fillable-скелет** (структура + placeholder `NOT_IMPLEMENTED` + component-test
+  инфра + `smoke.feature`; домен/логика — placeholder, который FILL-ят, не toy, который delete-ят). База —
+  `pinout-asyncapi` (боевой cobra-CLI). **Образец архитектуры (args→DTO→core→exit) → в скилле `cli-io`, НЕ в коде шаблона.**
+- [ ] **Ф1a** ⭐ **опубликовать `template-go-cli` на GitHub рядом с `template-go-api`** (scaffold.sh клонит по git).
+- [ ] **Ф2** sub-skill `cli-io` (параллельно http-io/queue-io/db-io) + образец паттерна в его reference.
+- [ ] **Ф3** shape-aware: scaffold.sh выбор шаблона по shape · apidesigner лёгкая ветка (cli→config-schema+report-schema+exit-table) · validate-dod/contract-frozen принимают CLI · shape-детект в gilb/triage.
+
 ### Gilb — фронтдор требований (БТ → BRD), НОВАЯ РОЛЬ
 Точка входа конвейера **до** planner. Пользователь грузит сырое **БТ** → `izi` доводит его до
 измеримого **BRD** (через @gilb) и роутит в нужный конвейер по размеру задачи. Имя — Tom Gilb
