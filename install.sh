@@ -148,9 +148,12 @@ if [ "$HARD" = yes ]; then
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
-      "Bash(go build)", "Bash(go build *)", "Bash(go test *)", "Bash(go vet *)", "Bash(go mod *)", "Bash(go run *)",
-      "Bash(gofmt *)", "Bash(node *)", "Bash(sh *)", "Bash(bash *)",
-      "Bash(docker *)", "Bash(docker compose *)", "Bash(git *)", "Bash(perl *)", "Bash(tar *)"
+      "Bash(go *)", "Bash(gofmt *)", "Bash(node *)", "Bash(sh *)", "Bash(bash *)",
+      "Bash(docker *)", "Bash(docker compose *)", "Bash(git *)", "Bash(perl *)", "Bash(tar *)", "Bash(curl *)",
+      "Bash(jq *)", "Bash(grep *)", "Bash(rg *)", "Bash(cat *)", "Bash(ls *)", "Bash(find *)", "Bash(head *)",
+      "Bash(tail *)", "Bash(wc *)", "Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(tr *)", "Bash(awk *)",
+      "Bash(sed *)", "Bash(echo *)", "Bash(printf *)", "Bash(test *)", "Bash(mkdir *)", "Bash(cp *)", "Bash(mv *)",
+      "Bash(rm *)", "Bash(touch *)", "Bash(chmod *)", "Bash(diff *)", "Bash(which *)", "Bash(xargs *)", "Bash(pwd)"
     ]
   },
   "hooks": {
