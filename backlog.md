@@ -19,6 +19,16 @@
   (gilb/intake/apidesigner/moduledesigner/mills); всё остальное sonnet (исполнение по готовому входу).
   hughes: `tier small→medium` (имплементер = не мех-работа, sonnet-пол корректности кода).
 
+### Доработки харнеса (из прогона 13-07, TODO)
+- [ ] **ticketer: объявлять КОНТЕНТНЫЙ скилл в шапке тикета, не только io-router.** Сейчас `skills:` в
+  тикете = только io/ingress-скилл (`http-io`/`cli-io`/`component-tests`/`service-scaffold`); модули
+  `io:none` получают `skills: []`. Контентный/дисциплинарный скилл выбирает hughes сам → **недетерминировано**.
+  Прогон 13-07: README-тикет (`ticket-10`) объявлен `skills: []`, а hughes по своему суждению подтянул
+  `documentation` (+`md-formatting`) — вышло качественно, но случайно; другой прогон мог не подтянуть.
+  **Фикс:** ticketer проставляет контентный скилл по типу тикета — README → `[documentation]` (+ `md-formatting`),
+  код-модуль → `[program-implementation]`, поверх io-скилла. Тогда выбор воспроизводим и виден валидатору/`progress`.
+  _MUST:_ не ломать io-router-равенство в `validate-tickets` (контентный скилл ортогонален outbound-io, как cli-io — Ф3-C).
+
 ### Перевод скиллов на английский (i18n) — оптимум, не минимум
 Цель: все `skills/lib/*` на английском, лаконичные, без потери сути; tier-agnostic (GLM…Opus).
 Статус: 2/17 (`http-io`, `program-implementation`). Осталось 15 (крупные первыми: `md-formatting` 511,
