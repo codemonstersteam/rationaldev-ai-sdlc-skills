@@ -91,10 +91,15 @@ switch ($Runner) {
 if (-not $Global) {
   $hdir = Join-Path $Project 'harness'
   New-Item -ItemType Directory -Force -Path $hdir | Out-Null
-  foreach ($v in @('validate-frd.mjs', 'validate-contract-frozen.mjs', 'validate-tickets.mjs', 'scaffold.sh')) {
-    $lnk = Join-Path $hdir $v
+  # glob, НЕ хардкод-список — иначе новые валидаторы/progress не долетают в проект (был Windows-баг):
+  # ВСЕ validate-*.mjs + progress.mjs + scaffold.sh + target-profiles.json.
+  $srcs = @(Get-ChildItem (Join-Path $Bundle 'harness') -Filter 'validate-*.mjs' | ForEach-Object FullName)
+  $srcs += @('progress.mjs', 'scaffold.sh', 'target-profiles.json') | ForEach-Object { Join-Path $Bundle "harness/$_" }
+  foreach ($src in $srcs) {
+    if (-not (Test-Path $src)) { continue }
+    $lnk = Join-Path $hdir (Split-Path $src -Leaf)
     if (Test-Path $lnk) { Remove-Item -Force $lnk }
-    New-Item -ItemType SymbolicLink -Path $lnk -Target (Join-Path $Bundle "harness/$v") | Out-Null
+    New-Item -ItemType SymbolicLink -Path $lnk -Target $src | Out-Null
   }
 }
 
@@ -127,10 +132,12 @@ if (-not $Soft) {
       $gb = 'node "' + (Join-Path $hooks 'gate-bash.mjs') + '"'
       $ga = 'node "' + (Join-Path $hooks 'gate-approve.mjs') + '"'
       $ld = 'node "' + (Join-Path $hooks 'log-decision.mjs') + '"'
-      # permissions: авто-приём правок файлов + харнес-команды; хуки (PreToolUse) имеют приоритет (deny держит гейты).
+      # permissions: ПОЛНЫЙ доступ субагентам (defaultMode bypassPermissions — без промптов; столл-на-промпте
+      # убивает автономный прогон). allow-лист — безопасная деградация. Хуки (PreToolUse) работают НЕЗАВИСИМО
+      # от режима и держат фронтдор/Gate #1/poka-yoke даже здесь.
       $settings = [ordered]@{
         permissions = [ordered]@{
-          defaultMode = 'acceptEdits'
+          defaultMode = 'bypassPermissions'
           allow = @('Bash(go *)','Bash(gofmt *)','Bash(node *)','Bash(sh *)','Bash(bash *)','Bash(docker *)','Bash(docker compose *)','Bash(git *)','Bash(perl *)','Bash(tar *)','Bash(curl *)','Bash(jq *)','Bash(grep *)','Bash(rg *)','Bash(cat *)','Bash(ls *)','Bash(find *)','Bash(head *)','Bash(tail *)','Bash(wc *)','Bash(awk *)','Bash(sed *)','Bash(echo *)','Bash(printf *)','Bash(test *)','Bash(mkdir *)','Bash(cp *)','Bash(mv *)','Bash(rm *)','Bash(touch *)','Bash(chmod *)','Bash(xargs *)','Bash(pwd)')
         }
         hooks = [ordered]@{

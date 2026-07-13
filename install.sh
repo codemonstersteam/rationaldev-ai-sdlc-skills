@@ -109,7 +109,7 @@ if [ "$SCOPE" != global ]; then
   mkdir -p "$PROJ/harness"
   # ВСЕ validate-*.mjs (glob, не хардкод-список — иначе новые валидаторы не долетают в песочницу),
   # + scaffold.sh. Их ./lib и ./frontmatter резолвятся Node по realpath из бандла (симлинков хватает).
-  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/scaffold.sh "$BUNDLE"/harness/target-profiles.json; do
+  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/progress.mjs "$BUNDLE"/harness/scaffold.sh "$BUNDLE"/harness/target-profiles.json; do
     [ -e "$v" ] && ln -sfn "$v" "$PROJ/harness/$(basename "$v")"
   done
 fi
@@ -142,11 +142,13 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
       # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
       gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
-      # permissions: авто-приём правок файлов В ПРОЕКТЕ (defaultMode acceptEdits) + харнес-команды без промпта.
-      # Хуки (PreToolUse) имеют ПРИОРИТЕТ: gate-check/gate-bash exit 2 блокируют даже при allow — гейты держат.
+      # permissions: ПОЛНЫЙ доступ субагентам, пока работают (defaultMode bypassPermissions — без промптов
+      # ни на bash, ни на правки: столл-на-промпте убивает автономный прогон). allow-лист оставлен как
+      # безопасная деградация, если режим позже понизят. Хуки (PreToolUse) имеют ПРИОРИТЕТ и работают
+      # НЕЗАВИСИМО от режима прав: gate-check/gate-bash exit 2 держат фронтдор/Gate #1/poka-yoke даже здесь.
       sjson='{
   "permissions": {
-    "defaultMode": "acceptEdits",
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(go *)", "Bash(gofmt *)", "Bash(node *)", "Bash(sh *)", "Bash(bash *)",
       "Bash(docker *)", "Bash(docker compose *)", "Bash(git *)", "Bash(perl *)", "Bash(tar *)", "Bash(curl *)",

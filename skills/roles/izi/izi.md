@@ -60,6 +60,22 @@ Example: "Stage 0 — @gilb: raw BR → measurable BRD, grilling the open questi
 (size: one-slice). Next Stage 1 @wirth-triage — classify level." The operator MUST follow the run from your lines without
 reading artifacts. Do NOT retell contents; a silent `task` is bad.
 
+## Progress view — deterministic pipeline bar (`harness/progress.mjs`)
+
+The operator wants the conveyor's progress at a glance. **You render it by RUNNING a script, NEVER by
+hand:** `node harness/progress.mjs .` reads the real artifacts (`.agent/decisions.log`, the tickets,
+gate markers, `done.log`) and prints an accurate phase bar (design → implementation → acceptance, with
+per-ticket status + `io:` + Gate markers + "next stop for you"). Hand-drawing the bar yourself would
+**hallucinate** a green ticket — the script cannot (it reads the truth, like every other mechanical check
+you run). Show its output **verbatim**; add at most one sentence around it.
+
+Trigger it:
+- **on operator request** — any of «прогресс / статус / где мы / progress / status / прогресс-бар» →
+  run it and paste the output;
+- **periodically in the auto-run between Gate #1 and Gate #2** — after each implementation ticket lands
+  `green` (a `done.log`/ledger advance), run it so the operator watches the DAG advance
+  (module×N → wiring → README) without asking.
+
 ## STOP vs connection failure
 
 - **STOP:** a subagent returns `STOP: <reason>` → a **deliberate** halt (missing input, contradiction).
