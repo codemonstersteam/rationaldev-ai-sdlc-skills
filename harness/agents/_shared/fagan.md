@@ -65,6 +65,12 @@ Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; retu
    `api-specification/openapi.yaml`·`Dockerfile`·`docker-compose.yml`·`run-tests.sh` present ·
    `./run-tests.sh` exits 0 (Dockerized godog) · README carries its required headings incl.
    `## Карта режимов отказа`. Non-zero → reject by the named item.
+3. **README structural gate — `node harness/validate-readme.mjs .`** — the `documentation` skill's
+   **Procedure A skeleton** is machine-checked here: one-sentence intro, `Can / Cannot` block, failure
+   table carrying **every** `error.code`, run + `component-tests/` link, the retrievability ladder to
+   `docs/design/<slice>/`. `validate-dod` (step 2) checks only section **names**; this checks the skill's
+   real **structure**. Non-zero → README form incomplete → reject (the content skill was loaded, but the
+   OUTPUT must CONFORM, not just the skill be present — run 13-07).
 
 These validators are agent-agnostic and deterministic: running them is **not** acceptance — they only
 clear the mechanical floor, so your judgement is spent solely where it must be.
