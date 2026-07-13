@@ -64,7 +64,12 @@ step = one concern = short implementer turn.
 strict YAML header (flow arrays `[a, b]`, see the `implementation-ticket-writer` skill):
 `id`, `type` (scaffold|component|module), `slice`, `blocked_by: [id,…]`, `inputs: [paths,…]`, `outputs:
 [paths,…]` (non-empty — artifacts the ticket produces), `io:` (for module), `skills: [...]`. Exactly **one**
-scaffold ticket (`id: 01`, `blocked_by: []`). `blocked_by`/`inputs`/`outputs` **MUST** be real (izi does not
+scaffold ticket (`id: 01`, `blocked_by: []`).
+**`skills:` = io-router add-ons (by `io:`) PLUS the CONTENT skill by artifact discipline** (see the skill):
+a ticket producing `README.md`/docs **MUST** carry `documentation` (+`md-formatting`) — content skill is
+deterministic by artifact, NOT the implementer's discretion; `validate-tickets` hard-blocks a README ticket
+without `documentation` (poka-yoke, run 13-07). Content/ingress skills (`documentation`/`cli-io`) are
+orthogonal to the io-router (stripped before the io-equality check). `blocked_by`/`inputs`/`outputs` **MUST** be real (izi does not
 compute them, it takes them as-is). `outputs` do **not** exist at Gate #1 (the implementer writes them) — the
 guardrail poka-yoke checks their existence at the `done.log` marker, not here. `harness/validate-tickets.mjs`
 and `@mills` reject the package as a **blocker** if a header is missing/broken or a reference does not resolve.

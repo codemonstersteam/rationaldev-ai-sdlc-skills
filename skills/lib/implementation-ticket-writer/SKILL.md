@@ -51,6 +51,24 @@ equals** the router output — neither missing nor extra. Over- or under-provisi
 service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
 never route `http-io` to it. If the module has no outbound call, its `io:` is `none`.
 
+## Content skill — by ARTIFACT discipline (orthogonal to the io-router)
+
+The io-router covers **outbound integration**, but some tickets produce an artifact whose **discipline is
+not code**. Attach the content skill by what the ticket *writes* — this is deterministic (by artifact),
+not the implementer's discretion:
+
+| Ticket produces | Content skill in `skills:` |
+|---|---|
+| `README.md` / docs | **`documentation`** (+ `md-formatting`) |
+| code (`.go`, …) | *(implicit `program-implementation` core — NOT listed)* |
+
+A README-module is `type: module`, `io: none` — the io-router gives `[]`, but its **artifact is a
+document**, so it needs `documentation`, not the code core. Declare it: `skills: [documentation, md-formatting]`.
+Content skills (`documentation`/`md-formatting`) and the ingress `cli-io` are **orthogonal** to the
+io-router — `validate-tickets` strips them before the io-equality check, and **hard-blocks a README-producing
+ticket whose `skills:` lacks `documentation`** (poka-yoke: README quality must be reproducible, not left to
+the implementer picking a skill by luck — run 13-07).
+
 ## Mandatory machine-readable header (MUST — the router's contract)
 
 Every ticket file `tickets/NN-*.md` **MUST start** with a strict YAML front-matter header so the
