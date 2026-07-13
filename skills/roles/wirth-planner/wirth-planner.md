@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Wirth
 - **Версия:** 1.0
-- **Тир / модель (claude):** large → opus
+- **Тир / модель (claude):** large → sonnet
 - **Режим:** subagent
 - **Запись (edit):** `.agent/**`: allow, `*`: deny
 

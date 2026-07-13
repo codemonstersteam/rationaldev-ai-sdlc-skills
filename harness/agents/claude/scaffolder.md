@@ -2,7 +2,7 @@
 name: scaffolder
 description: "Scaffolder (Qwen): on a scaffold ticket runs harness/scaffold.sh (git-clone template + rename + build), then TWO verification scripts (go build/test + smoke) — green → done, red → FAIL (the FIXER fixes it, not this role). Does NOT read the template, does NOT fix, does NOT write tests — saves tokens. Keywords: scaffold, template, skeleton, build, health."
 version: "1.0"
-model: haiku
+model: sonnet
 ---
 
 # scaffolder — lay the skeleton from the template (izi: Hughes)

@@ -2,7 +2,7 @@
 name: wirth-planner
 description: "Plan-index assembler (Wirth): from the finished design package assembles per-slice docs/design/slice-<name>/PLAN.md — path index + Gate #1 summary. Does not design or delegate. Keywords: plan, index, PLAN.md, summary, Gate #1."
 version: "1.0"
-model: opus
+model: sonnet
 ---
 
 # planner — plan-index assembler (izi: Wirth)

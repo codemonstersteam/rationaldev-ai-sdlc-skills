@@ -58,12 +58,18 @@ const adir = await mkdtemp(join(tmpdir(), "claude-approve-"))
 const marker = join(adir, ".agent", "gates", "gate1.approved")
 runHook("gate-approve.mjs", { prompt: "ну что, поехали дальше" }, { CLAUDE_PROJECT_DIR: adir })
 assert.ok(!existsSync(marker), "не-акцепт → маркера нет"); pass++
+// акцепт, но план НЕ собран → маркера НЕТ (гейт: «go ahead» на ранней фазе не проходит)
 runHook("gate-approve.mjs", { prompt: "акцепт, план ок" }, { CLAUDE_PROJECT_DIR: adir })
-assert.ok(existsSync(marker), "«акцепт» → маркер создан"); pass++
+assert.ok(!existsSync(marker), "акцепт без PLAN.md → маркера нет (план не готов)"); pass++
+// собираем PLAN.md → теперь акцепт валиден
+await mkdir(join(adir, "docs", "design", "slice-x"), { recursive: true })
+await writeFile(join(adir, "docs", "design", "slice-x", "PLAN.md"), "# plan\n")
+runHook("gate-approve.mjs", { prompt: "акцепт, план ок" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(existsSync(marker), "акцепт с PLAN.md → маркер создан"); pass++
 const first = readFileSync(marker, "utf8")
 runHook("gate-approve.mjs", { prompt: "approve again" }, { CLAUDE_PROJECT_DIR: adir })
 assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобберит первый акцепт"); pass++
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/16 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + approve)`)
+console.log(`PASS ${pass}/17 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + approve+plan-ready)`)

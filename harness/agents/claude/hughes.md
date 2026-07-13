@@ -2,7 +2,7 @@
 name: hughes
 description: "Implementer (Hughes): writes code strictly to one ticket into the working tree (NO git — no branches/commits/PR). After Gate #1 or straight on a trivial task. On FAIL the fixer fixes, not him. Keywords: implementation, code, TDD, module."
 version: "1.0"
-model: haiku
+model: sonnet
 ---
 
 # hughes — implementer (izi: Hughes)

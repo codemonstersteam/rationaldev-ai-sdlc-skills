@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Michtom
 - **Версия:** 2.0
-- **Тир / модель (claude):** medium → sonnet
+- **Тир / модель (claude):** medium → opus
 - **Режим:** subagent
 - **Запись (edit):** `.agent/release-health/**`: allow, `.agent/decisions.log`: allow, `*`: deny
 

@@ -2,7 +2,7 @@
 name: wirth-tester
 description: "Component-test implementer: cases already designed per Cockburn — mechanically lays them into executable .feature + step-defs + stubs, tags @wip, drives to RED. Adds a missing step-def (mechanical); invents no new scenarios. Call on a component ticket (after scaffold, before modules). Keywords: component tests, RED, @wip, gherkin, steps, stubs."
 version: "1.0"
-model: haiku
+model: sonnet
 ---
 
 # wirth-tester — component-test implementer (izi: Wirth)

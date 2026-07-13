@@ -24,6 +24,19 @@ export const BRD_MARK = ".agent/planner/brd.md"
 // izi — не цель делегации (он роутер), поэтому в проверке участвует только целевая роль.
 export const requiresFrontDoor = (role) => normRole(role) !== "gilb"
 
+// Gate #1 акцепт валиден ТОЛЬКО когда план СОБРАН и презентован (есть PLAN.md планировщика ИЛИ
+// plan-review.md критика). Иначе операторское «go ahead»/«акцепт» на ранней фазе (вопросы/дизайн)
+// ложно ставит маркер и обнуляет человеческий гейт — баг: маркер до презентации плана (run 12-07:
+// «go ahead» на фазе OQ поставил gate1 за час до плана). Пути-сигналы (fs-проверку делает вызывающий):
+export const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
+export const DESIGN_DIR = "docs/design" // PLAN.md лежит per-slice: docs/design/<slice>/PLAN.md
+// Готов ли план к акцепту? existsFn(relPath)→bool, slicesFn()→string[] имён под DESIGN_DIR (оба от вызывающего).
+export function planReadyForApproval(existsFn, sliceDirsFn) {
+  if (existsFn(PLAN_REVIEW_MARK)) return true
+  for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
+  return false
+}
+
 // Ключи, под которыми раннеры кладут имя роли в аргументы task-инструмента.
 export const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
 

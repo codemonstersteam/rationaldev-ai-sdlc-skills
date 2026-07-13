@@ -5,7 +5,7 @@
 
 - **Агент (izi):** Wirth
 - **Версия:** 1.0
-- **Тир / модель (claude):** small → haiku
+- **Тир / модель (claude):** small → sonnet
 - **Режим:** subagent
 - **Запись (edit):** `component-tests/**`: allow, `.agent/**`: allow, `*`: deny
 

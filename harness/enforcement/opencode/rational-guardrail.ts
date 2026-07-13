@@ -1,11 +1,12 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
+import { existsSync, readdirSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 // ЕДИНЫЙ источник enforcement-логики (общий с claude-хуками) — не расходиться.
 import {
   PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
-  parseTicketOutputs, isOperatorApproval,
+  parseTicketOutputs, isOperatorApproval, planReadyForApproval, DESIGN_DIR,
 } from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -205,6 +206,11 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
           .map((p) => String(p.text ?? ""))
           .join(" ")
         if (isOperatorApproval(text)) {
+          // Акцепт валиден ТОЛЬКО когда план собран (PLAN.md/plan-review.md) — иначе раннее «go ahead»
+          // ложно ставит маркер и обнуляет человеческий Gate #1. Нет плана → игнорируем.
+          const existsFn = (rel: string) => existsSync(join(root, rel))
+          const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
+          if (!planReadyForApproval(existsFn, sliceDirsFn)) return
           await mkdir(join(agentDir, "gates"), { recursive: true })
           await writeFile(gate1, new Date().toISOString() + "\toperator-approval-via-chat\n")
         }

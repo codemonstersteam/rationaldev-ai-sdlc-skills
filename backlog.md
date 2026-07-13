@@ -8,6 +8,17 @@
 
 > Унификация скиллов/ролей (DRY: A, A2, B, C, D, D2, E) — **завершена**, см. Done.
 
+### Landed (сессия 12-07, ветка feat/gilb-frontdoor)
+- [x] **Фронтдор — механический poka-yoke.** Проза в izi.md не держит (модель 2× проскочила @gilb → триаж);
+  инвариант «пока нет `.agent/planner/brd.md`, единственная разрешённая делегация — @gilb» унесён в хук
+  (`requiresFrontDoor` в `shared.mjs`, claude+opencode). Подтверждён вживую: izi заблокирован → сам ушёл в @gilb.
+- [x] **gate-approve — акцепт только когда план готов.** Баг: операторское «go ahead» на ранней фазе ложно
+  ставило `gate1.approved` за час до плана (обнуляло человеческий Gate #1). Фикс: `planReadyForApproval`
+  (`shared.mjs`) — маркер ставится ТОЛЬКО при наличии `PLAN.md`/`plan-review.md`. Claude+opencode, смоук 17/17.
+- [x] **Модели — две тира opus+sonnet (claude).** opus только для суждения, отравляющего downstream
+  (gilb/intake/apidesigner/moduledesigner/mills); всё остальное sonnet (исполнение по готовому входу).
+  hughes: `tier small→medium` (имплементер = не мех-работа, sonnet-пол корректности кода).
+
 ### Перевод скиллов на английский (i18n) — оптимум, не минимум
 Цель: все `skills/lib/*` на английском, лаконичные, без потери сути; tier-agnostic (GLM…Opus).
 Статус: 2/17 (`http-io`, `program-implementation`). Осталось 15 (крупные первыми: `md-formatting` 511,
@@ -15,8 +26,10 @@
 `doc-quality-review` 173, `observability` 134, `architecture` 116, `program-design` ×reference 1234,
 `code-style` 92, `memory` 88, `security` 74, `contract-tests` 63, `communication` 37).
 
-**Раскладка тиров (упоминать в релевантных скиллах):** `large`=opus (planner/plan-reviewer/fixer/
-orchestrator) · `medium`=sonnet (release-health) · `small`=haiku (implementer).
+**Раскладка тиров (упоминать в релевантных скиллах) — tier-agnostic текст, но факт claude-раскладки:**
+две тира — `opus` (суждение: gilb/intake/apidesigner/moduledesigner/mills) · `sonnet` (всё исполнение,
+включая имплементер/тестировщик/скаффолдер/роутер). haiku убран (пол корректности = sonnet). На opencode-
+бенче тиры иные (large=GLM · medium/small=Qwen) — раскладка per-runtime в `harness/models.config.json`.
 
 - [x] **Фаза 0 — подготовка.** Глоссарий RU→EN + список «литералов» (кросс-скилл строки) собраны в
   [`skills/I18N.md`](skills/I18N.md): единый перевод терминов, раскладка тиров, 9 литералов с парами

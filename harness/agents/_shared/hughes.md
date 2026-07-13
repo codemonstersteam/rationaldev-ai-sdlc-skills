@@ -2,7 +2,7 @@
 role: hughes
 izi: Hughes
 version: "1.0"
-tier: small
+tier: medium
 mode: subagent
 temperature: 0.2
 steps: 50

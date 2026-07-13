@@ -2,7 +2,7 @@
 name: michtom
 description: "Release & health (Michtom): canary rollout behind a feature toggle + golden-signals assessment, GREEN/YELLOW/RED verdict, rollback decision. Keywords: release, deploy, canary, rollout, health, SLO, rollback."
 version: "2.0"
-model: sonnet
+model: opus
 ---
 
 # Release & Health (izi: Michtom)

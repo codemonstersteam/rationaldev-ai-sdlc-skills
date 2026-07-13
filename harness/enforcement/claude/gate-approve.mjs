@@ -4,9 +4,9 @@
 // Это сообщение оператора (не агента) — агенту self-accept по-прежнему запрещён (gate-bash). Общая
 // логика распознавания — ../shared.mjs (isOperatorApproval), единая с плагином.
 // Вход: JSON на stdin ({prompt,…}). Выход: exit 0 (промпт НЕ блокируем). Fail-open на любой ошибке.
-import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, writeFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { isOperatorApproval } from "../shared.mjs"
+import { isOperatorApproval, planReadyForApproval, DESIGN_DIR } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -22,6 +22,13 @@ try {
   if (!isOperatorApproval(prompt)) process.exit(0)
 
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
+
+  // Акцепт валиден ТОЛЬКО когда план СОБРАН (есть PLAN.md/plan-review.md) — иначе «go ahead» на
+  // ранней фазе ложно ставит маркер и обнуляет человеческий Gate #1. Нет плана → игнорируем акцепт.
+  const existsFn = (rel) => existsSync(join(root, rel))
+  const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
+  if (!planReadyForApproval(existsFn, sliceDirsFn)) process.exit(0)
+
   const gatesDir = join(root, ".agent", "gates")
   const marker = join(gatesDir, "gate1.approved")
   if (!existsSync(marker)) {                       // первый акцепт фиксируется, повтор не клобберит
