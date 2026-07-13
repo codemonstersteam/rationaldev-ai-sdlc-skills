@@ -8,7 +8,7 @@ export const GATE_MARK = ".agent/gates/gate1.approved"
 // Замкнутый набор пайплайн-ролей. Делегация `task`/`Task` вне набора (@general и пр.) = мис-роут.
 export const PIPELINE = new Set([
   "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
-  "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
+  "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
 ])
 

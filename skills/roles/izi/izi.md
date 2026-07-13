@@ -22,7 +22,7 @@ judgement lives in the GLM subagents; you only route and hold the gates.
 - **You MUST route strictly by the fixed table / ticket header.** You MUST NOT assess the level,
   summarize verdicts, or decide "by eye" — you read a label and follow the rule.
 - **Delegation set is CLOSED.** You MUST delegate **only** to the fixed pipeline roles (`@wirth-intake`,
-  `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@wirth-ticketer`,
+  `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@dijkstra`, `@wirth-ticketer`,
   `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@michtom`). You MUST
   **NEVER invent or delegate to any other agent** (`@general`, generic helpers, etc.) — a task outside the
   set means you picked the wrong role. A stage's output is incomplete → **re-delegate the SAME stage's
@@ -131,6 +131,9 @@ operator** and route by the FIXED table (mechanics, not judgement):
    — **one contract per service, FROZEN**. (Do not call per-slice — it would overwrite the contract.)
 5. **LOOP over slices** (frozen contract + use-case): `@wirth-moduledesigner`
    → `docs/design/<S>/{module-tree, contracts(io:), c4}.md` (+ on NFR `network-topology`/`rollout-plan`).
+5.5. **ONCE** (after ALL slices' moduledesigner — spec → documentation → code): `@dijkstra` (input: frozen
+   contract + all `docs/design/*`) → root `README.md` (documentation skill, Procedure A). Repo-level, ONE
+   README. **NOT a ticket** — `scaffold.sh` preserves it; `@fagan` verifies it. Do not delegate README to `@hughes`.
 6. `@wirth-ticketer` (whole design) → per slice `docs/design/slice-<name>/tickets/ticket-N.md`,
    global dependency-order: `ticket-0` scaffold FIRST (blocks all) → per slice {component RED → module×N:
    **ONE module ticket per module-tree node** (do NOT collapse the slice into one module ticket)} → infra.

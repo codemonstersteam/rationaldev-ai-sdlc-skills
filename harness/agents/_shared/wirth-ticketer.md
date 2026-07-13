@@ -82,14 +82,14 @@ one module = one package dir; never merge two packages into one ticket nor split
 **invariant** for every API slice → cut them as **SEPARATE** tickets, never one heap:
 - **`wiring`** (`type: module`, `io: none`) — `register.go` (Deps + route) + mount in `cmd/app/main.go`
   (`501` → live endpoint); **exposes the API**. `outputs`: `internal/<slug>/register.go` + `cmd/app/main.go` ONLY.
-- **`README`** (`type: module`, `io: none`) — root `README.md` (API + run + architecture + use-cases +
-  `## Карта режимов отказа`), written from the design (openapi/module-tree/use-case). Independent of wiring
-  (∥). `outputs`: `README.md` ONLY.
+- **NO `README` ticket** — the repo `README.md` is a **design artifact** authored by `@dijkstra`
+  (planning stage, spec → documentation → code): it exists before Gate #1 and `scaffold.sh` preserves it.
+  Do **not** cut a README ticket; do **not** put `README.md` in any ticket's `outputs`. `@fagan` verifies it (`validate-readme`).
 - **DoD-closure + green is NOT a ticket** — it is the **@fagan acceptance step**: remove `@wip`, run
   build+unit+**component GREEN**, verify **every `TASK §DoD`** item met → Gate #2. Docker/compose/run-tests
   already exist from scaffold; @fagan **runs** them, does not write them.
 
-**Never bundle wiring+README+deploy in one ticket** — `validate-plan` (feasibility/single-concern) blocks it,
+**Never bundle wiring+deploy in one ticket** — `validate-plan` (feasibility/single-concern) blocks it,
 and a fat ticket blows Qwen's context and drops (run 07-07/2 ticket-11, 07-07/3 ticket-09 dropped ×4). Each
 step = one concern = short implementer turn.
 

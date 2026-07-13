@@ -41,6 +41,11 @@ for item in "$TMP"/* "$TMP"/.[!.]*; do
   if [ "$n" = "api-specification" ] && [ -d "$DEST/api-specification" ] && [ -n "$(ls -A "$DEST/api-specification" 2>/dev/null)" ]; then
     echo "scaffold: сохраняю замороженный контракт api-specification/ (openapi | config+report schema — не перезаписываю)"; continue
   fi
+  # README.md — артефакт дизайна (его пишет moduledesigner: спека→документация→код). Если уже есть —
+  # НЕ перезаписывать шаблонной заглушкой (тот же принцип, что и с замороженным контрактом).
+  if [ "$n" = "README.md" ] && [ -s "$DEST/README.md" ]; then
+    echo "scaffold: сохраняю README.md дизайна (не перезаписываю шаблонной заглушкой)"; continue
+  fi
   cp -R "$item" "$DEST/"
 done
 rm -rf "$TMP"

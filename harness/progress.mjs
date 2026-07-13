@@ -78,6 +78,7 @@ const DESIGN = [
   ["wirth-usecase", "Cockburn use-case"],
   ["wirth-apidesigner", `frozen contract (${target} profile)`],
   ["wirth-moduledesigner", "module tree + C4 + contracts"],
+  ["dijkstra", "README (Procedure A)"],
   ["wirth-ticketer", "tickets cut"],
   ["mills", "plan-review"],
   ["wirth-planner", "PLAN.md assembled"],
