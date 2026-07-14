@@ -75,8 +75,9 @@ root `CONTEXT.md` → single; neither → create root `CONTEXT.md` on the first 
 |---|---|---|
 | `requirements-intake` (wirth-intake) | pins terms in `CONTEXT.md` at planning; multi → per-slice + root `CONTEXT-MAP` | Ф1 |
 | `vertical-slices` (wirth-slicer) | names each slice's bounded context + relationships in `CONTEXT-MAP` | Ф2 |
-| `hughes` (via `documentation`) | writes context-specific / system-wide ADRs (three-condition rule) | Ф3 |
-| `linger` (this skill **only** — lean) | writes context-specific ADRs during fixes (fix = often a hard-to-reverse trade-off) | Ф3 |
+| **`wirth-moduledesigner`** (this skill) | **PRIMARY ADR author** — records the load-bearing DESIGN decisions (Parnas boundary, `io:` class, "verdict not a pipe error", valid-by-construction) as ADRs at design time; three-condition rule, sparingly | **Ф2 (design)** |
+| `linger` (this skill **only** — lean) | records a context-specific ADR only when a **fix** embodies a hard-to-reverse trade-off (rare — the design decisions are moduledesigner's) | Ф3 |
+| `hughes` (via `documentation`) | records an ADR only when a **ticket** embodies a hard-to-reverse trade-off (rare) | Ф3 |
 
 > **linger wiring is lean:** `linger` carries **only `domain-modeling`** (not the full `documentation` skill) —
 > the ADR template + numbering + placement + three-condition rule are self-contained in `ADR-FORMAT`. Allowlist,
