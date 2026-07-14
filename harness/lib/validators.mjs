@@ -27,6 +27,13 @@ export function expectedTicketSkills(type, io) {
 }
 const sameSet = (a, b) => a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",")
 
+// Скиллы, ОРТОГОНАЛЬНЫЕ outbound io-роутеру (снимаются перед сверкой io-равенства):
+// `cli-io` — ingress-адаптер двери (Ф3-C); `documentation`/`md-formatting` — контентная дисциплина
+// артефакта (README/доки), а не исходящая интеграция. Их наличие io-роутер не регулирует.
+export const ORTHOGONAL_SKILLS = new Set(["cli-io", "documentation", "md-formatting"])
+const producesReadme = (outputs) =>
+  Array.isArray(outputs) && outputs.some((p) => /(^|\/)README\.md$/i.test(String(p)))
+
 // --- FRD: структурная полнота по handoff-чеклисту requirements-intake ---
 export function validateFrd(text) {
   text = String(text).replace(/\r\n/g, "\n")
@@ -94,9 +101,18 @@ export function validateTicketHeaders(tickets) {
       errors.push(`${name}: skills должен быть flow-списком [a, b] (можно [])`)
     } else {
       const exp = expectedTicketSkills(data.type, data.io)
-      if (exp && !sameSet(data.skills, exp)) {
+      // Снимаем ОРТОГОНАЛЬНЫЕ скиллы (cli-io ingress + documentation/md-formatting контент) перед сверкой:
+      // io-роутер регулирует только исходящую интеграцию, остальное — доп. дисциплины поверх.
+      const actual = data.skills.filter((s) => !ORTHOGONAL_SKILLS.has(s))
+      if (exp && !sameSet(actual, exp)) {
         errors.push(`${name}: skills=[${data.skills.join(", ")}] ≠ io-роутер [${exp.join(", ")}] ` +
-          `(type=${data.type}, io=${data.io ?? "—"}) — имплементер должен получить РОВНО нужные скиллы`)
+          `(type=${data.type}, io=${data.io ?? "—"}) — имплементер должен получить РОВНО нужные скиллы (cli-io/documentation — доп. ортогональные)`)
+      }
+      // Poka-yoke: README/доку-тикет ОБЯЗАН нести контентный скилл documentation — детерминированно по
+      // типу артефакта, а не на усмотрение имплементера (иначе README-качество недетерминировано, run 13-07).
+      if (producesReadme(data.outputs) && !data.skills.includes("documentation")) {
+        errors.push(`${name}: производит README.md, но skills не содержит 'documentation' — контентный ` +
+          `скилл обязателен по типу артефакта (README → documentation), не на усмотрение имплементера`)
       }
     }
   }

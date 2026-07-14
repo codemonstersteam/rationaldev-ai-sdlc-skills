@@ -91,10 +91,15 @@ switch ($Runner) {
 if (-not $Global) {
   $hdir = Join-Path $Project 'harness'
   New-Item -ItemType Directory -Force -Path $hdir | Out-Null
-  foreach ($v in @('validate-frd.mjs', 'validate-contract-frozen.mjs', 'validate-tickets.mjs', 'scaffold.sh')) {
-    $lnk = Join-Path $hdir $v
+  # glob, НЕ хардкод-список — иначе новые валидаторы/progress не долетают в проект (был Windows-баг):
+  # ВСЕ validate-*.mjs + progress.mjs + scaffold.sh + target-profiles.json.
+  $srcs = @(Get-ChildItem (Join-Path $Bundle 'harness') -Filter 'validate-*.mjs' | ForEach-Object FullName)
+  $srcs += @('progress.mjs', 'scaffold.sh', 'target-profiles.json') | ForEach-Object { Join-Path $Bundle "harness/$_" }
+  foreach ($src in $srcs) {
+    if (-not (Test-Path $src)) { continue }
+    $lnk = Join-Path $hdir (Split-Path $src -Leaf)
     if (Test-Path $lnk) { Remove-Item -Force $lnk }
-    New-Item -ItemType SymbolicLink -Path $lnk -Target (Join-Path $Bundle "harness/$v") | Out-Null
+    New-Item -ItemType SymbolicLink -Path $lnk -Target $src | Out-Null
   }
 }
 
@@ -109,6 +114,8 @@ if (-not $Soft) {
       $pdir = if ($Global) { Join-Path $env:APPDATA 'opencode/plugins' } else { Join-Path $Project '.opencode/plugins' }
       New-Item -ItemType Directory -Force -Path $pdir | Out-Null
       Copy-Item (Join-Path $adapter 'rational-guardrail.ts') (Join-Path $pdir 'rational-guardrail.ts') -Force
+      # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом (copy → нужен реальный файл в destination)
+      Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path (Split-Path $pdir) 'shared.mjs') -Force
       $hardMsg = "on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
     }
     'claude' {
@@ -116,12 +123,30 @@ if (-not $Soft) {
       $hooks = Join-Path $cbase 'hooks'
       New-Item -ItemType Directory -Force -Path $hooks | Out-Null
       Copy-Item (Join-Path $adapter 'gate-check.mjs')   (Join-Path $hooks 'gate-check.mjs') -Force
+      Copy-Item (Join-Path $adapter 'gate-bash.mjs')    (Join-Path $hooks 'gate-bash.mjs') -Force
+      Copy-Item (Join-Path $adapter 'gate-approve.mjs') (Join-Path $hooks 'gate-approve.mjs') -Force
       Copy-Item (Join-Path $adapter 'log-decision.mjs') (Join-Path $hooks 'log-decision.mjs') -Force
+      # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом (copy → нужен реальный файл в destination)
+      Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path $cbase 'shared.mjs') -Force
       $gc = 'node "' + (Join-Path $hooks 'gate-check.mjs') + '"'
+      $gb = 'node "' + (Join-Path $hooks 'gate-bash.mjs') + '"'
+      $ga = 'node "' + (Join-Path $hooks 'gate-approve.mjs') + '"'
       $ld = 'node "' + (Join-Path $hooks 'log-decision.mjs') + '"'
-      $settings = [ordered]@{ hooks = [ordered]@{
-        PreToolUse  = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) })
+      # permissions: ПОЛНЫЙ доступ субагентам (defaultMode bypassPermissions — без промптов; столл-на-промпте
+      # убивает автономный прогон). allow-лист — безопасная деградация. Хуки (PreToolUse) работают НЕЗАВИСИМО
+      # от режима и держат фронтдор/Gate #1/poka-yoke даже здесь.
+      $settings = [ordered]@{
+        permissions = [ordered]@{
+          defaultMode = 'bypassPermissions'
+          allow = @('Bash(go *)','Bash(gofmt *)','Bash(node *)','Bash(sh *)','Bash(bash *)','Bash(docker *)','Bash(docker compose *)','Bash(git *)','Bash(perl *)','Bash(tar *)','Bash(curl *)','Bash(jq *)','Bash(grep *)','Bash(rg *)','Bash(cat *)','Bash(ls *)','Bash(find *)','Bash(head *)','Bash(tail *)','Bash(wc *)','Bash(awk *)','Bash(sed *)','Bash(echo *)','Bash(printf *)','Bash(test *)','Bash(mkdir *)','Bash(cp *)','Bash(mv *)','Bash(rm *)','Bash(touch *)','Bash(chmod *)','Bash(xargs *)','Bash(pwd)')
+        }
+        hooks = [ordered]@{
+        PreToolUse  = @(
+          @{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) },
+          @{ matcher = 'Bash'; hooks = @(@{ type = 'command'; command = $gb }) }
+        )
         PostToolUse = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $ld }) })
+        UserPromptSubmit = @(@{ hooks = @(@{ type = 'command'; command = $ga }) })
       } }
       $json = $settings | ConvertTo-Json -Depth 8
       $sjPath = Join-Path $cbase 'settings.json'

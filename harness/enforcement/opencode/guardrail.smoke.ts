@@ -14,7 +14,22 @@ async function run() {
   const dir = await mkdtemp(join(tmpdir(), "rg-smoke-"))
   const hooks: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
 
-  // A. Gate #1 блокирует implementer без апрува
+  // A0. Фронтдор (poka-yoke): пока нет brd.md, роутить можно ТОЛЬКО @gilb
+  await hooks["tool.execute.before"](task("gilb"), { args: { subagent: "gilb" } }); pass++
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("wirth-triage"), { args: { subagent: "wirth-triage" } }),
+    /Фронтдор не пройден/,
+  ); pass++
+  await assert.rejects(
+    () => hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }),
+    /Фронтдор не пройден/,
+  ); pass++
+
+  // грил пройден (brd.md есть) → пайплайн открывается
+  await mkdir(join(dir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(dir, ".agent", "planner", "brd.md"), "# BRD\n")
+
+  // A. Gate #1 блокирует implementer без апрува (brd.md уже есть — ловим именно Gate #1)
   await assert.rejects(
     () => hooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
     /Gate #1/,
@@ -128,7 +143,7 @@ async function run() {
   assert.equal(c2.text, "CUSTOM-NUDGE"); pass++
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/23 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/26 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

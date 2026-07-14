@@ -1,13 +1,17 @@
 {
   "//": "Назначение моделей ролям харнеса. Это ЕДИНСТВЕННАЯ точка правды по моделям — код генератора имён моделей не содержит. Резолвинг для роли: roles[<роль>] важнее tiers[<тир>]; пусто/нет ключа → модель не задаётся в проекции (раннер берёт модель пользователя по умолчанию). Тир роли (large/medium/small) задан в harness/agents/_shared/<роль>.md (frontmatter `tier`). Имена моделей произвольны и зависят от раннера/провайдера — харнес к Anthropic не привязан. После правки: node harness/gen-agents.mjs (перегенерация проекций), затем переустанови (install.sh / install.ps1).",
   "claude": {
-    "//": "Дефолт — раскладка на 3 модели по тирам. Замени имена на свои (любой провайдер). Пер-ролевое переопределение клади в roles, напр. \"planner\": \"opus\".",
+    "//": "Две тира: opus + sonnet (haiku убран — small=sonnet). ПРИНЦИП: opus везде, где живёт СУЖДЕНИЕ (дизайн/критика/фикс/приёмка/релиз); sonnet ТОЛЬКО на чистом механическом исполнении уже-решённого артефакта + роутинг/индекс. opus: gilb, wirth-intake, wirth-triage, wirth-slicer, wirth-usecase, wirth-apidesigner, wirth-moduledesigner, wirth-ticketer, mills (критик), linger (фикс/fault-localization), fagan (приёмка), michtom (канарейка/релиз). sonnet: izi (роутер), wirth-planner (сборка индекса), scaffolder (гоняет scaffold.sh), hughes (код по тикету), wirth-tester (укладка тестов). izi = primary → берёт модель СЕССИИ (запускай claude на sonnet), не отсюда.",
     "tiers": {
       "large": "opus",
       "medium": "sonnet",
-      "small": "haiku"
+      "small": "sonnet"
     },
-    "roles": {}
+    "roles": {
+      "izi": "sonnet",
+      "wirth-planner": "sonnet",
+      "michtom": "opus"
+    }
   },
   "opencode": {
     "//": "Имена в формате провайдера OpenCode. Прогон token-bench идёт через OpenRouter за прокси (experiments/token-bench). large = GLM 5.2 (планирование/дизайн/ревью: orchestrator/planner/plan-reviewer/fixer), medium = Qwen3.6-27b (release-health: канарейка+здоровье), small = Qwen3.6-27b (реализация: implementer).",

@@ -120,6 +120,20 @@ test("validateTicketHeaders: лишний скилл → ошибка", () => {
 test("validateTicketHeaders: io:none с непустыми skills → ошибка", () => {
   assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { io: "none", skills: ["http-io"] } })]).some((e) => /io-роутер/.test(e)))
 })
+// контентный скилл (documentation/md-formatting) ОРТОГОНАЛЕН io-роутеру — снимается перед сверкой
+test("validateTicketHeaders: README-тикет io:none + [documentation, md-formatting] → нет ошибок", () => {
+  assert.deepEqual(validateTicketHeaders([SCAFFOLD,
+    T({ data: { io: "none", outputs: ["README.md"], skills: ["documentation", "md-formatting"] } })]), [])
+})
+test("validateTicketHeaders: documentation не ломает io-роутер io:http", () => {
+  assert.deepEqual(validateTicketHeaders([SCAFFOLD,
+    T({ data: { io: "http", outputs: ["internal/s1/client.go"], skills: ["http-io", "documentation"] } })]), [])
+})
+// poka-yoke: производит README.md без documentation → блок
+test("validateTicketHeaders: README.md без documentation → ошибка", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD,
+    T({ data: { io: "none", outputs: ["README.md"], skills: [] } })]).some((e) => /README|documentation/.test(e)))
+})
 test("validateTicketHeaders: component без component-tests → ошибка", () => {
   const comp = { name: "03-comp.md", data: { id: "03", type: "component", slice: "s1", blocked_by: ["01"], inputs: ["x"], skills: [] } }
   assert.ok(validateTicketHeaders([SCAFFOLD, comp]).some((e) => /io-роутер/.test(e)))

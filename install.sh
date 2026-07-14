@@ -109,7 +109,7 @@ if [ "$SCOPE" != global ]; then
   mkdir -p "$PROJ/harness"
   # ВСЕ validate-*.mjs (glob, не хардкод-список — иначе новые валидаторы не долетают в песочницу),
   # + scaffold.sh. Их ./lib и ./frontmatter резолвятся Node по realpath из бандла (симлинков хватает).
-  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/scaffold.sh; do
+  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/progress.mjs "$BUNDLE"/harness/scaffold.sh "$BUNDLE"/harness/target-profiles.json; do
     [ -e "$v" ] && ln -sfn "$v" "$PROJ/harness/$(basename "$v")"
   done
 fi
@@ -125,6 +125,8 @@ if [ "$HARD" = yes ]; then
       [ "$SCOPE" = global ] && pdir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins" || pdir="$PROJ/.opencode/plugins"
       mkdir -p "$pdir"
       ln -sfn "$ADAPTER/rational-guardrail.ts" "$pdir/rational-guardrail.ts"
+      # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом, чтобы резолвилась и при location-based загрузке
+      ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$(dirname "$pdir")/shared.mjs"
       # watchdog-настройки плагина (T09b nudge/cooldown) из ЕДИНОГО источника models.config.json → рядом с плагином
       command -v jq >/dev/null 2>&1 && jq '.watchdog // {}' "$BUNDLE/harness/models.config.json" > "$(dirname "$pdir")/rational.config.json" 2>/dev/null || true
       HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts) + watchdog-конфиг"
@@ -133,12 +135,36 @@ if [ "$HARD" = yes ]; then
       [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
       mkdir -p "$cbase/hooks"
       ln -sfn "$ADAPTER/gate-check.mjs"   "$cbase/hooks/gate-check.mjs"
+      ln -sfn "$ADAPTER/gate-bash.mjs"    "$cbase/hooks/gate-bash.mjs"
+      ln -sfn "$ADAPTER/gate-approve.mjs" "$cbase/hooks/gate-approve.mjs"
       ln -sfn "$ADAPTER/log-decision.mjs" "$cbase/hooks/log-decision.mjs"
-      gc="node \"$cbase/hooks/gate-check.mjs\""; ld="node \"$cbase/hooks/log-decision.mjs\""
+      # общая enforcement-логика (../shared.mjs, хуки импортят её) — рядом на случай location-based резолва
+      ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
+      # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
+      gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
+      # permissions: ПОЛНЫЙ доступ субагентам, пока работают (defaultMode bypassPermissions — без промптов
+      # ни на bash, ни на правки: столл-на-промпте убивает автономный прогон). allow-лист оставлен как
+      # безопасная деградация, если режим позже понизят. Хуки (PreToolUse) имеют ПРИОРИТЕТ и работают
+      # НЕЗАВИСИМО от режима прав: gate-check/gate-bash exit 2 держат фронтдор/Gate #1/poka-yoke даже здесь.
       sjson='{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(go *)", "Bash(gofmt *)", "Bash(node *)", "Bash(sh *)", "Bash(bash *)",
+      "Bash(docker *)", "Bash(docker compose *)", "Bash(git *)", "Bash(perl *)", "Bash(tar *)", "Bash(curl *)",
+      "Bash(jq *)", "Bash(grep *)", "Bash(rg *)", "Bash(cat *)", "Bash(ls *)", "Bash(find *)", "Bash(head *)",
+      "Bash(tail *)", "Bash(wc *)", "Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(tr *)", "Bash(awk *)",
+      "Bash(sed *)", "Bash(echo *)", "Bash(printf *)", "Bash(test *)", "Bash(mkdir *)", "Bash(cp *)", "Bash(mv *)",
+      "Bash(rm *)", "Bash(touch *)", "Bash(chmod *)", "Bash(diff *)", "Bash(which *)", "Bash(xargs *)", "Bash(pwd)"
+    ]
+  },
   "hooks": {
-    "PreToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] } ],
-    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ]
+    "PreToolUse": [
+      { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] },
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
+    ],
+    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
   }
 }'
       if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then

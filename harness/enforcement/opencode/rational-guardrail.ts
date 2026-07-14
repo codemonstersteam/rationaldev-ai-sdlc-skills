@@ -1,28 +1,17 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
+import { existsSync, readdirSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
+// ЕДИНЫЙ источник enforcement-логики (общий с claude-хуками) — не расходиться.
+import {
+  PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
+  parseTicketOutputs, isOperatorApproval, planReadyForApproval, DESIGN_DIR,
+} from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
 //   1) decisions.log — пишется на каждое делегирование роли (аудит), без участия агента;
 //   2) Gate #1 — нельзя делегировать implementer без ревью плана и апрува оператора.
-
-const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
-
-// Замкнутый набор пайплайн-ролей. Делегация `task` кому-либо вне набора (@general и пр.) —
-// мис-роутинг: izi должен повторить ТУ ЖЕ стадию или escalate, а не выдумывать агента.
-const PIPELINE = new Set([
-  "izi", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
-  "wirth-moduledesigner", "wirth-ticketer", "wirth-planner", "mills",
-  "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
-])
-
-function pickRole(args: unknown): string {
-  if (!args || typeof args !== "object") return "unknown"
-  const a = args as Record<string, unknown>
-  for (const k of ROLE_KEYS) if (typeof a[k] === "string") return a[k] as string
-  return "unknown"
-}
 
 export const RationalGuardrail: Plugin = async ({ directory, worktree, client }: any) => {
   // Резолв корня проекта: пропускаем "/" (под headless `opencode run` directory/worktree
@@ -35,6 +24,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   const logPath = join(agentDir, "decisions.log")
   const gate1 = join(agentDir, "gates", "gate1.approved")
   const review = join(agentDir, "plan-reviewer", "plan-review.md")
+  const brd = join(agentDir, "planner", "brd.md")
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
@@ -82,9 +72,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
       }
     } catch { return [] }
     if (!text) return []
-    const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
-    if (!m) return []
-    const paths = m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+    const paths = parseTicketOutputs(text)
     const missing: string[] = []
     for (const p of paths) {
       try { const st = await stat(join(root, p)); if (st.isFile() && st.size === 0) missing.push(p) }
@@ -125,9 +113,6 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
     return m
   }
 
-  // Строка, по которой ловим попытку агента создать/тронуть маркер Gate #1.
-  const GATE_MARK = ".agent/gates/gate1.approved"
-
   return {
     // Gate #1: жёсткий стоп на делегировании implementer до апрува плана.
     "tool.execute.before": async (input: any, output: any) => {
@@ -140,11 +125,7 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         const cmd = String((args as any).command ?? "")
         // Блокируем только СОЗДАНИЕ/ЗАПИСЬ маркера (редирект >/>> или touch/tee/cp/mv/ln/install/dd),
         // но НЕ чтение-верификацию (ls/test/cat/stat) — izi ДОЛЖЕН мочь проверить маркер (см. izi.md).
-        const gm = GATE_MARK.replace(/[.]/g, "\\.")
-        const writesMarker =
-          new RegExp(`>>?\\s*['\"]?[^\\s;|&'\"]*${gm}`).test(cmd) ||
-          new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)
-        if (writesMarker) {
+        if (writesGateMarker(cmd)) {
           throw new Error(
             "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") ставит ТОЛЬКО оператор " +
             "вне сессии. Создавать/писать его агенту запрещено — на Gate #1 задай question и жди. " +
@@ -155,13 +136,12 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         // (0b) poka-yoke: маркер готовности `ticket-NN <slice> green` в done.log принимается ТОЛЬКО если
         // объявленные в заголовке тикета `outputs` реально существуют и непусты. Ловит «зелёный без
         // артефакта» на записи маркера (дёшево), а не на приёмке (@linger, дорого). run08: /health опущен.
-        const doneWrite = />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd)
-        const mk = /\bticket-0*(\d+)\b[^\n]*\bgreen\b/.exec(cmd)
-        if (doneWrite && mk) {
-          const miss = await missingOutputs(mk[1])
+        const greenId = doneGreenTicketId(cmd)
+        if (greenId) {
+          const miss = await missingOutputs(greenId)
           if (miss.length) {
             throw new Error(
-              "[rational-guardrail] poka-yoke: ticket-" + mk[1] + " помечается `green`, но его объявленные " +
+              "[rational-guardrail] poka-yoke: ticket-" + greenId + " помечается `green`, но его объявленные " +
               "`outputs` отсутствуют/пусты: " + miss.join(", ") + ". Маркер НЕ записан — доведи артефакт(ы) до " +
               "непустого состояния или не пиши `green`. (Проверка существования, НЕ build.)",
             )
@@ -188,11 +168,20 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         if (!PIPELINE.has(r)) {
           throw new Error(
             "[rational-guardrail] Делегация вне пайплайн-набора запрещена: '" + role + "'. " +
-            "Роутить можно ТОЛЬКО фикс-роли (wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). " +
+            "Роутить можно ТОЛЬКО фикс-роли (gilb/wirth-*/mills/scaffolder/hughes/wirth-tester/linger/fagan/michtom). " +
             "Неполный выход стадии → повтори ТУ ЖЕ стадию (≤2) или escalate. " +
             "Авторство тикетов — исключительно @wirth-ticketer, НЕ @hughes/@general.",
           )
         }
+      }
+
+      // (1.5) Фронтдор (poka-yoke): пока нет brd.md, роутить можно ТОЛЬКО @gilb. Проза в izi.md не держит.
+      if (role !== "unknown" && requiresFrontDoor(role) && !(await exists(brd))) {
+        throw new Error(
+          "[rational-guardrail] Фронтдор не пройден: пока нет .agent/planner/brd.md, ЕДИНственная " +
+          "разрешённая делегация — @gilb (сырое BR → измеримый BRD + грил открытых вопросов). " +
+          "Триаж/планирование/реализация заблокированы до этого. СНАЧАЛА делегируй @gilb.",
+        )
       }
 
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
@@ -216,8 +205,12 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
           .filter((p) => p?.type === "text")
           .map((p) => String(p.text ?? ""))
           .join(" ")
-          .toLowerCase()
-        if (/(^|[\s.,!])(акцепт|акцептую|approve|принял план|gate1[- ]?ok|go ahead)([\s.,!]|$)/.test(text)) {
+        if (isOperatorApproval(text)) {
+          // Акцепт валиден ТОЛЬКО когда план собран (PLAN.md/plan-review.md) — иначе раннее «go ahead»
+          // ложно ставит маркер и обнуляет человеческий Gate #1. Нет плана → игнорируем.
+          const existsFn = (rel: string) => existsSync(join(root, rel))
+          const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
+          if (!planReadyForApproval(existsFn, sliceDirsFn)) return
           await mkdir(join(agentDir, "gates"), { recursive: true })
           await writeFile(gate1, new Date().toISOString() + "\toperator-approval-via-chat\n")
         }

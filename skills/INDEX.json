@@ -23,6 +23,13 @@
       "description": "Draw the slice's C4 model into docs/design/<slice>/c4.md — C2 Container and C3 Component (the C3 IS the program-design module tree), as Mermaid blocks that render on GitHub. Use at stage 9, once the module tree exists (program-design, stage 8). C1 (system context) lives on the concept landing; C4 (code) is not drawn. The Cockburn use case is its neighbor file use-case.md (cockburn-use-case), not re-authored here. Do NOT design the module tree (program-design) or write the use case (cockburn-use-case). Tier-agnostic: fixed Mermaid templates, a C3=tree conformance rule, checklist, STOP."
     },
     {
+      "name": "cli-io",
+      "path": "skills/lib/cli-io/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "Designing the CLI ingress adapter of a slice — the driving adapter of a hexagon. Parse flags + positional args + config into ONE flat Request DTO, hand it to the pure core (head), map the core's Result to an exit code (0/1/2/3) and stdout (JSON report) / stderr (logs). Keep it small — ≤5 flags, no elephant; domain params MAY be flags. Use when a slice's external input is a command-line invocation (Go + cobra), not HTTP/queue. Do NOT put domain logic in the command. Scaffold — template-go-cli. Keywords - CLI, cobra, ingress, driving adapter, DTO, exit code, one-shot."
+    },
+    {
       "name": "cockburn-use-case",
       "path": "skills/lib/cockburn-use-case/SKILL.md",
       "version": "1.0",
@@ -196,6 +203,13 @@
       "version": "1.0",
       "status": "stable",
       "description": "Start a service from a preconfigured stack template (copy — then work). Two faces — the PLANNER picks the template by stack/context and writes a scaffold ticket; the IMPLEMENTER clones and configures the template per that ticket, yielding a runnable placeholder service (builds, /health green, 501 elsewhere) BEFORE tests are authored. Use at stage 4b, after the contract is frozen and before component-tests. Do NOT hand-assemble a runner (that defeats the template) or make tests RED-ready (that is component-tests — realize half) or implement logic (program-implementation). Tier-agnostic: stack router, a clone-and-configure checklist, STOP."
+    },
+    {
+      "name": "target-profiles",
+      "path": "skills/lib/target-profiles/SKILL.md",
+      "version": "1.0",
+      "status": "stable",
+      "description": "How the pipeline builds different deliverable SHAPES (HTTP service, CLI tool, …) without branching every stage on the shape. Each shape is a target profile — one cohesive vertical that owns its contract kind, ingress adapter, scaffold template, DoD checks and component-test flavour. Stages DELEGATE to the active profile; they never say \"if cli\". Adding a shape = one profile, zero stage edits. Data — harness/target-profiles.json. Use when a stage's behaviour depends on whether the deliverable is a service or a CLI. Keywords - target shape, profile, service, CLI, Strategy, open-closed, vertical slice."
     },
     {
       "name": "tmux-test-runner",

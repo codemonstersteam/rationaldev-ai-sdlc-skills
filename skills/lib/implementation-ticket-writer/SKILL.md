@@ -51,6 +51,25 @@ equals** the router output — neither missing nor extra. Over- or under-provisi
 service *calls out* to. The service's own **inbound** HTTP handler / ingress adapter is `io: none` —
 never route `http-io` to it. If the module has no outbound call, its `io:` is `none`.
 
+## Content skill — by ARTIFACT discipline (orthogonal to the io-router)
+
+The io-router covers **outbound integration**, but some tickets produce an artifact whose **discipline is
+not code**. Attach the content skill by what the ticket *writes* — this is deterministic (by artifact),
+not the implementer's discretion:
+
+| Ticket produces | Content skill in `skills:` |
+|---|---|
+| `README.md` / docs | **`documentation`** (+ `md-formatting`) |
+| code (`.go`, …) | *(implicit `program-implementation` core — NOT listed)* |
+
+**The repo `README.md` is NOT a ticket** — it is a **design artifact** authored by `@dijkstra` in the
+planning phase (spec → documentation → code); `scaffold.sh` preserves it and `@fagan` verifies it. Do
+**not** cut a README ticket. This Content-skill rule is the **defensive floor** for any *other* doc-ticket
+one might still cut: if a ticket's `outputs` include `README.md`/docs it **MUST** carry `documentation`
+(+`md-formatting`). Content skills (`documentation`/`md-formatting`) and the ingress `cli-io` are
+**orthogonal** to the io-router — `validate-tickets` strips them before the io-equality check and
+**hard-blocks a README-producing ticket whose `skills:` lacks `documentation`** (poka-yoke, run 13-07).
+
 ## Mandatory machine-readable header (MUST — the router's contract)
 
 Every ticket file `tickets/NN-*.md` **MUST start** with a strict YAML front-matter header so the
@@ -90,9 +109,9 @@ BEFORE the modules and their unit tests. Order the backlog exactly:
 2. **scaffold** — clone the stack template → runnable placeholder (`service-scaffold`);
 3. **component tests (RED)** — realized from the designed scenarios, tagged `@wip` (`component-tests`) — **precedes every module ticket**;
 4. **module tickets** — one per module-tree node (cutting formula below);
-5. **wiring** — `register.go` (Deps + route) + mount in `cmd/app/main.go` (`501` → live API — exposes the endpoint);
-6. **README** — root `README.md` from the design (∥ wiring).
-   The slice is then **closed by the `@linger` acceptance step** (remove `@wip` + run build/unit/component green +
+5. **wiring** — `register.go` (Deps + route) + mount in `cmd/app/main.go` (`501` → live API — exposes the endpoint).
+   (**No README ticket** — the repo `README.md` is authored earlier by `@dijkstra` as a design artifact.)
+   The slice is then **closed by the `@fagan` acceptance step** (remove `@wip` + run build/unit/component green +
    verify every `TASK §DoD`) — a pipeline step, **NOT a ticket**. No file-producing «final».
 
 **MUST NOT** place the component-tests ticket after the module tickets — component tests are the
@@ -110,9 +129,10 @@ Anti-example (WRONG): `module` ticket `blocked_by: [01]` (scaffold only). RIGHT:
 
 ### Cutting formula (antecedent → consequent)
 
-`T = 1 scaffold + 1 component(RED,@wip) + N + wiring + README` — **N = module-tree node count**. There is
-**no file-producing `final`** — `@linger`'s acceptance closes DoD (green + verify), not a ticket. Dependency-order
-the module tickets (a module before its consumers) via `blocked_by`; `wiring` blocked_by all modules, `README` ∥.
+`T = 1 scaffold + 1 component(RED,@wip) + N + wiring` — **N = module-tree node count**. The repo `README.md`
+is **not** a ticket (design artifact by `@dijkstra`). There is **no file-producing `final`** — `@fagan`'s
+acceptance closes DoD (green + verify), not a ticket. Dependency-order the module tickets (a module before
+its consumers) via `blocked_by`; `wiring` blocked_by all modules.
 
 **One ticket = one contract (MUST):** one antecedent **P** (`Input`+`Deps`) → one consequent **Q**
 (`Result<T,E>`). Two P→Q in a ticket = ≥2 modules → split; "always changes together" is one module (one

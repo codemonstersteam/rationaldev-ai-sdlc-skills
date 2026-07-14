@@ -20,19 +20,19 @@ if ($LASTEXITCODE -ne 0) { Fail "skill-index устарел" }; Ok
 # --- Claude: раскладка ---
 $P = Join-Path $Tmp 'claude'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" claude -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 16) { Fail "claude: ролей не 16" }; Ok
+if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 18) { Fail "claude: ролей не 18" }; Ok
 if (-not (Test-Path "$P/.claude/skills/memory/SKILL.md")) { Fail "claude: нет скилла memory" }; Ok
 if (-not (Test-Path "$P/CLAUDE.md")) { Fail "claude: нет CLAUDE.md" }; Ok
 
 # --- OpenCode / Codex: раскладка ---
 $P = Join-Path $Tmp 'opencode'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" opencode -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 16) { Fail "opencode: агентов не 16" }; Ok
+if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 18) { Fail "opencode: агентов не 18" }; Ok
 if (-not (Test-Path "$P/AGENTS.md")) { Fail "opencode: нет AGENTS.md" }; Ok
 
 $P = Join-Path $Tmp 'codex'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 16) { Fail "codex: ролей не 16" }; Ok
+if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 18) { Fail "codex: ролей не 18" }; Ok
 if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Hughes' -Quiet)) { Fail "codex: в AGENTS.md нет блоков ролей" }; Ok
 
 # --- Недеструктивность: существующий AGENTS.md ---
@@ -52,37 +52,50 @@ if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'gate-check.mj
 $GC = "$Repo/harness/enforcement/claude/gate-check.mjs"
 $LD = "$Repo/harness/enforcement/claude/log-decision.mjs"
 
-# gate-check: hughes без апрува → блок (exit 2)
-$D = Join-Path $Tmp 'gate-block'; New-Item -ItemType Directory -Force -Path $D | Out-Null
+# gate-check: фронтдор — без brd.md роутить можно ТОЛЬКО @gilb
+$D = Join-Path $Tmp 'frontdoor'; New-Item -ItemType Directory -Force -Path $D | Out-Null
+Push-Location $D
+'{"tool_input":{"subagent_type":"wirth-triage"}}' | node $GC 2>$null
+if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "фронтдор не заблокировал триаж без brd.md" }; Ok
+'{"tool_input":{"subagent_type":"gilb"}}' | node $GC
+if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "фронтдор заблокировал gilb" }; Ok
+Pop-Location
+
+# gate-check: hughes без апрува → блок (brd.md есть, ловим Gate #1)
+$D = Join-Path $Tmp 'gate-block'; New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
+New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null
 Push-Location $D
 '{"tool_input":{"subagent_type":"hughes"}}' | node $GC 2>$null
 if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "gate не заблокировал hughes без апрува" }; Ok
 Pop-Location
 
-# gate-check: hughes с апрувом → проход (exit 0)
+# gate-check: hughes с апрувом → проход (brd + plan-review + gate1)
 $D = Join-Path $Tmp 'gate-pass'
 New-Item -ItemType Directory -Force -Path "$D/.agent/plan-reviewer" | Out-Null
 New-Item -ItemType Directory -Force -Path "$D/.agent/gates" | Out-Null
+New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/plan-reviewer/plan-review.md" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/gates/gate1.approved" | Out-Null
+New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null
 Push-Location $D
 '{"tool_input":{"subagent_type":"hughes"}}' | node $GC
 if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "gate заблокировал при апруве" }; Ok
 Pop-Location
 
-# gate-check: planner проходит свободно
-$D = Join-Path $Tmp 'gate-planner'; New-Item -ItemType Directory -Force -Path $D | Out-Null
+# gate-check: не-implementer после фронтдора (brd.md есть) проходит
+$D = Join-Path $Tmp 'gate-planner'; New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
+New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null
 Push-Location $D
-'{"tool_input":{"subagent_type":"planner"}}' | node $GC
-if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "gate заблокировал planner" }; Ok
+'{"tool_input":{"subagent_type":"wirth-planner"}}' | node $GC
+if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "gate заблокировал wirth-planner" }; Ok
 Pop-Location
 
 # log-decision: дописывает decisions.log
 $D = Join-Path $Tmp 'loghook'; New-Item -ItemType Directory -Force -Path $D | Out-Null
 Push-Location $D
-'{"tool_input":{"subagent_type":"planner"}}' | node $LD
+'{"tool_input":{"subagent_type":"wirth-planner"}}' | node $LD
 Pop-Location
-if (-not (Select-String -Path "$D/.agent/decisions.log" -Pattern 'role=planner' -Quiet)) { Fail "log-decision не записал роль" }; Ok
+if (-not (Select-String -Path "$D/.agent/decisions.log" -Pattern 'role=wirth-planner' -Quiet)) { Fail "log-decision не записал роль" }; Ok
 if (-not (Select-String -Path "$D/.agent/decisions.log" -Pattern 'via=claude-hook' -Quiet)) { Fail "log-decision без via" }; Ok
 
 # Раздача моделей по ролям (тир + оверрайд + наследование), самовосстановление конфига

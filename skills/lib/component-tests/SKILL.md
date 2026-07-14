@@ -29,9 +29,10 @@ inputs are subcommands.
 Isolation is uniform: the whole environment runs in **Docker Compose**. Service — the
 service plus its dependencies. CLI — the binary in a container (run as a one-shot compose
 service against fixtures) plus its dependencies as compose services, **including a stub of
-each external API** (e.g. an LLM endpoint) reached by service name. The stub is a real
-service speaking the real protocol — **never an in-code mock**. This choice is fixed:
-component tests always run in Docker Compose.
+each external API** (e.g. an LLM endpoint) reached by service name. The stub is a **stub, not a
+mock** (Fowler, *Mocks Aren't Stubs*; Meszaros' test-double taxonomy): a real collaborator answering
+over the real protocol, never an in-code fake — you verify behaviour through the **real boundary**,
+not against a rigged internal double. This choice is fixed: component tests always run in Docker Compose.
 
 ## Principle — contract first
 

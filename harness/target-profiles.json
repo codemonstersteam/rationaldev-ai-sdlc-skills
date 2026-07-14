@@ -1,0 +1,22 @@
+{
+  "//": "ЕДИНЫЙ ИСТОЧНИК вертикалей формы (target shape). Стадии харнеса ДЕЛЕГИРУЮТ профилю, а не ветвят по shape (open-closed / vertical-slice — харнес ест свой корм). Добавить форму = + один профиль здесь (+ раздел в skills/lib/target-profiles), 0 правок стадий. Форму проекта объявляет @gilb/@wirth-intake в .agent/planner/target (одно слово: service|cli); нет маркера → default. Читают: validate-dod.mjs, validate-contract-frozen.mjs, scaffold.sh; документирует skills/lib/target-profiles.",
+  "default": "service",
+  "profiles": {
+    "service": {
+      "//": "HTTP-сервис (как было): контракт OpenAPI, ingress http, шаблон template-go-api.",
+      "contract": ["openapi.yaml"],
+      "ingress_skill": "http-io",
+      "template": "template-go-api",
+      "readme_sections": ["failure-map", "api", "build-run"],
+      "ctest": "compose-service"
+    },
+    "cli": {
+      "//": "CLI-инструмент: контракт = JSON-Schema конфига (вход-DTO) + JSON-Schema отчёта (выход) + exit-таблица; ingress cli-io; шаблон template-go-cli. См. skill cli-io.",
+      "contract": ["config.schema.json", "report.schema.json"],
+      "ingress_skill": "cli-io",
+      "template": "template-go-cli",
+      "readme_sections": ["failure-map", "usage", "build-run"],
+      "ctest": "one-shot-binary"
+    }
+  }
+}

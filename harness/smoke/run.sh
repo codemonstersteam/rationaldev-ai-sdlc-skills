@@ -26,22 +26,26 @@ node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness uni
 # --- Claude ---
 P="$TMP/claude"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" --no-input >/dev/null
-[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 16 ] || fail "claude: ролей не 16"; ok
+[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 18 ] || fail "claude: ролей не 18"; ok
 [ -f "$P/.claude/skills/memory/SKILL.md" ] || fail "claude: нет скилла memory"; ok
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
 # назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
 grep -q '^model:' "$P/.claude/agents/wirth-planner.md" || fail "claude: модель из конфига не проставлена"; ok
+# --hard: сгенерированный settings.json — ВАЛИДНЫЙ JSON (регресс: кавычки вокруг пути в command не экранировались)
+sh "$REPO/install.sh" claude "$P" --no-input --hard >/dev/null
+node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$P/.claude/settings.json" 2>/dev/null || fail "claude --hard: settings.json — битый JSON"; ok
+[ -f "$P/.claude/hooks/gate-approve.mjs" ] || fail "claude --hard: нет gate-approve хука"; ok
 
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"
 sh "$REPO/install.sh" opencode "$P" --no-input >/dev/null
-[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 16 ] || fail "opencode: агентов не 16"; ok
+[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 18 ] || fail "opencode: агентов не 18"; ok
 [ -e "$P/AGENTS.md" ] || fail "opencode: нет корневого AGENTS.md"; ok
 
 # --- Codex (сборка ролей в AGENTS.md) ---
 P="$TMP/codex"; mkdir -p "$P"
 sh "$REPO/install.sh" codex "$P" --no-input >/dev/null
-[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 16 ] || fail "codex: ролей не 16"; ok
+[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 18 ] || fail "codex: ролей не 18"; ok
 [ -f "$P/.agents/skills/memory/SKILL.md" ] || fail "codex: нет скилла memory"; ok
 grep -q "izi" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет izi"; ok
 grep -q "Hughes" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет блоков ролей"; ok
@@ -72,17 +76,22 @@ grep -q "PreToolUse" "$P/.claude/settings.json" || fail "claude --hard: settings
 # OpenCode-плагин: детерминированный смоук (Gate #1 + decisions.log)
 node "$REPO/harness/enforcement/opencode/guardrail.smoke.ts" >/dev/null || fail "opencode guardrail smoke упал"; ok
 
-# Claude gate-check: implementer без апрува → блок (exit != 0)
-D="$TMP/gate-block"; mkdir -p "$D"
+# Claude gate-check: фронтдор — без brd.md роутить можно ТОЛЬКО @gilb
+D="$TMP/frontdoor"; mkdir -p "$D"
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"wirth-triage"}}' | node "$GC" 2>/dev/null ); then fail "фронтдор не заблокировал триаж без brd.md"; fi; ok
+( cd "$D" && printf '{"tool_input":{"subagent_type":"gilb"}}' | node "$GC" ) || fail "фронтдор заблокировал @gilb (он и есть грил)"; ok
+
+# Claude gate-check: implementer без апрува → блок (exit != 0) — brd.md уже есть, ловим Gate #1
+D="$TMP/gate-block"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
 if ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" 2>/dev/null ); then fail "gate не заблокировал implementer без апрува"; fi; ok
 
-# Claude gate-check: implementer с апрувом → проход
-D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates"
-: > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"
+# Claude gate-check: implementer с апрувом → проход (brd.md + plan-review + gate1)
+D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates" "$D/.agent/planner"
+: > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" ) || fail "gate заблокировал при апруве"; ok
 
-# Claude gate-check: не-implementer проходит свободно
-D="$TMP/gate-planner"; mkdir -p "$D"
+# Claude gate-check: не-implementer после фронтдора проходит свободно (brd.md есть)
+D="$TMP/gate-planner"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"wirth-planner"}}' | node "$GC" ) || fail "gate заблокировал planner"; ok
 
 # Claude log-decision: дописывает decisions.log

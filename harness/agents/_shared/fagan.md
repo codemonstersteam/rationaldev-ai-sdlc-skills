@@ -65,6 +65,12 @@ Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; retu
    `api-specification/openapi.yaml`·`Dockerfile`·`docker-compose.yml`·`run-tests.sh` present ·
    `./run-tests.sh` exits 0 (Dockerized godog) · README carries its required headings incl.
    `## Карта режимов отказа`. Non-zero → reject by the named item.
+3. **README structural gate — `node harness/validate-readme.mjs .`** — the `documentation` skill's
+   **Procedure A skeleton** is machine-checked here: one-sentence intro, `Can / Cannot` block, failure
+   table carrying **every** `error.code`, run + `component-tests/` link, the retrievability ladder to
+   `docs/design/<slice>/`. `validate-dod` (step 2) checks only section **names**; this checks the skill's
+   real **structure**. Non-zero → README form incomplete → reject (the content skill was loaded, but the
+   OUTPUT must CONFORM, not just the skill be present — run 13-07).
 
 These validators are agent-agnostic and deterministic: running them is **not** acceptance — they only
 clear the mechanical floor, so your judgement is spent solely where it must be.
@@ -75,6 +81,12 @@ What no exit code can assert — read and judge (`doc-quality-review` for the RE
   `error.code` set the code emits** (not an invented table);
 - **config is file/env-driven — no hardcoded port/path/constant** (a literal like `8080` is acceptable
   only as a *documented default*, never a magic constant) — a judgement, not a grep.
+- **no artifact claims a state that contradicts the green reality.** `validate-dod` lists stale-marker
+  candidates (`placeholder`/`not implemented`/`stub`/`WIP` in README·`*.feature`·docs). For each, judge:
+  does it **lie** about the now-working service (`placeholder 501` on a green endpoint · «сервис не
+  реализован» in a passing scenario → **reject**, the text must be fixed) or is it **honest** scope/
+  tech-debt (`TODO: caching later` · «pagination — out of scope» → ok)? A green build carrying "not
+  done" prose is a reject — grep found the word, you decide if it lies.
 Any doubt → reject with the specific gap; never sign on "probably fine".
 
 ## Sign or reject
