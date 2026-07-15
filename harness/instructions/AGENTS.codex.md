@@ -561,17 +561,16 @@ sub-skill by type via `program-design` Step 6. Always emit a baseline `.agent/pl
 expand it + `.agent/planner/network-topology.md` on real NFR. Co-locate each slice's `CONTEXT.md` into
 its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).
 
-## ADR — record the load-bearing decisions HERE (MANDATORY, design phase)
-The hard-to-reverse, non-obvious architectural decisions are **made by you**, in design — not at fix time.
-So **you** record them as ADRs, not `@hughes`/`@linger` (they only record a *fix-time* trade-off, the rare
-case). For **every** decision that meets the three-condition rule — **hard-to-reverse + non-obvious + real
-alternatives existed** — write a numbered ADR in `docs/design/slice-<slug>/adr/` per `domain-modeling`'s
-**ADR-FORMAT** (1–3 sentences, sequential numbering). You already state these in prose in `module-tree.md`
-(«Key design decision», «the secret each module hides») — **promote the load-bearing ones to durable ADRs**
-so `@dijkstra`'s README ladder links live ADRs and the *why* survives past `.agent/decisions.log`. Typical
-qualifiers: a Parnas secret boundary chosen over an alternative, an `io:` classification, "outcome X is a
-verdict not a pipe error", a valid-by-construction choice. **Sparingly** — only genuine three-condition
-decisions, never a diary of every step; a slice with no hard trade-off may have **zero** ADRs (that is fine).
+## ADR — record the load-bearing decisions (MANDATORY)
+The hard-to-reverse, non-obvious architectural decisions are made **here, as you design** — so record them.
+For **every** decision meeting the three-condition rule — **hard-to-reverse + non-obvious + real alternatives
+existed** — write a numbered ADR in `docs/design/slice-<slug>/adr/` per `domain-modeling`'s **ADR-FORMAT**
+(1–3 sentences, sequential numbering). You already state these in prose in `module-tree.md` («Key design
+decision», «the secret each module hides») — **promote the load-bearing ones to durable ADRs** so the *why*
+survives past the moment it was decided. Typical qualifiers: a Parnas secret boundary chosen over an
+alternative, an `io:` classification, "outcome X is a verdict not a pipe error", a valid-by-construction
+choice. **Sparingly** — only genuine three-condition decisions, never a diary of every step; a slice with
+no hard trade-off has **zero** ADRs (that is fine).
 
 **Antecedent — before you design:** run `node harness/validate-contract-frozen.mjs`. The contract must
 be complete and frozen (`x-frozen`, paths/responses/schemas). Non-zero → return
@@ -629,17 +628,13 @@ You are **ONE stage** run **ONCE** (the README is repo-level, not per-slice); `i
 trees all exist. **Load ONLY the `documentation` skill** (+ its `md-formatting` companion) and follow its
 **Procedure A** pass-by-pass — it is your whole method.
 
-## Procedure A — your method (from the `documentation` skill)
-Author `README.md` at the repo root, passes in order (skill has the templates + checklist):
-- **A1** title + **one sentence** ≤20 words + the concept pointer line (`> Part of …`, only if a platform);
-- **A2** a **Can / Cannot** block — two lists, ≤12 words each;
-- **A5b** the **failure table** carrying **every `error.code`** from `api-specification/exit-codes.md`
-  (CLI: exit 0/1/2/3; HTTP: statuses) + one line on the error shape — 1:1 with the contract, invent no row;
-- **A6** run: copy-pasteable commands + a link to `component-tests/` (the path is stable even pre-scaffold);
-- **A7** the **links ladder** inward — `docs/design/<slice>/` (use-case / c4 / module-tree), architecture,
-  ADR — as **links**, not copied body.
-Skip A4/A5 (HTTP API table + per-endpoint pipe) for a `cli` target (one command). For multiple slices,
-one repo README aggregates them (A7 links each slice's design).
+## Procedure A — follow the `documentation` skill (single source — do NOT restate it here)
+Author `README.md` at the repo root **by the `documentation` skill's Procedure A** — its passes, templates
+and checklist live there; load it and follow them. The load-bearing passes: title + one-sentence intro +
+concept pointer · **Can / Cannot** · **pipe-description of each API/command** (for a CLI — the tool's
+data-flow pipe: «how it works and where it breaks» — NOT HTTP-only) · failure table with **every
+`error.code`** · run + `component-tests/` link · retrievability **links ladder** (design → architecture →
+ADR, as links). Multi-slice → one repo README aggregates them. `node harness/validate-readme.mjs .` = floor.
 
 ## Contract with izi
 - **In:** the frozen contract + all `docs/design/<slice>/*`. **Out:** root `README.md` — **NO git**,

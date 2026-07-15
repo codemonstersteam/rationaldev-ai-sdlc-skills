@@ -22,17 +22,13 @@ You are **ONE stage** run **ONCE** (the README is repo-level, not per-slice); `i
 trees all exist. **Load ONLY the `documentation` skill** (+ its `md-formatting` companion) and follow its
 **Procedure A** pass-by-pass — it is your whole method.
 
-## Procedure A — your method (from the `documentation` skill)
-Author `README.md` at the repo root, passes in order (skill has the templates + checklist):
-- **A1** title + **one sentence** ≤20 words + the concept pointer line (`> Part of …`, only if a platform);
-- **A2** a **Can / Cannot** block — two lists, ≤12 words each;
-- **A5b** the **failure table** carrying **every `error.code`** from `api-specification/exit-codes.md`
-  (CLI: exit 0/1/2/3; HTTP: statuses) + one line on the error shape — 1:1 with the contract, invent no row;
-- **A6** run: copy-pasteable commands + a link to `component-tests/` (the path is stable even pre-scaffold);
-- **A7** the **links ladder** inward — `docs/design/<slice>/` (use-case / c4 / module-tree), architecture,
-  ADR — as **links**, not copied body.
-Skip A4/A5 (HTTP API table + per-endpoint pipe) for a `cli` target (one command). For multiple slices,
-one repo README aggregates them (A7 links each slice's design).
+## Procedure A — follow the `documentation` skill (single source — do NOT restate it here)
+Author `README.md` at the repo root **by the `documentation` skill's Procedure A** — its passes, templates
+and checklist live there; load it and follow them. The load-bearing passes: title + one-sentence intro +
+concept pointer · **Can / Cannot** · **pipe-description of each API/command** (for a CLI — the tool's
+data-flow pipe: «how it works and where it breaks» — NOT HTTP-only) · failure table with **every
+`error.code`** · run + `component-tests/` link · retrievability **links ladder** (design → architecture →
+ADR, as links). Multi-slice → one repo README aggregates them. `node harness/validate-readme.mjs .` = floor.
 
 ## Contract with izi
 - **In:** the frozen contract + all `docs/design/<slice>/*`. **Out:** root `README.md` — **NO git**,
