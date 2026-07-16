@@ -1,6 +1,6 @@
 ---
 name: git-conventions
-description: Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker models: step-by-step commands, message validation, STOP rules.
+description: Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker tiers: step-by-step commands, message validation, STOP rules.
 version: "1.0"
 ---
 

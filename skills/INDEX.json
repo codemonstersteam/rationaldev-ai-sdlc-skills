@@ -55,7 +55,7 @@
       "path": "skills/lib/component-tests/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Design AND realize a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Two halves — DESIGN (a planner derives the scenario set by formula, Cockburn 1:1, tags @wip) and REALIZE (an implementer drops the designed .feature into the scaffolded skeleton, wires this slice's compose deps/stubs, adds any missing step-definition, proves every scenario RED by business reason). Use when you need new .feature files, more fixtures, a coverage assessment, or to make designed scenarios RED-ready. Do NOT use for unit tests or cross-service contract tests; cloning the skeleton is service-scaffold. Tier-agnostic, written for reliability on weaker models: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, RED-reason decision table, checklists, STOP rules."
+      "description": "Design AND realize a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Two halves — DESIGN (a planner derives the scenario set by formula, Cockburn 1:1, tags @wip) and REALIZE (an implementer drops the designed .feature into the scaffolded skeleton, wires this slice's compose deps/stubs, adds any missing step-definition, proves every scenario RED by business reason). Use when you need new .feature files, more fixtures, a coverage assessment, or to make designed scenarios RED-ready. Do NOT use for unit tests or cross-service contract tests; cloning the skeleton is service-scaffold. Tier-agnostic, written for reliability on weaker tiers: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, RED-reason decision table, checklists, STOP rules."
     },
     {
       "name": "contract-tests",
@@ -90,7 +90,7 @@
       "path": "skills/lib/documentation/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker models — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing)."
+      "description": "Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker tiers — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing)."
     },
     {
       "name": "domain-modeling",
@@ -104,21 +104,21 @@
       "path": "skills/lib/git-conventions/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker models: step-by-step commands, message validation, STOP rules."
+      "description": "Deterministic Git procedure following Trunk-Based Development. Use for all branch, commit and PR operations. Tier-agnostic, written for reliability on weaker tiers: step-by-step commands, message validation, STOP rules."
     },
     {
       "name": "http-io",
       "path": "skills/lib/http-io/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Designing an I/O object over HTTP to a metered / rate-limited external service — LLM, linter-as-a-service, embeddings, any external API. Use when a slice needs an outbound HTTP call and you must NOT overload the provider or send excess context. Backbone — two budgets (load and payload), computed in the slice design BEFORE code. Flow — curl probe → provider machine spec (OpenAPI/AsyncAPI; if the provider has none, write your own) → client, stub and unit/component test fixtures derived from it; budgets carried into tests as assertions. For LLM specifics (OpenAI-compatible protocol, response_format, fan-out over consumer roles) see the llm-client skill. Built for a weak model (Qwen3.5-397B-A17B, ~17B active): two budget formulas, decision tables, checklists, STOP rules."
+      "description": "Designing an I/O object over HTTP to a metered / rate-limited external service — LLM, linter-as-a-service, embeddings, any external API. Use when a slice needs an outbound HTTP call and you must NOT overload the provider or send excess context. Backbone — two budgets (load and payload), computed in the slice design BEFORE code. Flow — curl probe → provider machine spec (OpenAPI/AsyncAPI; if the provider has none, write your own) → client, stub and unit/component test fixtures derived from it; budgets carried into tests as assertions. For LLM specifics (OpenAI-compatible protocol, response_format, fan-out over consumer roles) see the llm-client skill. Built for weaker-tier models: two budget formulas, decision tables, checklists, STOP rules."
     },
     {
       "name": "implementation-ticket-writer",
       "path": "skills/lib/implementation-ticket-writer/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits Qwen3.6-27b, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP."
+      "description": "The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits a weaker tier, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP."
     },
     {
       "name": "llm-client",
@@ -132,7 +132,7 @@
       "path": "skills/lib/md-formatting/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Deterministic self-check and formatting procedure for Markdown documents. Use after writing or editing `.md` files to verify formatting before commit (blank lines around block elements, code-fence language tags, valid links/anchors). Tier-agnostic, written for reliability on weaker models: stepwise checks, grep/Python snippets, checklists, STOP rules."
+      "description": "Deterministic self-check and formatting procedure for Markdown documents. Use after writing or editing `.md` files to verify formatting before commit (blank lines around block elements, code-fence language tags, valid links/anchors). Tier-agnostic, written for reliability on weaker tiers: stepwise checks, grep/Python snippets, checklists, STOP rules."
     },
     {
       "name": "memory",
@@ -174,7 +174,7 @@
       "path": "skills/lib/program-implementation/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong, e.g. GLM / Qwen through Opus): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum."
+      "description": "Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong tiers): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum."
     },
     {
       "name": "queue-io",
@@ -216,14 +216,14 @@
       "path": "skills/lib/tmux-test-runner/SKILL.md",
       "version": "0.3",
       "status": "draft",
-      "description": "Run a long/interactive test command in a detached tmux pane with a shell watchdog that polls the pane, auto-answers only SAFE prompts via send-keys (default-yes confirms, Press-Enter, pager q) and pings the human for everything else (passwords, [y/N] default-no, destructive or unknown prompts). Use when tests may hang, ask for input, or run long enough that you should not block on them. Do NOT use for fast non-interactive tests — just run them. Written for weaker models (GLM-5.2): a script file (no quoting traps), a strict safe-prompt whitelist, short events. Needs bash + tmux."
+      "description": "Run a long/interactive test command in a detached tmux pane with a shell watchdog that polls the pane, auto-answers only SAFE prompts via send-keys (default-yes confirms, Press-Enter, pager q) and pings the human for everything else (passwords, [y/N] default-no, destructive or unknown prompts). Use when tests may hang, ask for input, or run long enough that you should not block on them. Do NOT use for fast non-interactive tests — just run them. Written for weaker tiers: a script file (no quoting traps), a strict safe-prompt whitelist, short events. Needs bash + tmux."
     },
     {
       "name": "vertical-slices",
       "path": "skills/lib/vertical-slices/SKILL.md",
       "version": "1.0",
       "status": "stable",
-      "description": "Cut a service (or task) into atomic vertical slices — the spine of the planning pipeline. Use right after requirements-intake (FRD + high-level plan exist) and BEFORE specs/design: each slice is one end-to-end path through all layers, tied to exactly one external input, demoable on its own, dependency-ordered. Out — a slice backlog that each downstream stage (use case, OpenAPI/AsyncAPI, component tests, program-design) consumes one slice at a time. Do NOT use to design a slice's module tree (that is program-design) or to write code. Tier-agnostic, built for weak models: rules, a granularity table, checklists, STOP rules."
+      "description": "Cut a service (or task) into atomic vertical slices — the spine of the planning pipeline. Use right after requirements-intake (FRD + high-level plan exist) and BEFORE specs/design: each slice is one end-to-end path through all layers, tied to exactly one external input, demoable on its own, dependency-ordered. Out — a slice backlog that each downstream stage (use case, OpenAPI/AsyncAPI, component tests, program-design) consumes one slice at a time. Do NOT use to design a slice's module tree (that is program-design) or to write code. Tier-agnostic, built for weaker tiers: rules, a granularity table, checklists, STOP rules."
     }
   ],
   "roles": [
