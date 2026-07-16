@@ -1,6 +1,6 @@
 ---
 name: md-formatting
-description: Deterministic self-check and formatting procedure for Markdown documents. Use after writing or editing `.md` files to verify formatting before commit (blank lines around block elements, code-fence language tags, valid links/anchors). Tier-agnostic, written for reliability on weaker models: stepwise checks, grep/Python snippets, checklists, STOP rules.
+description: Deterministic self-check and formatting procedure for Markdown documents. Use after writing or editing `.md` files to verify formatting before commit (blank lines around block elements, code-fence language tags, valid links/anchors). Tier-agnostic, written for reliability on weaker tiers: stepwise checks, grep/Python snippets, checklists, STOP rules.
 version: "1.0"
 ---
 

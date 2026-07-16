@@ -1,15 +1,15 @@
 ---
 name: implementation-ticket-writer
-description: The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits Qwen3.6-27b, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP.
+description: The SECOND planner — turn the operator-approved design package (program-design) into implementation tickets one at a time, each carrying the MINIMAL atomic context that fits a weaker tier, with the exact io sub-skills attached by a deterministic router (io: type → skills). Use at stage 11, after Gate #1, to prepare per-module/per-slice tickets an implementer subagent executes independently (tests → module → green → mark done). Do NOT design module trees/contracts (program-design) or write code (program-implementation). Tier-agnostic: io-router table, a minimal-context checklist, STOP.
 version: "1.0"
 status: "stable"
 ---
 
-# implementation-ticket-writer — cut Qwen-sized implementation tickets
+# implementation-ticket-writer — cut small-tier-sized implementation tickets
 
 **In:** the operator-approved (`Gate #1`) design package from `program-design` — slices, module
 trees, contracts with `io:`, unit-test formulas, Gherkin-mapping. **Out:** an implementation backlog
-where **each ticket is self-contained and fits Qwen3.6-27b** — one ticket = one slice/module = one
+where **each ticket is self-contained and fits a weaker tier** — one ticket = one slice/module = one
 implementer subagent. This is the **second planner** (`docs/04_PLANNING_PIPELINE.md` §7): the first
 planner *designs*; this pass *packages* the design into minimal-context tickets. It writes tickets —
 it does **not** design or implement.
@@ -19,7 +19,7 @@ it does **not** design or implement.
 
 ## Minimal-context principle (the whole point)
 
-A ticket must carry **only what its module needs**, not the full design package. A Qwen-sized ticket
+A ticket must carry **only what its module needs**, not the full design package. A small-tier-sized ticket
 holds: the module contract (Input/Deps/`io:`/antecedent/consequent), the exact unit-test list (by
 formula), the component scenario(s) it must green, the io sub-skill(s) for its `io:`, and its
 dependencies — nothing else. If a ticket needs the whole package to be understood, it is too big —
@@ -147,18 +147,18 @@ logic; **DoD-closure is `@linger`'s acceptance step, not a ticket** — there is
 2. No module ticket carries >1 contract (>1 P→Q); **no ticket bundles wiring+README+deploy** (single-concern — `validate-plan` blocks it).
 3. **No file-producing `final`** — DoD-closure is `@linger`'s acceptance step; `wiring`/`README` carry no module logic.
 4. No ticket delivers "all scenarios green" / "assemble the service"; green is nowhere a deliverable (fixer's, §6).
-5. Each ticket completes from only `{ticket + inputs}` — self-contained, Qwen-sized.
+5. Each ticket completes from only `{ticket + inputs}` — self-contained, small-tier-sized.
 
 ## STOP
 
 - The design package is not operator-approved (Gate #1 not passed) → STOP.
 - A module has no `io:` field → STOP, back to `program-design` Step 5 (can't route).
-- A ticket won't fit Qwen3.6-27b even after splitting to one module → STOP, report (module too big — a design smell, back to `program-design`).
+- A ticket won't fit a weaker tier even after splitting to one module → STOP, report (module too big — a design smell, back to `program-design`).
 - Asked to design or to implement here → STOP (wrong role).
 
 ## Definition of Done
 
-One ticket per module/slice, dependency-ordered, each self-contained and Qwen-sized; every ticket has
+One ticket per module/slice, dependency-ordered, each self-contained and small-tier-sized; every ticket has
 `io:` + the router-attached skills (implementer selects nothing); the component-test ticket carries the
 `@wip` acceptance, module tickets carry unit-by-formula; the backlog assembles the whole service →
 hand off to `program-implementation`.

@@ -1,6 +1,6 @@
 ---
 name: tmux-test-runner
-description: Run a long/interactive test command in a detached tmux pane with a shell watchdog that polls the pane, auto-answers only SAFE prompts via send-keys (default-yes confirms, Press-Enter, pager q) and pings the human for everything else (passwords, [y/N] default-no, destructive or unknown prompts). Use when tests may hang, ask for input, or run long enough that you should not block on them. Do NOT use for fast non-interactive tests — just run them. Written for weaker models (GLM-5.2): a script file (no quoting traps), a strict safe-prompt whitelist, short events. Needs bash + tmux.
+description: Run a long/interactive test command in a detached tmux pane with a shell watchdog that polls the pane, auto-answers only SAFE prompts via send-keys (default-yes confirms, Press-Enter, pager q) and pings the human for everything else (passwords, [y/N] default-no, destructive or unknown prompts). Use when tests may hang, ask for input, or run long enough that you should not block on them. Do NOT use for fast non-interactive tests — just run them. Written for weaker tiers: a script file (no quoting traps), a strict safe-prompt whitelist, short events. Needs bash + tmux.
 version: "0.3"
 status: draft
 ---
@@ -89,7 +89,7 @@ STALL tst | <last 3 lines> | answer it: `tmux attach -t tst`
 **NEVER auto-answer → escalate as `PROMPT`:** `[y/N]` and plain `(yes/no)` (default is **no**,
 often a destructive/important question the watchdog can't judge), `password`/`passphrase`/
 `secret`/`token`, or any unknown line ending in `?`/`:`/`>`. Safety is decided by the prompt's
-*default*, not its wording — a weak model must not guess intent.
+*default*, not its wording — a weaker-tier model must not guess intent.
 
 ### STOP rules
 - You poll the pane "by hand" each turn → stop. The `while` loop (S2) polls; you read `/tmp/tst.ev`.

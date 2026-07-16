@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker models — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing).
+description: Deterministic procedure for creating and maintaining a service repository's documentation as a product, for four JTBD consumers (author-engineer, consumer-engineer, concept-level consumer, AI agent). Written for reliability on weaker tiers — stepwise passes, router tables instead of judgement, hard numeric limits, STOP rules, fill-in templates, final checklist. Apply when assembling or updating README or docs/architecture.md, deciding which file a piece of content belongs in, or updating docs on a change trigger. Do NOT apply for reviewing already-written docs (use doc-quality-review) or for the concept platform landing (use platform-landing).
 version: "1.0"
 ---
 

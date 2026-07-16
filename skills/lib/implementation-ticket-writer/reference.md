@@ -4,7 +4,7 @@
 > собрал header по контракту в `SKILL.md`): аннотированный шаблон, спец-правило component-тикета,
 > foundations. Правила маршрутизации/порядка/STOP — в `SKILL.md`.
 
-## Ticket template (minimal, Qwen-sized) — body after the header
+## Ticket template (minimal, small-tier-sized) — body after the header
 
 Reuse the `program-design` ticket template (`reference/ticket-template.md`) but **trim to this
 module's rows**. Each ticket carries (below the header):
@@ -60,6 +60,6 @@ becomes a mid-implementation surprise → wasted fixer round).
 
 ## Foundations
 
-Second-planner / context-minimization for weak models (Qwen3.6-27b). Consumes `program-design`
+Second-planner / context-minimization for weaker-tier models. Consumes `program-design`
 (design package + `io:` field), routes io sub-skills (`http-io`/`llm-client`/`queue-io`/`db-io`/
 `db-schema`), hands off to `program-implementation`. Router source: `docs/04_PLANNING_PIPELINE.md` §4.

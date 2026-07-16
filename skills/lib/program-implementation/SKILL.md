@@ -1,6 +1,6 @@
 ---
 name: program-implementation
-description: Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong, e.g. GLM / Qwen through Opus): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum.
+description: Implementing a program ticket by ticket via Trunk Based Development. Use when a design package `.agent/planner/design/<slug>/` exists with an operator-approved handoff checklist, and slices are to be implemented one at a time (one ticket = one slice = one branch = one PR). Do NOT use if the package is incomplete, the checklist is not operator-approved, or a spec contradiction is found — stop and report. Tier-agnostic (weak to strong tiers): explicit MUST / MUST NOT / STOP gates, decision tables and checklists carry the essence without bloat — the optimum, not the minimum.
 version: "1.0"
 ---
 
