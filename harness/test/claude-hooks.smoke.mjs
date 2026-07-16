@@ -53,23 +53,32 @@ assert.equal(runHook("gate-bash.mjs", green, { CLAUDE_PROJECT_DIR: dir }), 0, "g
 // fail-open: битый JSON не блокирует
 assert.equal(spawnSync("node", [join(HOOKS, "gate-bash.mjs")], { input: "not json" }).status, 0, "битый JSON → fail-open"); pass++
 
-// gate-approve: UserPromptSubmit ставит маркер Gate #1 на «акцепт» (паритет с opencode chat.message)
+// gate-approve: UserPromptSubmit ставит маркер Gate #1 ТОЛЬКО на явный токен «GATE1 APPROVE»
 const adir = await mkdtemp(join(tmpdir(), "claude-approve-"))
 const marker = join(adir, ".agent", "gates", "gate1.approved")
 runHook("gate-approve.mjs", { prompt: "ну что, поехали дальше" }, { CLAUDE_PROJECT_DIR: adir })
 assert.ok(!existsSync(marker), "не-акцепт → маркера нет"); pass++
-// акцепт, но план НЕ собран → маркера НЕТ (гейт: «go ahead» на ранней фазе не проходит)
-runHook("gate-approve.mjs", { prompt: "акцепт, план ок" }, { CLAUDE_PROJECT_DIR: adir })
-assert.ok(!existsSync(marker), "акцепт без PLAN.md → маркера нет (план не готов)"); pass++
-// собираем PLAN.md → теперь акцепт валиден
+// собираем PLAN.md (planReadyForApproval=true) — но согласие всё равно требует токена
 await mkdir(join(adir, "docs", "design", "slice-x"), { recursive: true })
 await writeFile(join(adir, "docs", "design", "slice-x", "PLAN.md"), "# plan\n")
-runHook("gate-approve.mjs", { prompt: "акцепт, план ок" }, { CLAUDE_PROJECT_DIR: adir })
-assert.ok(existsSync(marker), "акцепт с PLAN.md → маркер создан"); pass++
+// РЕГРЕССИЯ (run 16-07): свободные «go ahead / approve / акцепт» БОЛЬШЕ НЕ согласие даже при готовом плане
+runHook("gate-approve.mjs", { prompt: "ок, go ahead — approve, акцепт, принял план" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(!existsSync(marker), "свободные слова + PLAN.md → маркера НЕТ (нужен явный токен)"); pass++
+// токен «GATE1 APPROVE», но план НЕ собран — проверим на чистом каталоге
+const adir2 = await mkdtemp(join(tmpdir(), "claude-approve2-"))
+const marker2 = join(adir2, ".agent", "gates", "gate1.approved")
+runHook("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir2 })
+assert.ok(!existsSync(marker2), "токен без PLAN.md → маркера нет (план не готов)"); pass++
+await rm(adir2, { recursive: true, force: true })
+// токен + готовый план → маркер создан
+runHook("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(existsSync(marker), "GATE1 APPROVE + PLAN.md → маркер создан"); pass++
 const first = readFileSync(marker, "utf8")
-runHook("gate-approve.mjs", { prompt: "approve again" }, { CLAUDE_PROJECT_DIR: adir })
+assert.match(first, /prompt\tGATE1 APPROVE slice-x/, "маркер несёт точную реплику оператора (provenance)"); pass++
+assert.match(first, /plan_hash\t[0-9a-f]{16}/, "маркер несёт хеш снимка плана (provenance)"); pass++
+runHook("gate-approve.mjs", { prompt: "gate1 approve" }, { CLAUDE_PROJECT_DIR: adir })
 assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобберит первый акцепт"); pass++
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/17 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + approve+plan-ready)`)
+console.log(`PASS ${pass}/20 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)

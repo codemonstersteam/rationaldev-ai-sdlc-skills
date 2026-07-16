@@ -72,7 +72,26 @@ export function parseTicketOutputs(text) {
   return m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
 }
 
-// Оператор написал «акцепт/approve/go ahead» (Gate #1 акцепт из чата)?
+// Явный ТОКЕН-КОМАНДА акцепта Gate #1 — НЕ свободный текст. Оператор ДОЛЖЕН написать «GATE1 APPROVE»
+// (регистр не важен, опц. имя слайса после). Свободные «go ahead / approve / акцепт / принял план»
+// БОЛЬШЕ НЕ считаются согласием: они ложно ставили человеческий гейт по случайной фразе (run 16-07:
+// маркер за 20с после презентации плана по попутной реплике). Осознанный токен = poka-yoke, а не
+// NLP-догадка. Ручной `touch` маркера оператором вне сессии — по-прежнему валиден (out-of-band).
 export function isOperatorApproval(text) {
-  return /(^|[\s.,!])(акцепт|акцептую|approve|принял план|gate1[- ]?ok|go ahead)([\s.,!]|$)/.test(String(text).toLowerCase())
+  return /\bgate1\s+approve\b/i.test(String(text))
+}
+
+// Содержимое маркера Gate #1 — PROVENANCE акцепта (аудит, НЕ enforcement: gate-check смотрит только
+// существование файла, дрейф плана НЕ ре-блокирует). Несёт: когда, каким раннером, ПО КАКОЙ реплике
+// оператора и хеш снимка плана НА ТОТ МИГ — чтобы акцепт был привязуем к реальному решению.
+// planHash считает вызывающий (fs+crypto). Формат — TSV-строки; prompt санитизируется (без tab/newline).
+export function gateMarkerContent({ timestamp, source, prompt, planHash }) {
+  const one = (s) => String(s ?? "").replace(/[\t\r\n]+/g, " ").trim().slice(0, 500)
+  return [
+    `approved_at\t${timestamp}`,
+    `source\t${source}`,
+    `plan_hash\t${planHash ?? "na"}`,
+    `prompt\t${one(prompt)}`,
+    "",
+  ].join("\n")
 }
