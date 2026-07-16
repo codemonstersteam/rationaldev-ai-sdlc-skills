@@ -6,7 +6,7 @@ import { join } from "node:path"
 // ЕДИНЫЙ источник enforcement-логики (общий с claude-хуками) — не расходиться.
 import {
   PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
-  parseTicketOutputs, isOperatorApproval, planReadyForApproval, DESIGN_DIR,
+  parseTicketOutputs, isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK,
 } from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -28,6 +28,22 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
 
   const exists = async (p: string) => {
     try { await access(p); return true } catch { return false }
+  }
+
+  // Хеш снимка плана НА МОМЕНТ акцепта (аудит, паритет с claude gate-approve.mjs):
+  // все docs/design/*/PLAN.md (sorted) + plan-review.md. best-effort → "na".
+  const planHashSnapshot = async (): Promise<string> => {
+    try {
+      const parts: string[] = []
+      const designDir = join(root, DESIGN_DIR)
+      const dirs = (await readdir(designDir, { withFileTypes: true }))
+        .filter((e: any) => e.isDirectory()).map((e: any) => e.name).sort()
+      for (const d of dirs) {
+        try { parts.push(d + "\n" + await readFile(join(designDir, d, "PLAN.md"), "utf8")) } catch { /* нет PLAN.md */ }
+      }
+      try { parts.push("plan-review\n" + await readFile(join(root, PLAN_REVIEW_MARK), "utf8")) } catch { /* нет ревью */ }
+      return parts.length ? createHash("sha256").update(parts.join("\n---\n")).digest("hex").slice(0, 16) : "na"
+    } catch { return "na" }
   }
 
   // (T09b) 504/сеть-resilience В ПЛАГИНЕ (замена tmux-сайдкара): на session.error (провайдер оборвался/
@@ -195,7 +211,8 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
       }
     },
 
-    // Gate #1 акцепт БЕЗ touch: оператор пишет «акцепт» в чат → плагин ставит маркер.
+    // Gate #1 акцепт БЕЗ touch: оператор пишет явный ТОКЕН «GATE1 APPROVE» в чат → плагин ставит маркер.
+    // Свободные «go ahead / approve / акцепт» больше НЕ согласие (ложно ставили гейт по случайной фразе).
     // Это сообщение ОПЕРАТОРА (role=user), агент его подделать не может; сам маркер агенту
     // по-прежнему запрещён (tool.execute.before выше). Реализует «флоу от команды оператора».
     "chat.message": async (_input: any, output: any) => {
@@ -211,8 +228,14 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
           const existsFn = (rel: string) => existsSync(join(root, rel))
           const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
           if (!planReadyForApproval(existsFn, sliceDirsFn)) return
+          if (await exists(gate1)) return                   // первый акцепт фиксируется, повтор не клобберит
           await mkdir(join(agentDir, "gates"), { recursive: true })
-          await writeFile(gate1, new Date().toISOString() + "\toperator-approval-via-chat\n")
+          await writeFile(gate1, gateMarkerContent({
+            timestamp: new Date().toISOString(),
+            source: "operator-approval-via-chat",
+            prompt: text,
+            planHash: await planHashSnapshot(),
+          }))
         }
       } catch {
         // best-effort: сбой записи не валит сессию

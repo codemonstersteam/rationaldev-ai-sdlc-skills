@@ -155,12 +155,14 @@ operator** and route by the FIXED table (mechanics, not judgement):
 ticket list (the planner already assembled them there). Copy from the artifact; invent nothing (you are a
 router). Then ask the accept `question`.
 
-Ask the operator a `question` and **wait**. The operator writes **"акцепт"/"approve"** → the
-`rational-guardrail` plugin **itself** creates `.agent/gates/gate1.approved`.
+Ask the operator a `question` and **wait**. Acceptance is an **explicit token command** — the operator must
+write exactly **`GATE1 APPROVE`** (optionally with the slice name). Loose words ("ok", "go ahead", "approve",
+"акцепт") are **NOT** acceptance and will not pass the gate — tell the operator to type `GATE1 APPROVE` to
+accept. On that token the enforcement hook **itself** creates `.agent/gates/gate1.approved`.
 
-- **THE PLUGIN SETS THE MARKER, NOT YOU. You MUST NEVER `touch`/`>`/write/edit `.agent/gates/gate1.approved`** —
+- **THE HOOK SETS THE MARKER, NOT YOU. You MUST NEVER `touch`/`>`/write/edit `.agent/gates/gate1.approved`** —
   it is forbidden and the plugin will block it (do not try).
-- After the operator's "approve" you MUST NOT set the marker — **verify it** with `ls .agent/gates/gate1.approved`.
+- After the operator's `GATE1 APPROVE` you MUST NOT set the marker — **verify it** with `ls .agent/gates/gate1.approved`.
   Present → begin implementation (ticket 01). If your `touch` was blocked, that is **normal and expected** —
   the marker already exists from the operator's approval; just re-read `ls` and continue.
 - **Do NOT ask the operator to `touch` manually** — the plugin already did it.
