@@ -8,6 +8,15 @@
 
 > Унификация скиллов/ролей (DRY: A, A2, B, C, D, D2, E) — **завершена**, см. Done.
 
+### Landed (сессия 14-07)
+- [x] **ADR перенесён в дизайн-фазу — `@wirth-moduledesigner` = PRIMARY ADR-автор (обязательный шаг).**
+  Наблюдение: труднообратимые/неочевидные архитектурные решения ПРИНИМАЮТСЯ в дизайне (Parnas-границы,
+  io-router, «вердикт не ошибка пайпа», valid-by-construction), а ADR-авторство висело на `@hughes`/`@linger`
+  (имплементация/фиксы) — перевёрнуто. moduledesigner уже грузит `domain-modeling` (ADR-FORMAT) → на один шаг
+  от записи. Фикс: обязательный ADR-шаг в moduledesigner (three-condition, sparingly, `docs/design/slice-<slug>/adr/`);
+  hughes/linger — только редкий fix-time ADR. Лестница README `@dijkstra` теперь ведёт в живые ADR, «почему»
+  не теряется в `.agent/decisions.log`. Сверено: таблица авторов в `domain-modeling` Ф-табле.
+
 ### Landed (сессия 12-07, ветка feat/gilb-frontdoor)
 - [x] **Фронтдор — механический poka-yoke.** Проза в izi.md не держит (модель 2× проскочила @gilb → триаж);
   инвариант «пока нет `.agent/planner/brd.md`, единственная разрешённая делегация — @gilb» унесён в хук

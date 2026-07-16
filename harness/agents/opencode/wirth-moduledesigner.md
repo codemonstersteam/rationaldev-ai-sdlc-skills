@@ -64,6 +64,17 @@ sub-skill by type via `program-design` Step 6. Always emit a baseline `.agent/pl
 expand it + `.agent/planner/network-topology.md` on real NFR. Co-locate each slice's `CONTEXT.md` into
 its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).
 
+## ADR — record the load-bearing decisions (MANDATORY)
+The hard-to-reverse, non-obvious architectural decisions are made **here, as you design** — so record them.
+For **every** decision meeting the three-condition rule — **hard-to-reverse + non-obvious + real alternatives
+existed** — write a numbered ADR in `docs/design/slice-<slug>/adr/` per `domain-modeling`'s **ADR-FORMAT**
+(1–3 sentences, sequential numbering). You already state these in prose in `module-tree.md` («Key design
+decision», «the secret each module hides») — **promote the load-bearing ones to durable ADRs** so the *why*
+survives past the moment it was decided. Typical qualifiers: a Parnas secret boundary chosen over an
+alternative, an `io:` classification, "outcome X is a verdict not a pipe error", a valid-by-construction
+choice. **Sparingly** — only genuine three-condition decisions, never a diary of every step; a slice with
+no hard trade-off has **zero** ADRs (that is fine).
+
 **Antecedent — before you design:** run `node harness/validate-contract-frozen.mjs`. The contract must
 be complete and frozen (`x-frozen`, paths/responses/schemas). Non-zero → return
 `STOP: contract not frozen/incomplete — <what>` to izi. Design against the frozen contract, never by guessing.

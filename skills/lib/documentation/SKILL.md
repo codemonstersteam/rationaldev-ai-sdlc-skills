@@ -102,22 +102,23 @@ A "Can / Cannot" block — two lists. Each item ≤ 12 words.
 Table `component → technology`. Only what is actually used.
 (Check: table, not prose.)
 
-**Pass A4 — API table.**
-Table `method | resource | action`. Source of truth — `api-specification/`.
-No contract → STOP (section 2).
-(Check: each row matches an endpoint from the spec.)
+**Pass A4 — API/command table.**
+For a **service** — `method | resource | action`; for a **CLI** — `command | args | action`. Source of
+truth — `api-specification/` (spec / config+exit-codes). No contract → STOP (section 2).
+(Check: each row matches an endpoint (service) or a command (CLI) from the contract.)
 
-**Pass A5 — Pipe description of each API.**
-For each endpoint — data flow by steps via `|`. Template:
+**Pass A5 — Pipe description of each API/command (ANY program — NOT HTTP-only).**
+Data flow by steps via `|`. For a **service** — one pipe per endpoint; for a **CLI** — the command's
+data-flow (the ROP head-pipe). Pipe = "how it works and where it can break"; the A4 table = "what exists".
+Templates (HTTP · CLI):
 ```
-POST /v1/registrations
-| Accept handle from client
-| Generate challenge (32 bytes, TTL 5 min)
-| Store challenge in DB
-| Return challenge + WebAuthn options → 201
+POST /v1/registrations                 pinout-openapi run <config>
+| Accept handle from client            | Read + validate config
+| Generate challenge (32 bytes, 5 min) | Load provider spec ($ref-resolved)
+| Store challenge in DB                 | Compare consumed-contract ↳ provider schema
+| Return challenge + options → 201     | Write report → exit 0 | 1 | 2 | 3
 ```
-Pipe = "how it works and where it can break". The A4 table = "what exists". Both are needed.
-(Check: number of pipe blocks = number of rows in the API table.)
+(Check: a pipe block per endpoint (service) or per command (CLI) — a single-command CLI still needs ≥1 pipe.)
 
 **Pass A5b — Failure table and error model.**
 Table `return code → meaning → error codes`. For CLI — `exit` (0 success / N…); for HTTP — statuses. Source — the error dictionary from the contract/design (`error.code`), not from the code.
