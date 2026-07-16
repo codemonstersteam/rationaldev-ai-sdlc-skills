@@ -9,7 +9,7 @@ status: "stable"
 
 > **Status: Ф0 skeleton** (feature [`domain-context-adr-layout`](../../../docs/features/domain-context-adr-layout.md)).
 > Role-wiring (intake/slicer/documentation) lands in Ф1–Ф3; this file already carries the **format + structure**
-> so the others can *reference* it — «по одной копии», без дублирования формата в трёх скиллах.
+> so the others can *reference* it — one copy, no format duplication across the three skills.
 
 ## Purpose
 
@@ -31,7 +31,7 @@ slice-scoped knowledge — they live in the slice's **design package**, keyed by
 
 Knowledge lives in the **design package**, not inside the code folder: `internal/<slug>/` does not exist
 until scaffold (after Gate #1), while `CONTEXT.md` is born at planning (intake). Code and knowledge are two
-trees bound by one `<slug>` (спайка с [`slice-aligned-code-layout`](../../../docs/features/slice-aligned-code-layout.md)).
+trees bound by one `<slug>` (coupled with [`slice-aligned-code-layout`](../../../docs/features/slice-aligned-code-layout.md)).
 
 **Single context (most tasks — stays laconic):**
 
