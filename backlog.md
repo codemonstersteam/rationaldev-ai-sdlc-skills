@@ -29,14 +29,15 @@
   hughes: `tier small→medium` (имплементер = не мех-работа, sonnet-пол корректности кода).
 
 ### Доработки харнеса (из прогона 13-07, TODO)
-- [ ] **ticketer: объявлять КОНТЕНТНЫЙ скилл в шапке тикета, не только io-router.** Сейчас `skills:` в
-  тикете = только io/ingress-скилл (`http-io`/`cli-io`/`component-tests`/`service-scaffold`); модули
-  `io:none` получают `skills: []`. Контентный/дисциплинарный скилл выбирает hughes сам → **недетерминировано**.
-  Прогон 13-07: README-тикет (`ticket-10`) объявлен `skills: []`, а hughes по своему суждению подтянул
-  `documentation` (+`md-formatting`) — вышло качественно, но случайно; другой прогон мог не подтянуть.
-  **Фикс:** ticketer проставляет контентный скилл по типу тикета — README → `[documentation]` (+ `md-formatting`),
-  код-модуль → `[program-implementation]`, поверх io-скилла. Тогда выбор воспроизводим и виден валидатору/`progress`.
-  _MUST:_ не ломать io-router-равенство в `validate-tickets` (контентный скилл ортогонален outbound-io, как cli-io — Ф3-C).
+- [x] **ticketer: объявлять КОНТЕНТНЫЙ скилл в шапке тикета, не только io-router.** ✅ Сделано (фикс run 13-07).
+  Реализовано в `implementation-ticket-writer` §«Content skill — by ARTIFACT discipline»: контентный скилл
+  роутится по **выходному артефакту** тикета — doc/README → `documentation` (+`md-formatting`), MUST;
+  `validate-tickets` **hard-блокирует** doc-производящий тикет без `documentation` (poka-yoke). Content-скиллы
+  ортогональны io-роутеру (стрипаются перед io-equality). Недетерминизм ticket-10 закрыт.
+  _Осознанное решение:_ `program-implementation` для код-модулей **НЕ листится** — это **Core (always)** hughes
+  (`hughes.md`: Core = program-implementation/code-style/communication/memory), грузится по построению; листинг = шум.
+  _ADR не трогаем:_ ADR — не выход тикета, его пишет `wirth-moduledesigner` в дизайн-фазе (#45) с `domain-modeling`;
+  роутить нечего.
 
 ### Brownfield-режим — доработка СУЩЕСТВУЮЩЕГО API (из анализа 16-07)
 Конвейер greenfield-first: на задаче «доработать API» apidesigner пере-замораживает контракт, но существующий
