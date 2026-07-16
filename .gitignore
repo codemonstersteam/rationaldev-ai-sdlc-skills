@@ -2,6 +2,9 @@
 .env
 .env.local
 
+# Рабочее состояние харнес-прогона (izi) — run-артефакт, не коммитить
+.agent/
+
 # Build artifacts
 /bin/
 /dist/
