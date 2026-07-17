@@ -41,6 +41,46 @@ change-intake (дельта + rationale + change-type; читает текущи
 - **Новые роли:** `change-intake`, `impact-map`, **`hughes-rework`**.
 - **Выкидываем:** `scaffolder` (нечего клонировать).
 
+## Алгоритм (функциональный стиль)
+
+**Роутер 2×2 — ДАННЫЕ, не условие** (как io-router `io:`→skills):
+
+```
+route : ChangeType -> Steps
+  REFACTOR  ↦ { spec: keep,   tests: invariant,   tickets: refactor }
+  BEHAVIOR  ↦ { spec: keep,   tests: extend(RED), tickets: modify }
+  API       ↦ { spec: evolve, tests: extend(RED), tickets: modify, reverse: pinout }
+  SPEC_ONLY ↦ { spec: evolve, tests: keep,        tickets: none, code: none }
+```
+
+**Конвейер — ROP-труба, короткое замыкание на STOP; `red/incompatible` — вердикт, не ошибка:**
+
+```
+rework(task, repo) -> Result<Shipped, Stop>:
+  | changeIntake(task, repo)                     -> Change    # читает spec+tree+tests → {delta, rationale, changeType}; неясность → STOP(ask оператора)
+  | writeBrief(Change)                        ⇒ brd.md        # фронтдор-маркер (реюз): гейт-хук пускает конвейер дальше
+  | baselineGreen(repo.componentTests)           -> Baseline  # прогон текущего набора; red → STOP(репо грязный); дыры покрытия → characterize()
+  | r := route(Change.changeType)                             # выбор пути ТАБЛИЦЕЙ (не if/else)
+  | impactMap(Change.delta, repo.moduleTree)     -> Impact    # blast-radius: затронутые модули + порядок по воздействию
+  | evolveContract(r.spec, Change, provider)     -> Contract  # keep → identity; evolve → apidesigner эволюц. x-frozen + diff-gate breaking (r.reverse=pinout)
+  | designDelta(repo.moduleTree, Impact, Change) -> ModuleΔ   # moduledesigner: СУЩЕСТВУЮЩЕЕ дерево — ВХОД → дельта (change/add/merge/split), не с нуля
+  | authorTests(r.tests, Baseline, ModuleΔ)      -> TestΔ     # invariant → характеризация (пиннуть неизменное); extend → новый компонентный RED (@wirth-tester)
+  | cutTickets(r.tickets, ModuleΔ, TestΔ, Impact)-> [Ticket]  # ticketer: modify/refactor-тикеты (НЕ scaffold), порядок из Impact
+  | assemblePlan(Change, Impact, [Ticket])       -> Plan      # ПЛАН ДОРАБОТКИ = дельта + rationale + impact + тикеты
+  | review(Plan)                                 -> OK|Block  # mills: граф/DoD/impact; Block → назад к designDelta (≤2) | escalate
+  |————— GATE #1: оператор оценивает план+impact → «GATE1 APPROVE» (иначе держим) —————
+  | traverse([Ticket], implement)                -> [Green]   # hughes-rework per тикет: read целевой модуль scoped → edit
+  |     implement(t) = drive(t) |> regressionGate(Baseline)   #   RED→GREEN (behavior) | держать baseline GREEN (refactor); green-маркер только если baseline зелёный
+  | accept([Green], Plan)                        -> Accepted  # fagan DoD (НЕ hughes-rework — Cleanroom); fail → @linger чинит, не он
+  |————— GATE #2: мерж (человек) —————
+  | canary(r, Accepted, toggle = r.tests≠invariant) -> Shipped # michtom: канарейка + тоггл если поведение менялось; 4 золотых сигнала
+  |————— GATE #3: приёмка после канарейки (человек) —————
+```
+
+- **STOP-точки** (короткое замыкание): неясная дельта · грязный baseline · breaking без осознанного major · размер-диф · регрессия baseline.
+- **Гардрэйлы по ходу:** `writeBrief`⇒фронтдор пущен · Gate #1 блок до `hughes-rework` · `regressionGate` пока-йоке · closed-set на каждой делегации.
+- **Та же машина, другая композиция:** `changeIntake`/`impactMap` — новые; `apidesigner`/`moduledesigner`/`ticketer`/`mills`/`wirth-tester`/`linger`/`fagan`/`michtom` — реюз, параметризованы `route`; `scaffolder` отсутствует. Ветвление — `route`-таблицей, не `if`.
+
 ## Как работают ГАРДРЭЙЛЫ в rework
 
 Enforcement ключуется **по имени роли** (`shared.mjs`), поэтому rework наследует ту же механику — при условии регистрации ролей:
