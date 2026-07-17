@@ -39,6 +39,19 @@ only the serialization differs (see `cli-io`) — **no OpenAPI for a CLI**.
 every external input of the service — **FROZEN** (contract-first). One file per service: you **MUST NOT**
 create a per-slice contract or overwrite — consolidate all endpoints into one document.
 
+**Rework-api mode — EVOLVE, don't regenerate.** When `.agent/planner/mode` is `rework-api` (a change-delta
+with a **spec-delta** exists at `.agent/planner/change-delta.md`), you are called on the **rework** path with a
+DIFFERENT input and one relaxed rule:
+- **In:** the **existing** frozen contract (`api-specification/*`) + the **spec-delta** (which operations/fields
+  to add/alter/remove) — NOT fresh use cases. You **read the existing contract and evolve it in place** to satisfy
+  the delta; the "**MUST NOT overwrite**" rule is **lifted for this mode** — evolving the existing file **is** the intent.
+- **Compatibly where possible; a breaking change is a new major** — bump the contract `version` (semver): additive/
+  optional → minor; a change that breaks a consumer's expectation (removed/renamed field, narrowed type, new required) →
+  major, never a silent edit. Re-freeze (`x-frozen`) the evolved document with the new version.
+- You touch **only** what the spec-delta names; the rest of the surface stays byte-identical. You do NOT redesign.
+- After you return, izi runs `validate-contract-diff` (new vs previous frozen version) → an **advisory** breaking-list for `@mills`/Gate #1 (the operator accepts a major consciously). You do NOT run it yourself.
+- Return `wirth-apidesigner → openapi.yaml evolved to vX (N endpoints, M changed)`.
+
 **Freeze marker (mandatory):** you **MUST** set the extension `x-frozen: true` in the contract's `info:`
 (a date value is fine). `validate-contract-frozen` and the consumer (`wirth-moduledesigner`) check it;
 without the marker module design does not start. The contract **MUST** be structurally complete: `paths`

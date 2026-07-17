@@ -252,6 +252,21 @@
       ],
       "outputs": [
         ".agent/triage.md",
+        ".agent/planner/mode",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "change-intake",
+      "skills": [
+        "requirements-intake",
+        "domain-modeling"
+      ],
+      "inputs": [
+        "requirements"
+      ],
+      "outputs": [
+        ".agent/planner/change-delta.md",
         ".agent/decisions.log"
       ]
     },
@@ -405,6 +420,32 @@
         "communication",
         "component-tests",
         "service-scaffold",
+        "documentation",
+        "domain-modeling",
+        "http-io",
+        "llm-client",
+        "queue-io",
+        "db-io",
+        "db-schema",
+        "md-formatting",
+        "memory",
+        "program-implementation"
+      ],
+      "inputs": [
+        "docs/design",
+        "gate1"
+      ],
+      "outputs": [
+        "working-tree",
+        ".agent/decisions.log"
+      ]
+    },
+    {
+      "role": "hughes-rework",
+      "skills": [
+        "code-style",
+        "communication",
+        "component-tests",
         "documentation",
         "domain-modeling",
         "http-io",

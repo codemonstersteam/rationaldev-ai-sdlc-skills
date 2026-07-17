@@ -80,7 +80,7 @@ export function validateContractFrozen(text) {
 // --- Заголовки тикетов: структура + перекрёстные ссылки + один scaffold ---
 // tickets: [{ name, data }] — data = распарсенный frontmatter (или null). Чисто: без fs.
 // Существование inputs-путей проверяет CLI-оболочка (это I/O).
-export function validateTicketHeaders(tickets) {
+export function validateTicketHeaders(tickets, opts = {}) {
   const errors = []
   const ids = new Set()
   for (const { name, data } of tickets) {
@@ -123,7 +123,10 @@ export function validateTicketHeaders(tickets) {
     }
   }
   const scaffold = tickets.filter((t) => t.data && t.data.type === "scaffold")
-  if (scaffold.length !== 1) errors.push(`ожидался ровно ОДИН scaffold-тикет, найдено ${scaffold.length}`)
+  if (opts.rework) {
+    // rework: проект уже отскаффолжен — scaffold-тикет в наборе = ошибка (правим существующее на месте)
+    if (scaffold.length !== 0) errors.push(`rework: scaffold-тикет недопустим (проект уже существует), найдено ${scaffold.length}`)
+  } else if (scaffold.length !== 1) errors.push(`ожидался ровно ОДИН scaffold-тикет, найдено ${scaffold.length}`)
   return errors
 }
 
@@ -417,7 +420,7 @@ export function validateContextMap(contextPaths, mapText, adrDirs = []) {
 // RED-по-бизнес-причине и резолв step-def остаются семантике (@linger/@mills) — их тут НЕ ловим.
 // Чисто: (feature, declaredN?) → errors[]. declaredN=null → сверка с дизайном пропускается (soft).
 //   feature: { business: string[], wip: number, smoke: number }
-export function validateComponentTests(feature, declaredN = null) {
+export function validateComponentTests(feature, declaredN = null, opts = {}) {
   const errors = []
   const biz = (feature && feature.business) || []
   const wip = (feature && feature.wip) || 0
@@ -425,8 +428,9 @@ export function validateComponentTests(feature, declaredN = null) {
 
   if (!biz.length) errors.push("нет бизнес-сценариев (.feature пуст кроме smoke) — покрытие не реализовано")
   if (smoke < 1) errors.push("нет smoke-сценария — обвязка компонентных тестов не доказана")
-  if (wip < biz.length)
+  if (!opts.rework && wip < biz.length)
     errors.push(`не все сценарии @wip (${wip}/${biz.length}) — риск преждевременного green/гейминга (снятие @wip = акт фиксера, не автора)`)
+  // rework: baseline-сценарии легитимно НЕ @wip (зелёные, инвариант); @wip лишь у новых/изменённых behavior-сценариев
 
   // дубль заголовков
   const seen = new Set(), dup = new Set()

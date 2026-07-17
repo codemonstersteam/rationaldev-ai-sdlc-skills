@@ -55,6 +55,14 @@ izi may restart this stage. Acceptance is idempotent by its own result: if the b
 already carry **no** `@wip` AND `node harness/validate-dod.mjs .` is green, the slice is **already
 accepted** — return immediately `fagan → <slice> accepted (idempotent)`; strip nothing, re-verify nothing.
 
+**Exception — rework mode (MUST):** when `.agent/planner/mode` starts with `rework`, "no `@wip`" does **NOT**
+imply "already accepted": a `rework-refactor` legitimately has **zero** `@wip` scenarios on its **first** pass
+(behaviour unchanged → the existing suite is the invariant, no new scenario). So in rework mode you treat the
+slice as already-accepted **only if** a prior `role=fagan … accepted` line exists in `.agent/decisions.log`;
+otherwise you **MUST** run the full gate below (Move 1: in rework mode `validate-component-tests` does not
+require every scenario `@wip` — reads the marker; Move 2 `validate-dod --run` = whole-suite green = regression
+gate). Never shortcut a refactor's first acceptance — its README/semantic verdict is exactly what you add.
+
 ## Move 1 — the deterministic gate (mechanical DoD)
 Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; return the failed item):
 1. **Coverage re-check — `@wip` MUST still be present.** `node harness/validate-component-tests.mjs`

@@ -10,10 +10,11 @@ export const PIPELINE = new Set([
   "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
+  "change-intake", "hughes-rework", // rework pipeline (доработка существующего кода)
 ])
 
 // Реализаторы, заблокированные до Gate #1 (нужны plan-review.md + gate1.approved).
-export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder"])
+export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
 
 // Маркер прохождения фронтдора: @gilb пишет измеримый BRD сюда. Пока файла нет — грил не пройден.
 export const BRD_MARK = ".agent/planner/brd.md"

@@ -46,7 +46,9 @@ if (explicit) {
 if (!ticketFiles.length) { console.error(`validate-tickets: не найдено тикетов (docs/design/slice-*/tickets/*.md)`); process.exit(1) }
 
 const tickets = ticketFiles.map(({ rel, abs }) => ({ name: rel, data: parseFrontmatter(readFileSync(abs, "utf8")).data }))
-const errors = validateTicketHeaders(tickets) // структура + ссылки + один scaffold (чисто)
+// rework-режим (маркер от wirth-triage): в rework scaffold-тикет недопустим (правим существующее)
+const rework = (() => { try { return readFileSync(join(root, ".agent", "planner", "mode"), "utf8").trim().startsWith("rework") } catch { return false } })()
+const errors = validateTicketHeaders(tickets, { rework }) // структура + ссылки + scaffold (greenfield=1 / rework=0)
 
 // I/O-часть: inputs-пути должны существовать (это не логика — файловая система).
 for (const { name, data } of tickets) {

@@ -16,7 +16,8 @@ judgement lives in the GLM subagents; you only route and hold the gates.
   summarize verdicts, or decide "by eye" — you read a label and follow the rule.
 - **Delegation set is CLOSED.** You MUST delegate **only** to the fixed pipeline roles (`@wirth-intake`,
   `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@dijkstra`, `@wirth-ticketer`,
-  `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@michtom`). You MUST
+  `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@michtom`, `@change-intake`,
+  `@hughes-rework`). You MUST
   **NEVER invent or delegate to any other agent** (`@general`, generic helpers, etc.) — a task outside the
   set means you picked the wrong role. A stage's output is incomplete → **re-delegate the SAME stage's
   owner** (retry ≤2) or `escalate`; never route the work to a different role.
@@ -104,15 +105,18 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 ## STEP 1 — TRIAGE & ROUTING (only AFTER Step 0's front door — you do NOT classify)
 
 **Only after Step 0's `@gilb` returned `agent-ready`** (never as your first action on a task), delegate
-`@wirth-triage` (input: `.agent/planner/brd.md`). It (GLM) returns `level=…`. **Announce the verdict to the
-operator** and route by the FIXED table (mechanics, not judgement):
+`@wirth-triage` (input: `.agent/planner/brd.md`). It (GLM) returns a `route=` token (and writes
+`.agent/planner/mode`). **Announce the verdict to the operator** and route by the FIXED table (mechanics, not judgement):
 
-| `level` | You do |
+| verdict token | You do |
 |---|---|
-| `trivial` | straight to `@hughes` (contract unchanged), skipping planning |
-| `modular` | run the planning pipeline (below) |
-| `epic`    | **STOP. Tell the operator: "EPIC-level task (multi-repo: meta-repo + components). The epic algorithm is NOT YET IMPLEMENTED in the harness — I cannot drive it. Needs a manual path or await implementation." + targets from the verdict.** Launch nothing. |
-| `unclear` | pass the line to the operator for clarification, wait |
+| `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) |
+| `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
+| `route=rework-refactor` | run the **REWORK path §refactor** (below) |
+| `route=rework-behavior` | run the **REWORK path §behavior** (below) |
+| `route=rework-api` | run the **REWORK path §api** (below) |
+| `route=greenfield · level=epic` | **STOP. Tell the operator: "EPIC-level task (multi-repo). The epic algorithm is NOT YET IMPLEMENTED — I cannot drive it." + targets.** Launch nothing. |
+| `level=unclear` | pass the line to the operator for clarification, wait |
 
 ## PLANNING — `modular` path (all stages = Wirth on GLM, each a fresh subagent)
 
@@ -136,6 +140,24 @@ operator** and route by the FIXED table (mechanics, not judgement):
    **NEVER** hand unfinished ticketing to `@hughes`/`@general` (see closed-set rule above).
 7. `@wirth-planner` (input: package paths) → per slice `docs/design/slice-<name>/PLAN.md` (path index +
    summary of that slice's tickets/design). Planner does not design.
+
+## REWORK path — doработка existing code (route=rework-*, all stages fresh subagents)
+
+Greenfield-роли `@wirth-slicer/usecase/moduledesigner/dijkstra` и `@scaffolder` **НЕ участвуют** (проект уже
+есть). You read the label, follow the sequence — you compute nothing. All three sub-routes share:
+
+1. `@change-intake` (input: `.agent/planner/brd.md` + existing repo) → `.agent/planner/change-delta.md`
+   (delta, rationale, affected-modules). Decides fit/STOP itself — on `STOP` pass it to the operator.
+2. **§api ONLY** — `@wirth-apidesigner` (input: existing contract + the delta's spec-delta) → **evolves**
+   `api-specification/*` (new `x-frozen` version). Then run `node harness/validate-contract-diff.mjs` →
+   an **advisory** breaking-list; **announce it to the operator** (a major is theirs to accept), do NOT block.
+3. `@wirth-ticketer` (input: `change-delta` + existing design) → `docs/design/slice-<name>/tickets/ticket-N.md`:
+   **module** tickets from the affected-modules list, **NO scaffold**; **§behavior/§api** also cut **one
+   `component` ticket** (changed/added scenarios, `@wip`). On `PARTIAL:` re-delegate the rest to it.
+4. `@wirth-planner` → `PLAN.md`. Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below.
+
+**§refactor:** no `@wirth-apidesigner`, **no** `component` ticket — the existing suite is the invariant.
+**§behavior:** no `@wirth-apidesigner`; **one** `component` ticket (spec untouched). **§api:** step 2 runs.
 
 ## REVIEW (one pass) + LOCAL FIX
 
@@ -182,8 +204,11 @@ Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate
 - `scaffold`  → `@scaffolder` (Qwen): runs `harness/scaffold.sh` (git-clone template + rename + build),
   checks build + component tests, fixes if needed. **Does not read the whole template — cheap** (not @hughes).
 - `component` → `@wirth-tester` (Qwen, skill `component-tests`): mechanically lays the **already-designed**
-  scenarios (`contracts.md`) into executable `.feature`+steps+stubs, tags `@wip`, drives to RED.
-- `module`    → `@hughes` (Qwen): implements the module, RED → green; skill by `io:` from the header.
+  scenarios (`contracts.md`) into executable `.feature`+steps+stubs, tags `@wip`, drives to RED. (Both modes.)
+- `module`    → route by `.agent/planner/mode` (read it ONCE at implementation start; a fixed 2-key table, no
+  judgement): **greenfield** (no marker / `greenfield`) → `@hughes` (implements the NEW module, RED→green);
+  **rework** (`mode` starts with `rework`) → `@hughes-rework` (edits the EXISTING module in place — refactor keeps
+  the suite green, behavior/api drives its `@wip` scenario RED→green). Skill by `io:` from the header in both.
 
 You MUST pass a subagent **only its ticket + the paths in `inputs`** (not the whole backlog). Order by
 `blocked_by`; independent tickets (no shared `blocked_by`) → in parallel. **Fallback:** a ticket without a
