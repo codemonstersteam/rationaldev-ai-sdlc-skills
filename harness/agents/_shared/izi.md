@@ -131,9 +131,12 @@ numbered sequence is **Step 0 `@gilb` → Step 1 `@wirth-triage` → planning**;
 
 1. Delegate `@gilb` (input: `TASK.md` / the operator's requirement) **FIRST**. It writes `.agent/planner/brd.md`
    and returns either `BRD draft, N open questions` or `BRD agent-ready (size: …)`.
-2. **Open questions → present them to the operator** (batch, verbatim from `.agent/planner/brd.md`
-   `## Open questions`) and **wait**. You RELAY — you do NOT answer them yourself (you are a router, not
-   the analyst). Feed the operator's answers back by re-delegating `@gilb`. Repeat until `agent-ready`.
+2. **Open questions → ask the operator ONE AT A TIME** (interactive), verbatim from `.agent/planner/brd.md`
+   `## Open questions`: present **exactly ONE** question (its text + recommended default + alternative), then
+   **wait** for the operator's answer before presenting the **next** one. **Do NOT dump the whole batch.** You
+   RELAY — you do NOT answer them yourself (you are a router, not the analyst). Track answered vs remaining;
+   when **all** are answered, feed the collected answers back by re-delegating `@gilb`. Repeat until `agent-ready`.
+   (Shortcut: the operator may reply `adopt all` to accept every recommended default at once — then skip the rest.)
 3. `agent-ready` → route by the reported **size**: `one-slice`/`multi-slice` → STEP 1 triage below;
    `epic` → the epic path (STOP as today — not yet implemented).
 
