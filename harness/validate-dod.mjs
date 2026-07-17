@@ -14,7 +14,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs"
 import { join, relative, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
-import { validateToolchainConsistency } from "./lib/validators.mjs"
+import { validateToolchainConsistency, classifyRunFailure } from "./lib/validators.mjs"
 
 // Профиль формы (target shape) — ЕДИНЫЙ источник harness/target-profiles.json (рядом с этим файлом,
 // резолвится по realpath даже когда validate-dod симлинкнут в проект). Форма проекта — .agent/planner/target
@@ -164,7 +164,17 @@ if (invokedDirectly) {
   if (doRun) {
     const rt = files.find((f) => /(^|\/)run-tests\.sh$/i.test(f))
     if (!rt) fails.push("--run: run-tests.sh не найден")
-    else { const r = run(`sh ${JSON.stringify(rt)}`, root); if (!r.ok) fails.push("run-tests.sh exit≠0:\n" + r.out.trim().slice(-800)) }
+    else {
+      const r = run(`sh ${JSON.stringify(rt)}`, root)
+      if (!r.ok) {
+        const tail = r.out.trim().slice(-800)
+        // env/инфра-сбой (docker/registry/сеть) ≠ дефект кода → метим для маршрутизации @fagan
+        if (classifyRunFailure(r.out) === "env")
+          fails.push("run-tests.sh exit≠0 — ENV/инфра-сбой (docker/registry/сеть; НЕ дефект кода → оператору, НЕ @linger, НЕ чинить инфру):\n" + tail)
+        else
+          fails.push("run-tests.sh exit≠0 — дефект кода/DoD:\n" + tail)
+      }
+    }
   }
 
   // 5) стейл-маркеры (НЕ фатально — кандидаты для семантического вердикта @fagan)

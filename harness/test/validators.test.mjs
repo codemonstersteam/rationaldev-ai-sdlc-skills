@@ -515,3 +515,16 @@ test("extractToolchainVersions: нормализует и извлекает lab
   assert.equal(found[0].version, "1.24")
   assert.equal(found[0].path, "go.mod")
 })
+
+// --- classifyRunFailure (infra-vs-defect, чисто) ---
+import { classifyRunFailure } from "../lib/validators.mjs"
+test("classifyRunFailure: docker daemon недоступен → env", () => {
+  assert.equal(classifyRunFailure("docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock"), "env")
+})
+test("classifyRunFailure: registry pull EOF / manifest → env", () => {
+  assert.equal(classifyRunFailure("failed to pull golang:1.25: unexpected EOF"), "env")
+  assert.equal(classifyRunFailure("Error: manifest unknown"), "env")
+})
+test("classifyRunFailure: провал ассерта godog → defect", () => {
+  assert.equal(classifyRunFailure("--- FAIL: expected 212.0000 got 213.0000\n1 scenarios (1 failed)"), "defect")
+})

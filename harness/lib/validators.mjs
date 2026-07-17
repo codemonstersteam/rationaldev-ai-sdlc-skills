@@ -348,6 +348,12 @@ export function validateToolchainConsistency(entries, sources = []) {
   return [`toolchain-скос: в проекте ${versions.length} версии тулчейна, должна быть ОДНА (единый go/Docker); бампи ВСЕ манифесты + Docker-базу единым фронтом:\n${detail}`]
 }
 
+// env/инфра-сбой vs дефект кода — по маркерам недоступности docker/registry/сети в выводе run-tests.
+// Для МАРШРУТИЗАЦИИ (env → оператору, НЕ @linger; defect → reject кода), не для вердикта: гейт всё равно
+// не закрыт, но причина помечена. Версия-агностично (сетевой/докерный словарь, не про язык).
+export const ENV_FAILURE_RE = /cannot connect to the docker daemon|docker daemon|no such host|connection refused|i\/o timeout|tls handshake|failed to (pull|fetch)|pull access denied|manifest unknown|network is unreachable|temporary failure in name resolution|dial tcp|\bEOF\b/i
+export const classifyRunFailure = (out) => ENV_FAILURE_RE.test(String(out)) ? "env" : "defect"
+
 // --- Против переусложнения декомпозиции (harden-decomposition) ---------------
 // Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
 // тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
