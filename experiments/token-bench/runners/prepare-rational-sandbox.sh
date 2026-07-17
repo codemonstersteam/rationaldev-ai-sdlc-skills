@@ -51,7 +51,10 @@ JSON
 # 2a) Гард: opencode мержит global+project; проектный конфиг НЕ отключает плагин из global.
 #     Если global объявляет omo-плагин — он протечёт в песочницу (sisyphus/opus перехватят).
 OMO_LEAK=0; LEAK_AT=""
-for GCFG in "$HOME/.config/opencode/opencode.jsonc" "$HOME/.config/opencode/opencode.json"; do
+# opencode грузит плагины из opencode.json[c]; tui.json проверяем на всякий (omo-инсталлер
+# исторически писал туда plugin-ключ — инертный, но пусть гард видит любой omo-след в global).
+for GCFG in "$HOME/.config/opencode/opencode.jsonc" "$HOME/.config/opencode/opencode.json" \
+            "$HOME/.config/opencode/tui.json"; do
   [ -f "$GCFG" ] || continue
   if grep -Eq '"plugin"|oh-my-openagent' "$GCFG"; then OMO_LEAK=1; LEAK_AT="$GCFG"; fi
 done
