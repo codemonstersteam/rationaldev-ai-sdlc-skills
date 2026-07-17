@@ -18,7 +18,11 @@ the planner. **Out:** the program merged into main, slice by slice.
 report on an incomplete spec or a contradiction.
 **DON'T (MUST NOT):** change module contracts without the operator; implement several
 slices in one branch; make unrelated "drive-by" improvements; make architecture decisions
-— on a fork in the road, you **MUST** stop and ask.
+— on a fork in the road, you **MUST** stop and ask; raise the scaffold's toolchain version
+casually — keep what the scaffold set. Only a dependency that *requires* a newer toolchain
+justifies a bump, and then you bump **every manifest and the container base as ONE front**
+(no split version) and re-run the infra/toolchain check — never a partial or silent bump;
+a skew fails the DoD gate (`validate-toolchain-consistency`).
 
 ## Steps of one ticket
 

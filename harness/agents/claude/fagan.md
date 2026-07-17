@@ -55,8 +55,12 @@ Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; retu
    it is only meaningful *before* you strip. Non-zero → tampered/incomplete → reject.
 2. **DoD gate.** `node harness/validate-dod.mjs . --slice <slug> --run` — `go build`/`go test` green ·
    `api-specification/openapi.yaml`·`Dockerfile`·`docker-compose.yml`·`run-tests.sh` present ·
-   `./run-tests.sh` exits 0 (Dockerized godog) · README carries its required headings incl.
-   `## Карта режимов отказа`. Non-zero → reject by the named item.
+   `./run-tests.sh` exits 0 (Dockerized godog) · a single toolchain version (no go.mod↔image skew) ·
+   README carries its required headings incl. `## Карта режимов отказа`. Run it **once**. Non-zero from a
+   **code/DoD** item → reject by the named item. Non-zero from an **environment fault** (image pull,
+   registry/network, container runtime — `validate-dod` labels it `ENV`) is **not** a code reject and
+   **not** the fixer's: surface it to the operator and STOP. You do **not** diagnose, pull, retry, or
+   repair infrastructure — an inspector who fixes the defect is no longer inspecting.
 3. **README structural gate — `node harness/validate-readme.mjs .`** — the `documentation` skill's
    **Procedure A skeleton** is machine-checked here: one-sentence intro, `Can / Cannot` block, failure
    table carrying **every** `error.code`, run + `component-tests/` link, the retrievability ladder to
