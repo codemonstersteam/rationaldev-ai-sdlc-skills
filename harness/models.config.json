@@ -20,9 +20,9 @@
       "medium": "openrouter/qwen/qwen3.6-27b",
       "small": "openrouter/qwen/qwen3.6-27b"
     },
-    "//roles": "Оркестратор (Витт) = Qwen: только роутит/делегирует куски плана короткими турнами. Всё планирование и проектирование тикетов (Wirth) = large=GLM 5.2: этапы intake/slicer/usecase/apidesigner/moduledesigner/ticketer + сборка индекса planner. GLM гонять МИМО Novita (прокси GLM_IGNORE_PROVIDERS=Novita) — Novita рвёт длинный tool-call. glm-5-turbo НЕ использовать (куцый ответ, виснет).",
+    "//roles": "Роутер izi = GLM 5.2 (НЕ flash!): live-прогон 17-07 показал — glm-4.7-flash не держит closed-set/фронтдор, зациклился на @wirth-intake игнорируя блок гардрэйла; роутер ОБЯЗАН быть моделью, следующей правилам делегации. Всё планирование/проектирование тикетов (Wirth) = large=GLM 5.2: intake/slicer/usecase/apidesigner/moduledesigner/ticketer + сборка индекса planner. GLM гонять МИМО Novita (прокси GLM_IGNORE_PROVIDERS=Novita) — Novita рвёт длинный tool-call. glm-5-turbo НЕ использовать (куцый ответ, виснет).",
     "roles": {
-      "izi": "openrouter/z-ai/glm-4.7-flash",
+      "izi": "openrouter/z-ai/glm-5.2",
       "scaffolder": "openrouter/z-ai/glm-5.2",
       "wirth-tester": "openrouter/z-ai/glm-5.2"
     }
