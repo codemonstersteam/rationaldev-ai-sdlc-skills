@@ -1,0 +1,121 @@
+# rework-workflow — отдельный конвейер доработки существующего кода 🔴
+
+> **Принцип:** доработка существующего сервиса/CLI — это **другой конвейер** (`KIND=rework`), а не режим-с-условиями
+> в greenfield-ролях. Конвейер декларативен (`pipelines.json`: `KIND → список ролей`), поэтому rework — просто
+> другая композиция переиспользуемых ролей/скиллов. **Никаких `if brownfield` в коде оркестрации.**
+>
+> **Архитектура-хост:** каждый конвейер — отдельный **SDK-агент** поверх общей библиотеки ролей/хуков, под единым
+> пультом (терминал/веб). Концепт — [`izi-sdk-pipeline-agents.md`](./izi-sdk-pipeline-agents.md); `izi-rework` там =
+> первая SDK-программа (тикет S2). Этот файл — её внутренняя дисциплина и алгоритм.
+
+## Корень
+
+Конвейер построен greenfield-first: `scaffold из шаблона → построй новые модули из тикетов, код не читая`.
+Роли это зашивают: `scaffolder` git-клонит шаблон; `hughes` `MUST NOT glob the codebase` (пишет из тикета);
+`wirth-moduledesigner` проектирует дерево с нуля; никто не читает существующий код как вход. Задача «доработать
+существующее» (API / срез / рефакторинг модуля) в эту модель не ложится.
+
+## Две оси доработки (2×2 — классификатор, не условие в коде)
+
+`change-intake` ставит `change-type`; таблица-роутер выбирает подмножество ролей (как io-router `io:`→skills):
+
+| | Спека НЕ меняется | Спека меняется |
+|---|---|---|
+| **Поведение НЕ меняется** | **рефакторинг** — компонентные = сеть безопасности (GREEN, не трогаем); moduledesigner-дельта | (редко: правка спеки-доков, кода нет) |
+| **Поведение меняется** | **багфикс/правило** — компонентные RED→GREEN; apidesigner НЕ нужен | **API/контракт** — apidesigner эволюционирует спеку + pinout reverse; компонентные расширяем |
+
+**Инвариант переворачивается:** в greenfield тесты пишут RED→GREEN; в rework существующие компонентные тесты —
+**инвариант, который держим зелёным**. Первый шаг rework — **baseline-GREEN** (прогнать набор); дырявое покрытие →
+**характеризация** (пиннуть текущее поведение) перед рефактором.
+
+## Композиция конвейера (реюз максимальный)
+
+```
+change-intake (дельта + rationale + change-type; читает текущие спеку/дерево/тесты)
+  → impact-map (blast-radius по существующему дереву)
+  → [ветка change-type]
+      рефактор:  baseline-GREEN/характеризация → moduledesigner(Δ) → tickets(refactor) → hughes-rework(read+edit, компонентные GREEN)
+      поведение: apidesigner? (если спека) → wirth-tester(новый компонентный RED) → moduledesigner(Δ) → tickets(modify) → hughes-rework(RED→GREEN)
+  → mills (план+impact) → Gate #1 → linger/fagan → michtom (канарейка + тоггл если поведение)
+```
+
+- **Реюз как есть:** `izi`, `mills`, `wirth-planner`, `linger`, `fagan`, `michtom` + гейты/enforcement/decisions.log (pipeline-agnostic).
+- **Реюз по ветке:** `wirth-apidesigner` (только если меняется спека), `wirth-tester` (новый сценарий — только поведение; рефактор → характеризация).
+- **Δ на уровне ВХОДА (не новая роль):** `wirth-moduledesigner`/`wirth-ticketer` получают существующее дерево входом → выдают дельту/`modify`-тикеты. Та же дисциплина на другом входе.
+- **Новые роли:** `change-intake`, `impact-map`, **`hughes-rework`**.
+- **Выкидываем:** `scaffolder` (нечего клонировать).
+
+## Алгоритм (функциональный стиль)
+
+**Роутер 2×2 — ДАННЫЕ, не условие** (как io-router `io:`→skills):
+
+```
+route : ChangeType -> Steps
+  REFACTOR  ↦ { spec: keep,   tests: invariant,   tickets: refactor }
+  BEHAVIOR  ↦ { spec: keep,   tests: extend(RED), tickets: modify }
+  API       ↦ { spec: evolve, tests: extend(RED), tickets: modify, reverse: pinout }
+  SPEC_ONLY ↦ { spec: evolve, tests: keep,        tickets: none, code: none }
+```
+
+**Конвейер — ROP-труба, короткое замыкание на STOP; `red/incompatible` — вердикт, не ошибка:**
+
+```
+rework(task, repo) -> Result<Shipped, Stop>:
+  | changeIntake(task, repo)                     -> Change    # читает spec+tree+tests → {delta, rationale, changeType}; неясность → STOP(ask оператора)
+  | writeBrief(Change)                        ⇒ brd.md        # фронтдор-маркер (реюз): гейт-хук пускает конвейер дальше
+  | baselineGreen(repo.componentTests)           -> Baseline  # прогон текущего набора; red → STOP(репо грязный); дыры покрытия → characterize()
+  | r := route(Change.changeType)                             # выбор пути ТАБЛИЦЕЙ (не if/else)
+  | impactMap(Change.delta, repo.moduleTree)     -> Impact    # blast-radius: затронутые модули + порядок по воздействию
+  | evolveContract(r.spec, Change, provider)     -> Contract  # keep → identity; evolve → apidesigner эволюц. x-frozen + diff-gate breaking (r.reverse=pinout)
+  | designDelta(repo.moduleTree, Impact, Change) -> ModuleΔ   # moduledesigner: СУЩЕСТВУЮЩЕЕ дерево — ВХОД → дельта (change/add/merge/split), не с нуля
+  | authorTests(r.tests, Baseline, ModuleΔ)      -> TestΔ     # invariant → характеризация (пиннуть неизменное); extend → новый компонентный RED (@wirth-tester)
+  | cutTickets(r.tickets, ModuleΔ, TestΔ, Impact)-> [Ticket]  # ticketer: modify/refactor-тикеты (НЕ scaffold), порядок из Impact
+  | assemblePlan(Change, Impact, [Ticket])       -> Plan      # ПЛАН ДОРАБОТКИ = дельта + rationale + impact + тикеты
+  | review(Plan)                                 -> OK|Block  # mills: граф/DoD/impact; Block → назад к designDelta (≤2) | escalate
+  |————— GATE #1: оператор оценивает план+impact → «GATE1 APPROVE» (иначе держим) —————
+  | traverse([Ticket], implement)                -> [Green]   # hughes-rework per тикет: read целевой модуль scoped → edit
+  |     implement(t) = drive(t) |> regressionGate(Baseline)   #   RED→GREEN (behavior) | держать baseline GREEN (refactor); green-маркер только если baseline зелёный
+  | accept([Green], Plan)                        -> Accepted  # fagan DoD (НЕ hughes-rework — Cleanroom); fail → @linger чинит, не он
+  |————— GATE #2: мерж (человек) —————
+  | canary(r, Accepted, toggle = r.tests≠invariant) -> Shipped # michtom: канарейка + тоггл если поведение менялось; 4 золотых сигнала
+  |————— GATE #3: приёмка после канарейки (человек) —————
+```
+
+- **STOP-точки** (короткое замыкание): неясная дельта · грязный baseline · breaking без осознанного major · размер-диф · регрессия baseline.
+- **Гардрэйлы по ходу:** `writeBrief`⇒фронтдор пущен · Gate #1 блок до `hughes-rework` · `regressionGate` пока-йоке · closed-set на каждой делегации.
+- **Та же машина, другая композиция:** `changeIntake`/`impactMap` — новые; `apidesigner`/`moduledesigner`/`ticketer`/`mills`/`wirth-tester`/`linger`/`fagan`/`michtom` — реюз, параметризованы `route`; `scaffolder` отсутствует. Ветвление — `route`-таблицей, не `if`.
+
+## Как работают ГАРДРЭЙЛЫ в rework
+
+Enforcement ключуется **по имени роли** (`shared.mjs`), поэтому rework наследует ту же механику — при условии регистрации ролей:
+
+1. **Closed-set (`PIPELINE`).** Все rework-роли (`change-intake`, `impact-map`, `hughes-rework`) MUST добавить в `PIPELINE`, иначе гардрэйл заблокирует делегацию к ним как мис-роут.
+2. **Фронтдор.** Сейчас: пока нет `.agent/planner/brd.md`, единственная разрешённая делегация — `@gilb`. В rework фронтдор = **`change-intake`**: он первый, пишет change-brief в тот же маркер `brd.md` (реюз), остальное заблокировано до него.
+3. **Gate #1 (`IMPLEMENTERS`).** `hughes-rework` пишет код → MUST добавить в `IMPLEMENTERS` → блокируется до `plan-review.md` + `gate1.approved`. **План доработки** акцептует оператор токеном `GATE1 APPROVE` (провенанс-маркер) — тот же человеческий гейт.
+4. **Защита маркера (`gate-bash`/`gate-check`).** Агент не может сам поставить `gate1.approved` — role-agnostic, работает как есть.
+5. **decisions.log + пока-йоке outputs.** Логирование делегаций и проверка «`green` только если объявленные `outputs` тикета есть и непусты» — role-agnostic, работают для `modify`-тикетов (outputs = изменённые файлы).
+6. **НОВЫЙ гардрэйл — регрессия baseline.** Для `refactor`-тикета `green`-маркер MUST гейтиться на «**пред-существующие компонентные тесты ВСЁ ЕЩЁ зелёные**» (нет регрессии), а не только «outputs есть». Нужен rework-пока-йоке `validate-rework-baseline` (расширение green-маркер-проверки).
+7. **Scoped-read — НЕ послабление гардрэйла.** Чтение/`glob` гардрэйлами не ограничиваются вообще (блокируются лишь делегация, запись гейт-маркера, closed-set). `hughes` `MUST NOT glob` — это его **проза-дисциплина**, не хук (в permission у него `glob: allow`). Значит «`hughes-rework` читает целевой код» — прозаическая разница манифеста, а не смена гардрэйла.
+
+**Итог:** гардрэйлы в rework = та же модель (closed-set · фронтдор · Gate #1 · защита маркера · decisions.log · пока-йоке), плюс один новый (регрессия baseline). Всё — через регистрацию имён в `shared.mjs`, без условий в коде.
+
+## Тикеты (work items)
+
+- [ ] **T1 — `pipelines.json` first-class + `KIND=rework`.** Поднять конвейер в декларативный `KIND → [роли]`; rework = отдельный список. (Цепляется к пункту «pipelines.json» в `backlog.md`.)
+- [ ] **T2 — роль `change-intake`.** Читает текущие спеку/дерево/тесты → **дельта + rationale (зачем) + `change-type`** (2×2). Пишет change-brief в `.agent/planner/brd.md` (реюз фронтдор-маркера).
+- [ ] **T3 — роль `impact-map`.** Blast-radius по существующему дереву модулей; порядок тикетов — по воздействию, не по зависимостям новых модулей.
+- [ ] **T4 — роль `hughes-rework`** (реализатор доработки). База — `hughes`, отличия:
+  - **читает целевой модуль(и)** тикета и **правит на месте** (снять прозу `MUST NOT glob the codebase` → scoped: только модули тикета);
+  - тикет типа **`modify`/`refactor`** (не `scaffold`/`module`); **никогда не scaffold**;
+  - **рефактор:** держит существующие компонентные тесты **GREEN** (регрессия = FAIL); **поведение:** RED→GREEN на новом сценарии `@wirth-tester`;
+  - сохраняет: no-git, Cleanroom (не чинит своё, не акцептует — `@linger`/`@fagan`), size-STOP, «не править тесты/CI ради зелёного»;
+  - **регистрация (иначе гардрэйл заблокирует):** `PIPELINE` + `IMPLEMENTERS` в `shared.mjs`; `ORDER` в `gen-agents.mjs`; счётчики ролей `18→19` в `harness/smoke/run.{sh,ps1}`; регенерация проекций.
+- [ ] **T5 — Δ-вход для `wirth-moduledesigner`/`wirth-ticketer`.** Принять существующее дерево входом → дельта / `modify`-тикеты (без условий — через вход).
+- [ ] **T6 — `validate-rework-baseline`** (пока-йоке регрессии): `green` на `refactor`-тикете только если baseline-набор компонентных всё ещё зелёный.
+- [ ] **T7 — общий формат артефактов** (plan/tickets/DoD) единый с greenfield, чтобы `mills`/`fagan`/гейты работали в обоих конвейерах без правок.
+
+## DoD фичи
+
+- `KIND=rework` в `pipelines.json` маршрутизирует rework-роли; никаких `if brownfield` в коде оркестрации.
+- Гардрэйлы покрывают rework-роли (closed-set + Gate #1 + фронтдор + регрессия-baseline); smoke зелёный, счётчики ролей обновлены.
+- `hughes-rework` правит существующий код scoped, держит baseline GREEN; рефактор-DoD = «все прежние сценарии зелёные, нет дрейфа поведения».
