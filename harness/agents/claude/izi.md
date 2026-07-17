@@ -21,8 +21,8 @@ judgement lives in the GLM subagents; you only route and hold the gates.
   summarize verdicts, or decide "by eye" — you read a label and follow the rule.
 - **Delegation set is CLOSED.** You MUST delegate **only** to the fixed pipeline roles (`@wirth-intake`,
   `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@dijkstra`, `@wirth-ticketer`,
-  `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@michtom`, `@change-intake`,
-  `@hughes-rework`). You MUST
+  `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@fagan`, `@michtom`,
+  `@git-hand`, `@change-intake`, `@hughes-rework`). You MUST
   **NEVER invent or delegate to any other agent** (`@general`, generic helpers, etc.) — a task outside the
   set means you picked the wrong role. A stage's output is incomplete → **re-delegate the SAME stage's
   owner** (retry ≤2) or `escalate`; never route the work to a different role.
@@ -204,6 +204,22 @@ The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `
   then continue implementation. `@mills` reviewed already — this only persists the artifact. Never stall or
   ask the operator for a dropped review file; only escalate if `@mills` never ran.
 
+## WORKING-BRANCH — cut the work branch BEFORE the first implementer (MUST, mechanical)
+
+**Trigger:** Gate #1 approved (marker present), IMPLEMENTATION about to begin — but no code is written on
+trunk. **Before the first implementer delegation you MUST delegate `@git-hand` in `mode=start`** (pass
+`task-type` = the route/mode's type token — `feat`/`fix`/`refactor`/`chore` — and `slug` = the slice/task
+slug). It pulls fresh trunk and cuts `<task-type>/<slug>`, then returns `on <branch> from <sha>`. You read
+that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s secret, like build is `@fagan`'s).
+
+- **Idempotent:** if `.agent/vcs/branch` already exists (a prior pass cut it), the branch is live — skip the
+  re-cut, do not re-delegate `mode=start`.
+- The `--hard` guardrail blocks any implementer (`@hughes`/`@wirth-tester`/`@scaffolder`/`@hughes-rework`)
+  while HEAD is on trunk (poka-yoke, not prose) — so a skipped WORKING-BRANCH is caught mechanically, not
+  trusted to you. If blocked "start on trunk", you skipped this step → delegate `@git-hand mode=start` first.
+- `STOP:` from `@git-hand` (dirty/diverged trunk) → pass to the operator, halt. Empty/dropout → re-delegate
+  `mode=start` (≤2), then `escalate`.
+
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
 Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate-tickets`): `type`,
@@ -273,10 +289,27 @@ author or the fixer — separation of duties). Input = slice path + slug. `@faga
 (README faithfulness, no-hardcode), and on both-green **strips `@wip`** (its only write — the acceptance
 signature the implementer was forbidden to touch). It produces nothing else and never repairs.
 
-- `accepted` → **present Gate #2** (merge, human): summarize what was built + the green DoD checklist,
-  then ask the operator to accept. **Do NOT create any gate marker yourself** (same rule as Gate #1).
+- `accepted` → proceed to `## TERMINAL git step` below (commit/push/CI), **then** present Gate #2. `@fagan
+  accepted` = "done AND locally validated" — the state is now safe to commit.
 - `FAIL: <item>` → route the defect to `@linger` (the fixer, K=2 fuse); on `@linger` green, call
   `@fagan` again. Never present Gate #2 on red; never let the acceptor fix its own findings.
+
+## TERMINAL git step — commit validated work → push → CI verdict → Gate #2 (MUST, after `@fagan accepted`)
+
+CI cannot be checked before the push (it runs remotely on pushed code) — so the last mile is **two ordered
+stages**: Stage 1 = local validation (`@fagan`, already done); then commit/push; then Stage 2 = remote CI.
+
+**Delegate `@git-hand` in `mode=terminal`** (pass `task-type`, `slug`, and a one-line `summary`). You run no
+git yourself. It commits the working tree (git-conventions message), pushes the branch, opens/updates the PR,
+reads CI, and returns ONE line:
+
+- `PR <url> · ci=green` → **present Gate #2** (merge, human): summarize what was built + the green DoD
+  checklist **+ the green PR `<url>` as evidence**, then ask the operator to accept. **Do NOT create any gate
+  marker yourself** (same rule as Gate #1).
+- `PR <url> · ci=red:<reason>` → route the defect to `@linger` (the fixer, **K=2 fuse** — same as an
+  implementation FAIL); on `@linger` green, **re-delegate `@git-hand mode=terminal`** (re-push + re-read CI).
+  Never present Gate #2 on red.
+- `PR <url> · ci=pending-timeout` or `STOP:` → surface to the operator; do not hang, do not touch git yourself.
 
 → after operator accept → `@michtom`: canary 1→5→25→100% + 4 golden signals → **Gate #3** (human).
 

@@ -17,6 +17,10 @@ fail() { echo "FAIL: $1"; exit 1; }
 # проекции в актуальном состоянии
 node "$REPO/harness/gen-agents.mjs" >/dev/null
 
+# Ожидаемое число ролей — из ИСТОЧНИКА ПРАВДЫ (_shared/*.md), не магическое число:
+# добавил роль → счётчик подстроился сам, смоук не надо трогать.
+NROLES="$(ls "$REPO/harness/agents/_shared"/*.md 2>/dev/null | wc -l | tr -d ' ')"
+
 # реестр скиллов актуален + ссылки ролей (skills:) ведут на существующие stable-скиллы
 node "$REPO/harness/gen-skill-index.mjs" --check >/dev/null || fail "skill-index: устарел или битая ссылка роль→скилл"; ok
 
@@ -26,7 +30,7 @@ node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness uni
 # --- Claude ---
 P="$TMP/claude"; mkdir -p "$P"
 sh "$REPO/install.sh" claude "$P" --no-input >/dev/null
-[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 20 ] || fail "claude: ролей не 20"; ok
+[ "$(ls "$P/.claude/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')" = "$NROLES" ] || fail "claude: ролей не $NROLES"; ok
 [ -f "$P/.claude/skills/memory/SKILL.md" ] || fail "claude: нет скилла memory"; ok
 [ -e "$P/CLAUDE.md" ] || fail "claude: нет CLAUDE.md"; ok
 # назначение моделей из models.config.json применилось (дефолт claude → 3 модели)
@@ -39,13 +43,13 @@ node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$P/.cl
 # --- OpenCode ---
 P="$TMP/opencode"; mkdir -p "$P"
 sh "$REPO/install.sh" opencode "$P" --no-input >/dev/null
-[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 20 ] || fail "opencode: агентов не 20"; ok
+[ "$(ls "$P/.opencode/agent"/*.md 2>/dev/null | wc -l | tr -d ' ')" = "$NROLES" ] || fail "opencode: агентов не $NROLES"; ok
 [ -e "$P/AGENTS.md" ] || fail "opencode: нет корневого AGENTS.md"; ok
 
 # --- Codex (сборка ролей в AGENTS.md) ---
 P="$TMP/codex"; mkdir -p "$P"
 sh "$REPO/install.sh" codex "$P" --no-input >/dev/null
-[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = 20 ] || fail "codex: ролей не 20"; ok
+[ "$(ls "$P/.agents/roles"/*.md 2>/dev/null | wc -l | tr -d ' ')" = "$NROLES" ] || fail "codex: ролей не $NROLES"; ok
 [ -f "$P/.agents/skills/memory/SKILL.md" ] || fail "codex: нет скилла memory"; ok
 grep -q "izi" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет izi"; ok
 grep -q "Hughes" "$P/AGENTS.md" || fail "codex: в AGENTS.md нет блоков ролей"; ok

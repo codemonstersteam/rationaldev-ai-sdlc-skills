@@ -10,6 +10,7 @@ export const PIPELINE = new Set([
   "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
+  "git-hand", // VCS-порт: start (ветка от транка) + terminal (commit/push/PR/CI)
   "change-intake", "hughes-rework", // rework pipeline (доработка существующего кода)
 ])
 
@@ -24,6 +25,18 @@ export const BRD_MARK = ".agent/planner/brd.md"
 // заблокировано. Проза в izi.md не держит (модель рационализирует «триаж — вход конвейера»); держит хук.
 // izi — не цель делегации (он роутер), поэтому в проверке участвует только целевая роль.
 export const requiresFrontDoor = (role) => normRole(role) !== "gilb"
+
+// On-trunk poka-yoke. Реализаторы НЕ работают на транке: сначала @git-hand mode=start режет ветку от
+// свежего транка (правило старта работы, git-conventions «MUST NOT commit to trunk»). Проза в izi.md не
+// держит — держит хук: реализатор + HEAD на транке → блок «сначала @git-hand». @git-hand НЕ реализатор
+// (он-то ветку и режет) → не блокируется. fs-часть (чтение .git/HEAD) делает вызывающий; здесь — парсер+набор.
+export const TRUNK_BRANCHES = new Set(["main", "master", "trunk"])
+// Имя текущей ветки из содержимого .git/HEAD (`ref: refs/heads/<branch>`); detached-HEAD (сырой sha) → null.
+export function branchFromHead(headContent) {
+  const m = /^ref:\s*refs\/heads\/(.+?)\s*$/m.exec(String(headContent || ""))
+  return m ? m[1] : null
+}
+export const isTrunkBranch = (branch) => TRUNK_BRANCHES.has(String(branch || "").trim())
 
 // Gate #1 акцепт валиден ТОЛЬКО когда план СОБРАН и презентован (есть PLAN.md планировщика ИЛИ
 // plan-review.md критика). Иначе операторское «go ahead»/«акцепт» на ранней фазе (вопросы/дизайн)
@@ -95,4 +108,37 @@ export function gateMarkerContent({ timestamp, source, prompt, planHash }) {
     `prompt\t${one(prompt)}`,
     "",
   ].join("\n")
+}
+
+// ── anti-loop: детект застревания субагента (петля без прогресса) ────────────
+// Субагент (напр. hughes/Qwen на конфликте типа) уходит в петлю повтора ОДНОГО действия без
+// новых outputs. Детект — по СИГНАТУРАМ tool-call'ов: канонизируем (tool + отсортированные args);
+// хвост = K подряд одинаковых ИЛИ короткий цикл (период 2..maxPeriod), повторённый cycleRepeats раз
+// → петля. Гардрэйл на детекте бросает → турн падает как dropout → izi эскалирует (@linger/split, T04).
+// Прогресс (иной вызов) естественно рвёт паттерн → нет ложняка. Чисто (io: none), тестируемо.
+export function toolCallSignature(tool, args) {
+  const norm = (v) => {
+    if (Array.isArray(v)) return v.map(norm)
+    if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm(v[k])]))
+    return v
+  }
+  let a
+  try { a = JSON.stringify(norm(args ?? {})) } catch { a = String(args) }
+  return `${tool} ${a}`
+}
+
+export function detectLoop(sigs, { runThreshold = 5, cycleRepeats = 3, maxPeriod = 3 } = {}) {
+  const n = sigs.length
+  // 1) K подряд одинаковых (одно и то же действие без изменений)
+  if (n >= runThreshold && sigs.slice(n - runThreshold).every((s) => s === sigs[n - 1])) return sigs[n - 1]
+  // 2) короткий цикл A,B,(A,B,…) периода 2..maxPeriod, повторённый cycleRepeats раз (read↔edit-петля)
+  for (let p = 2; p <= maxPeriod; p++) {
+    const need = p * cycleRepeats
+    if (n < need) continue
+    const tail = sigs.slice(n - need)
+    let cyclic = true
+    for (let i = p; i < need; i++) if (tail[i] !== tail[i - p]) { cyclic = false; break }
+    if (cyclic) return tail.slice(0, p).join(" | ")
+  }
+  return null
 }

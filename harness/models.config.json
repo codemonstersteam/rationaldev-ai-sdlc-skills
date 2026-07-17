@@ -37,9 +37,14 @@
     "roles": {}
   },
   "watchdog": {
-    "//": "T09b — 504/сеть-resilience плагина rational-guardrail (opencode --hard). ЕДИНЫЙ источник, из него генерятся 2 таргета: chunkTimeout → prep пишет в opencode.jsonc (provider.options — OpenCode-настройка, ловит тихий hang); nudgeCooldownMs/nudgeText → install кладёт в .opencode/rational.config.json, плагин читает сам (OpenCode их не понимает).",
+    "//": "Plugin-runtime конфиг rational-guardrail (opencode --hard). ЕДИНЫЙ источник: chunkTimeout → prep пишет в opencode.jsonc (provider.options — ловит тихий hang, T09b); остальное (nudge* T09b + loop* anti-loop) → install кладёт в .opencode/rational.config.json как есть, плагин читает сам (OpenCode их не понимает).",
     "chunkTimeout": 90000,
     "nudgeCooldownMs": 30000,
-    "nudgeText": "Провайдер оборвался — продолжи с текущего места, не переделывай"
+    "nudgeText": "Провайдер оборвался — продолжи с текущего места, не переделывай",
+    "//loop": "anti-loop: детект застревания субагента на повторе действия без прогресса. loopRunThreshold — сколько подряд ОДИНАКОВЫХ tool-call'ов = петля; loopCycleRepeats — сколько повторов короткого цикла (read↔edit); loopWindow — глубина буфера сигнатур. enabled=false отключает.",
+    "loopEnabled": true,
+    "loopRunThreshold": 5,
+    "loopCycleRepeats": 3,
+    "loopWindow": 16
   }
 }

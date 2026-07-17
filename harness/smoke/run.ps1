@@ -14,25 +14,28 @@ Remove-Item Env:CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue
 
 # проекции/индекс актуальны (node — кросс-платформенно)
 node "$Repo/harness/gen-agents.mjs" | Out-Null
+
+# Ожидаемое число ролей — из ИСТОЧНИКА ПРАВДЫ (_shared/*.md), не магическое число (зеркало run.sh).
+$NRoles = (Get-ChildItem "$Repo/harness/agents/_shared/*.md").Count
 node "$Repo/harness/gen-skill-index.mjs" --check | Out-Null
 if ($LASTEXITCODE -ne 0) { Fail "skill-index устарел" }; Ok
 
 # --- Claude: раскладка ---
 $P = Join-Path $Tmp 'claude'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" claude -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne 20) { Fail "claude: ролей не 20" }; Ok
+if ((Get-ChildItem "$P/.claude/agents/*.md").Count -ne $NRoles) { Fail "claude: ролей не $NRoles" }; Ok
 if (-not (Test-Path "$P/.claude/skills/memory/SKILL.md")) { Fail "claude: нет скилла memory" }; Ok
 if (-not (Test-Path "$P/CLAUDE.md")) { Fail "claude: нет CLAUDE.md" }; Ok
 
 # --- OpenCode / Codex: раскладка ---
 $P = Join-Path $Tmp 'opencode'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" opencode -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne 20) { Fail "opencode: агентов не 20" }; Ok
+if ((Get-ChildItem "$P/.opencode/agent/*.md").Count -ne $NRoles) { Fail "opencode: агентов не $NRoles" }; Ok
 if (-not (Test-Path "$P/AGENTS.md")) { Fail "opencode: нет AGENTS.md" }; Ok
 
 $P = Join-Path $Tmp 'codex'; New-Item -ItemType Directory -Force -Path $P | Out-Null
 & pwsh -File "$Repo/install.ps1" codex -Project $P -NoInput | Out-Null
-if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne 20) { Fail "codex: ролей не 20" }; Ok
+if ((Get-ChildItem "$P/.agents/roles/*.md").Count -ne $NRoles) { Fail "codex: ролей не $NRoles" }; Ok
 if (-not (Select-String -Path "$P/AGENTS.md" -Pattern 'Hughes' -Quiet)) { Fail "codex: в AGENTS.md нет блоков ролей" }; Ok
 
 # --- Недеструктивность: существующий AGENTS.md ---

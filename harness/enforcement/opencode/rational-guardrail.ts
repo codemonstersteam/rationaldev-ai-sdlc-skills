@@ -7,6 +7,7 @@ import { join } from "node:path"
 import {
   PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
   parseTicketOutputs, isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK,
+  isImplementer, branchFromHead, isTrunkBranch, toolCallSignature, detectLoop,
 } from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -54,11 +55,18 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   // Нет файла → дефолты. OpenCode их не знает — потому отдельный plugin-конфиг, не opencode.jsonc.
   let NUDGE = "Провайдер оборвался — продолжи с текущего места, не переделывай"
   let NUDGE_COOLDOWN_MS = 30_000
+  // anti-loop: детект застревания субагента на повторе действия без прогресса (из того же plugin-конфига).
+  let LOOP_ON = true, LOOP_RUN = 5, LOOP_CYCLE = 3, LOOP_WINDOW = 16
   try {
     const wc = JSON.parse(await readFile(join(root, ".opencode", "rational.config.json"), "utf8"))
     if (typeof wc?.nudgeText === "string" && wc.nudgeText) NUDGE = wc.nudgeText
     if (Number.isFinite(wc?.nudgeCooldownMs)) NUDGE_COOLDOWN_MS = wc.nudgeCooldownMs
+    if (typeof wc?.loopEnabled === "boolean") LOOP_ON = wc.loopEnabled
+    if (Number.isFinite(wc?.loopRunThreshold)) LOOP_RUN = wc.loopRunThreshold
+    if (Number.isFinite(wc?.loopCycleRepeats)) LOOP_CYCLE = wc.loopCycleRepeats
+    if (Number.isFinite(wc?.loopWindow)) LOOP_WINDOW = wc.loopWindow
   } catch { /* нет конфига → дефолты */ }
+  const loopSigs: string[] = [] // кольцевой буфер сигнатур tool-call'ов (инстанс = сессия)
   const lastNudge = new Map<string, number>()
   const wakeIzi = async (sid: string) => {
     if (!client?.tui) return // headless / нет TUI — тихо
@@ -135,6 +143,24 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
       const tool = input?.tool
       const args = output?.args ?? input?.args ?? {}
 
+      // (L) anti-loop: субагент застрял на повторе ОДНОГО действия без прогресса (петля reasoning/tool
+      // без новых outputs — hughes/Qwen на конфликте типа, 17-07). Трекаем сигнатуры всех tool-call'ов
+      // кроме `task` (делегации гейтятся отдельно). Детект → бросаем: турн падает как dropout, izi
+      // эскалирует по genchi-genbutsu (T04). Сброс буфера после броска — не долбить каждый следующий вызов.
+      if (LOOP_ON && tool && tool !== "task") {
+        loopSigs.push(sha12(toolCallSignature(tool, args)))
+        if (loopSigs.length > LOOP_WINDOW) loopSigs.shift()
+        const hit = detectLoop(loopSigs, { runThreshold: LOOP_RUN, cycleRepeats: LOOP_CYCLE })
+        if (hit) {
+          loopSigs.length = 0
+          throw new Error(
+            "[rational-guardrail] anti-loop: субагент повторяет одно действие ('" + tool + "') без прогресса " +
+            "(петля reasoning/tool без новых outputs). Действие заблокировано. Это DROPOUT — izi: genchi-genbutsu " +
+            "(артефакт есть+build green? допиши маркер; нет — andon stop, retry ≤2 → @linger / split тикета). НЕ повторяй тот же шаг.",
+          )
+        }
+      }
+
       // (0) Маркер Gate #1 ставит ТОЛЬКО оператор вне сессии. Агент не может его
       // создавать/трогать — иначе human-gate обходится самоакцептом (найдено на dry-run).
       if (tool === "bash") {
@@ -198,6 +224,24 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
           "разрешённая делегация — @gilb (сырое BR → измеримый BRD + грил открытых вопросов). " +
           "Триаж/планирование/реализация заблокированы до этого. СНАЧАЛА делегируй @gilb.",
         )
+      }
+
+      // (1.7) On-trunk poka-yoke: реализатор НЕ работает на транке — сначала @git-hand mode=start режет ветку
+      // от свежего транка (правило старта работы). @git-hand не реализатор → не блокируется (он-то ветку и режет).
+      if (role !== "unknown" && isImplementer(role)) {
+        try {
+          const branch = branchFromHead(await readFile(join(root, ".git", "HEAD"), "utf8"))
+          if (branch && isTrunkBranch(branch)) {
+            throw new Error(
+              "[rational-guardrail] Старт на транке запрещён: HEAD на '" + branch + "'. Реализатор (" + role +
+              ") работает ТОЛЬКО на рабочей ветке. Сначала делегируй @git-hand mode=start — свежий транк + ветка " +
+              "<type>/<slug> (git-conventions).",
+            )
+          }
+        } catch (e: any) {
+          if (e instanceof Error && e.message.startsWith("[rational-guardrail]")) throw e
+          // нет .git/HEAD или detached-HEAD → fail-open (не блокируем)
+        }
       }
 
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
