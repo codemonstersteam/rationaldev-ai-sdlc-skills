@@ -90,7 +90,8 @@ $D = Join-Path $Tmp 'gate-chore'
 New-Item -ItemType Directory -Force -Path "$D/.agent/gates" | Out-Null
 New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null
-Set-Content -NoNewline "$D/.agent/planner/mode" 'chore'
+# UTF-8 без BOM (как пишет агент) — Set-Content на Windows добавляет BOM/UTF-16, ломая сравнение mode.
+[System.IO.File]::WriteAllText((Join-Path $D '.agent/planner/mode'), 'chore')
 New-Item -ItemType File -Force -Path "$D/.agent/gates/gate1.approved" | Out-Null
 Push-Location $D
 '{"tool_input":{"subagent_type":"hughes"}}' | node $GC 2>$null
