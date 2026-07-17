@@ -9,9 +9,16 @@
 #   1) ставит харнес в песочницу (install.sh opencode --no-input; модели — из
 #      harness/models.config.json opencode-секции: large=GLM 5.2, medium/small=Qwen3.6-27b);
 #   2) кладёт TASK.md (bench spec/task.md);
-#   3) правит глобальный ~/.config/opencode/opencode.jsonc: провайдер openrouter → прокси,
-#      БЕЗ плагина omo (иначе его агент sisyphus/opus перехватывает запуск) — с бэкапом;
+#   3) пишет ПРОЕКТНО-ЛОКАЛЬНЫЙ конфиг прогона $SB/opencode.jsonc (провайдер openrouter →
+#      прокси). Глобальный ~/.config/opencode НЕ трогается вовсе.
 #   4) поднимает token-логирующий прокси на :4000, если не запущен.
+#
+# ПРО omo (oh-my-openagent): конфиг прогона — проектный, но opencode МЕРЖИТ global+project
+# и проектный НЕ может отключить плагин, объявленный в global (массивы плагинов
+# конкатенируются, disable-механизма нет). Поэтому omo должен жить ПРОЕКТНО (в своих
+# проектах: opencode.json {"plugin":["oh-my-openagent"]} + .opencode/oh-my-openagent.json —
+# образец omo-sdlc-test/opencode.json), а НЕ в global. Иначе его sisyphus/opus протечёт
+# в песочницу и перехватит прогон. Шаг 2a проверяет global и предупреждает.
 set -eu
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BENCH="$(cd "$HERE/.." && pwd)"                 # experiments/token-bench
@@ -27,15 +34,12 @@ rm -rf "$SB"; mkdir -p "$SB"
 sh "$BUNDLE/install.sh" opencode "$SB" --no-input --hard
 cp "$BENCH/spec/task.md" "$SB/TASK.md"
 
-# 2) глобальный opencode: openrouter → прокси, без omo
-CFG="$HOME/.config/opencode/opencode.jsonc"
-mkdir -p "$(dirname "$CFG")"
-[ -f "$CFG" ] && [ ! -f "$CFG.bak-before-rational-test" ] && cp "$CFG" "$CFG.bak-before-rational-test" || true
+# 2) ПРОЕКТНО-ЛОКАЛЬНЫЙ конфиг прогона (в песочнице, НЕ глобальный).
 # ЕДИНЫЙ источник — harness/models.config.json: дефолт-модель (tiers.large) + watchdog.chunkTimeout.
 MODELS="$BUNDLE/harness/models.config.json"
 MODEL="$(jq -r '.opencode.tiers.large // "openrouter/z-ai/glm-5.2"' "$MODELS")"
 CHUNK="$(jq -r '.watchdog.chunkTimeout // 90000' "$MODELS")"
-cat > "$CFG" <<JSON
+cat > "$SB/opencode.jsonc" <<JSON
 {
   "\$schema": "https://opencode.ai/config.json",
   "model": "$MODEL",
@@ -43,6 +47,27 @@ cat > "$CFG" <<JSON
     "baseURL": "http://localhost:4000/api/v1", "apiKey": "$KEY", "chunkTimeout": $CHUNK } } }
 }
 JSON
+
+# 2a) Гард: opencode мержит global+project; проектный конфиг НЕ отключает плагин из global.
+#     Если global объявляет omo-плагин — он протечёт в песочницу (sisyphus/opus перехватят).
+OMO_LEAK=0; LEAK_AT=""
+for GCFG in "$HOME/.config/opencode/opencode.jsonc" "$HOME/.config/opencode/opencode.json"; do
+  [ -f "$GCFG" ] || continue
+  if grep -Eq '"plugin"|oh-my-openagent' "$GCFG"; then OMO_LEAK=1; LEAK_AT="$GCFG"; fi
+done
+if [ "$OMO_LEAK" = 1 ]; then
+  cat >&2 <<WARN
+
+⚠️  ВНИМАНИЕ: глобальный $LEAK_AT объявляет "plugin" (вероятно omo).
+    opencode мержит global+project → плагин ПРОТЕЧЁТ в песочницу и перехватит прогон
+    (проектный конфиг отключить его НЕ может). Сделай omo проектно-локальным:
+      • убери "plugin" из global ($LEAK_AT);
+      • в omo-проект положи opencode.json {"plugin":["oh-my-openagent"]}
+        + .opencode/oh-my-openagent.json  (образец: omo-sdlc-test/opencode.json).
+    Прогон харнеса продолжать НЕ рекомендуется, пока global объявляет плагин.
+
+WARN
+fi
 
 # 3) прокси токенов (если не поднят)
 if ! curl -s -o /dev/null http://localhost:4000/ 2>/dev/null; then
@@ -55,7 +80,9 @@ cat <<EOF
 
 ✅ Эталонная песочница готова: $SB
    Модели: large=GLM 5.2 · medium/small=Qwen3.6-27b  (harness/models.config.json)
-   omo отключён (бэкап: $CFG.bak-before-rational-test) · прокси :4000 → OpenRouter
+   Конфиг прогона: $SB/opencode.jsonc (ПРОЕКТНО-ЛОКАЛЬНЫЙ) · прокси :4000 → OpenRouter
+   Глобальный ~/.config/opencode НЕ тронут. omo подключается ПРОЕКТНО (не в global) —
+   иначе его sisyphus/opus перехватит прогон (см. гард выше).
 
 Запуск харнеса:
   cd "$SB"
@@ -67,7 +94,4 @@ cat <<EOF
 
 Модель по факту (в другом терминале):
   tail -f "$BENCH/proxy/usage.jsonl" | jq -c '{req_model,input_tokens,completion_tokens}'
-
-Вернуть omo обратно:
-  cp "$CFG.bak-before-rational-test" "$CFG"
 EOF
