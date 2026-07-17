@@ -5,9 +5,9 @@
 //   2) Gate #1: делегация реализатора (hughes/wirth-tester/scaffolder) без plan-review.md + gate1.approved → блок.
 // Вход: JSON на stdin (tool_input{subagent_type,…}). Выход: exit 2 → Claude блокирует вызов, показывает stderr.
 // Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -42,6 +42,21 @@ try {
       "(сырое BR → измеримый BRD + грил открытых вопросов). Триаж/планирование/реализация заблокированы " +
       "до этого. Ты ушёл в '" + normRole(role) + "' в обход грила — СНАЧАЛА делегируй @gilb.",
     )
+  }
+
+  // (1.7) On-trunk poka-yoke — реализатор НЕ работает на транке. Сначала @git-hand mode=start режет ветку
+  // от свежего транка; пока HEAD на main/master/trunk — реализация заблокирована. @git-hand не реализатор.
+  if (isImplementer(role)) {
+    try {
+      const branch = branchFromHead(readFileSync(join(root, ".git", "HEAD"), "utf8"))
+      if (branch && isTrunkBranch(branch)) {
+        block(
+          "Старт на транке запрещён: HEAD на '" + branch + "'. Реализатор (" + normRole(role) + ") работает " +
+          "ТОЛЬКО на рабочей ветке. Сначала делегируй @git-hand mode=start — он подтянет свежий транк и отрежет " +
+          "ветку <type>/<slug> (правило старта работы, git-conventions).",
+        )
+      }
+    } catch { /* нет .git/HEAD или detached → не блокируем (fail-open) */ }
   }
 
   // (2) Gate #1 — реализаторы заблокированы до апрува плана.

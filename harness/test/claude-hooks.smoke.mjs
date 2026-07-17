@@ -35,6 +35,22 @@ assert.equal(runHook("gate-check.mjs", task("wirth-triage"), { CLAUDE_PROJECT_DI
 assert.equal(runHook("gate-check.mjs", task("mills"), { CLAUDE_PROJECT_DIR: dir }), 0, "@mills с brd.md → пропуск (не реализатор)"); pass++
 assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: dir }), 2, "@hughes с brd.md, но без Gate #1 → блок"); pass++
 
+// gate-check (1.7): on-trunk poka-yoke — реализатор на транке блокируется даже при пройденном Gate #1
+const gdir = await mkdtemp(join(tmpdir(), "claude-ontrunk-"))
+await mkdir(join(gdir, ".agent", "planner"), { recursive: true })
+await writeFile(join(gdir, ".agent", "planner", "brd.md"), "# BRD\n")
+await mkdir(join(gdir, ".agent", "plan-reviewer"), { recursive: true })
+await writeFile(join(gdir, ".agent", "plan-reviewer", "plan-review.md"), "ok\n")
+await mkdir(join(gdir, ".agent", "gates"), { recursive: true })
+await writeFile(join(gdir, ".agent", "gates", "gate1.approved"), "ok\n")
+await mkdir(join(gdir, ".git"), { recursive: true })
+await writeFile(join(gdir, ".git", "HEAD"), "ref: refs/heads/main\n")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: gdir }), 2, "@hughes на транке (Gate #1 ok) → блок (сначала @git-hand)"); pass++
+assert.equal(runHook("gate-check.mjs", task("git-hand"), { CLAUDE_PROJECT_DIR: gdir }), 0, "@git-hand на транке → пропуск (он режет ветку)"); pass++
+await writeFile(join(gdir, ".git", "HEAD"), "ref: refs/heads/feat/x\n")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: gdir }), 0, "@hughes на рабочей ветке (Gate #1 ok) → пропуск"); pass++
+await rm(gdir, { recursive: true, force: true })
+
 // gate-bash: само-запись маркера
 assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate1.approved")), 2, "touch gate1 → блок"); pass++
 assert.equal(runHook("gate-bash.mjs", bash("echo x > .agent/gates/gate1.approved")), 2, "> gate1 → блок"); pass++
@@ -81,4 +97,4 @@ assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобб�
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/20 — claude hooks smoke (closed-set + фронтдор + Gate #1 + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)
+console.log(`PASS ${pass}/23 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)

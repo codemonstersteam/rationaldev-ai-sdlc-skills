@@ -1,0 +1,48 @@
+{
+  "//": "ЕДИНЫЙ ИСТОЧНИК VCS-провайдеров (порт доставки). @git-hand ЗАВИСИТ ОТ ПОРТА (4 глагола: cut_branch, commit_push, open_pr, ci_status) и НЕ хардкодит форж — конкрет выбирается отсюда (DIP/open-closed, как target-profiles.json). Смена форжа = переключить `default` ИЛИ записать одно слово в .agent/planner/vcs; новый форж = +один блок здесь, 0 правок @git-hand и izi. `mechanism`: cli → глагол = shell-команда (шаблон, {…}=подстановка izi/роли); mcp → глагол = имя MCP-тула (схему грузит @git-hand через ToolSearch). Читают: @git-hand. Единственный ВЖИВУЮ провайдер сейчас — gh (cli); mcp-* — заглушки под доработку (выбран невваренный → @git-hand делает STOP).",
+  "default": "gh",
+  "providers": {
+    "gh": {
+      "//": "GitHub через gh CLI — уже установлен и залогинен. Walking-skeleton провайдер.",
+      "mechanism": "cli",
+      "verbs": {
+        "cut_branch": "git fetch origin && git checkout {trunk} && git pull --ff-only origin {trunk} && git checkout -b {branch}",
+        "commit_push": "git add -A && git commit -m {msg} && git push -u origin {branch}",
+        "open_pr": "gh pr create --base {trunk} --head {branch} --title {title} --body {body} || gh pr edit {branch} --title {title} --body {body}",
+        "ci_status": "gh pr checks {branch} --watch --fail-fast"
+      }
+    },
+    "mcp-github": {
+      "//": "ЗАГЛУШКА. GitHub через MCP-сервер (доказать сменяемость на реальном MCP тем же портом). Доработка: (1) подключить mcp-github сервер; (2) заполнить verbs именами его тулов; (3) @git-hand возьмёт mechanism=mcp и будет звать тулы вместо gh. izi/@git-hand-тело не трогать.",
+      "mechanism": "mcp",
+      "server": "mcp-github",
+      "verbs": {
+        "cut_branch": "TODO:create_branch",
+        "commit_push": "TODO:push_files",
+        "open_pr": "TODO:create_pull_request",
+        "ci_status": "TODO:get_workflow_run"
+      }
+    },
+    "mcp-bitbucket": {
+      "//": "ЗАГЛУШКА. Bitbucket через MCP-сервер — тот же порт, другой адаптер. Доработка: заполнить server+verbs именами тулов bitbucket-MCP; переключить default/маркер на 'mcp-bitbucket'. Демонстрация DIP: @git-hand и izi не меняются.",
+      "mechanism": "mcp",
+      "server": "mcp-bitbucket",
+      "verbs": {
+        "cut_branch": "TODO:create_branch",
+        "commit_push": "TODO:push_changes",
+        "open_pr": "TODO:create_pull_request",
+        "ci_status": "TODO:get_pipeline"
+      }
+    },
+    "local": {
+      "//": "ЗАГЛУШКА. Без remote: только commit, без push/PR/CI (Этап 2 пропущен, мёрж локально). Доработка: open_pr/ci_status = no-op, @git-hand возвращает ci=green без remote-проверки.",
+      "mechanism": "cli",
+      "verbs": {
+        "cut_branch": "git checkout -b {branch}",
+        "commit_push": "git add -A && git commit -m {msg}",
+        "open_pr": "true",
+        "ci_status": "true"
+      }
+    }
+  }
+}

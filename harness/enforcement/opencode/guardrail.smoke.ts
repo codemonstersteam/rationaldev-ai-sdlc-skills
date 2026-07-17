@@ -142,8 +142,27 @@ async function run() {
   await h6.event({ event: { type: "session.error", properties: { sessionID: "x" } } })
   assert.equal(c2.text, "CUSTOM-NUDGE"); pass++
 
+  // M. anti-loop: субагент долбит одно действие без прогресса → блок (свежий инстанс, фронтдор не при чём)
+  const hLoop: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
+  const rd = (p: string) => hLoop["tool.execute.before"]({ tool: "read", args: { path: p } }, {})
+  await rd("x"); await rd("x"); await rd("x"); await rd("x")            // 4 подряд — ещё не петля (порог 5)
+  await assert.rejects(() => rd("x"), /anti-loop/); pass++                // 5-й одинаковый → петля
+  // прогресс (иной вызов) не ложно-срабатывает; после сброса счётчик с нуля
+  await rd("a"); await rd("b"); await rd("a"); await rd("b"); pass++      // разнообразно → без броска
+  // цикл период-2 (read↔edit одного файла) повторённый 3 раза → петля
+  const hLoop2: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
+  const ed = (p: string) => hLoop2["tool.execute.before"]({ tool: "edit", args: { path: p, content: "z" } }, {})
+  const re = (p: string) => hLoop2["tool.execute.before"]({ tool: "read", args: { path: p } }, {})
+  await re("f"); await ed("f"); await re("f"); await ed("f"); await re("f")
+  await assert.rejects(() => ed("f"), /anti-loop/); pass++
+  // task-делегации НЕ трекаются анти-петлёй (гейтятся отдельно): повтор task не бросает anti-loop
+  const hLoop3: any = await RationalGuardrail({ directory: dir, worktree: dir } as any)
+  await mkdir(join(dir, ".agent", "planner"), { recursive: true })
+  for (let i = 0; i < 6; i++) await hLoop3["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } })
+  pass++
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/26 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/30 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
