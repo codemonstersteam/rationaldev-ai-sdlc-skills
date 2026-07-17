@@ -122,6 +122,7 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 
 | verdict token | You do |
 |---|---|
+| `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages |
 | `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) |
 | `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
 | `route=rework-refactor` | run the **REWORK path §refactor** (below) |
@@ -129,6 +130,32 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 | `route=rework-api` | run the **REWORK path §api** (below) |
 | `route=greenfield · level=epic` | **STOP. Tell the operator: "EPIC-level task (multi-repo). The epic algorithm is NOT YET IMPLEMENTED — I cannot drive it." + targets.** Launch nothing. |
 | `level=unclear` | pass the line to the operator for clarification, wait |
+
+## CHORE lane — repo plumbing, economical, still BY PLAN (route=chore, mode=chore)
+
+A chore (CI/Dockerfile/Makefile/config/dep-bump/docs) is NOT a slice: **no FRD, no spec, no slicer,
+no scaffold, no component tests, no module tree.** But it is still **planned and gated** — a cheap plan +
+one human gate, not zero plan. The front door (`@gilb`) already ran in Step 0; from the `route=chore` verdict:
+
+1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`.agent/planner/CHORE-PLAN.md`**: a one-pager —
+   the file(s) to change, the **verification command** (how we prove it works, e.g. "PR to main, both CI jobs
+   green"), and rollback. Planner does not design a module tree here — it writes the one-pager and returns a line.
+2. **Mini Gate #1** (human): present `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
+   token **`GATE1 APPROVE`** (the `--hard` hook sets `.agent/gates/gate1.approved` on that token — you MUST NOT).
+   Under `mode=chore` the guardrail requires `CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
+3. **WORKING-BRANCH** (as below): `@git-hand mode=start` (`task-type=chore`, `slug`) → cuts `chore/<slug>` from
+   fresh trunk. No code on trunk.
+4. **`@hughes` under `mode=chore`** — writes the file(s); **no io-skills attached** (config/CI/docs, not a module).
+   It self-appends its `green` marker to `done.log` as usual.
+5. **Acceptance = run the verification command** from `CHORE-PLAN.md` — **NOT** `@fagan`'s Go-DoD (`validate-dod`
+   is for a service/CLI slice; a chore has none). If the command is local (lint/build/yaml-valid) run it via the
+   terminal step's Stage 1 equivalent; if it is "green CI on the PR", it **is** Stage 2 of the terminal step below.
+6. **TERMINAL git step** (as in DoD-closure): `@git-hand mode=terminal` → commit (git-conventions) → push → PR →
+   CI. `ci=green` → present **Gate #2** with the green PR as the verification evidence; `ci=red` → `@linger`
+   (K-fuse) → re-terminal. The chore's "verification command green" and the terminal CI verdict are the same signal.
+
+No `@wirth-slicer/usecase/apidesigner/moduledesigner/dijkstra/ticketer`, no `@scaffolder`, no `@wirth-tester`,
+no `@mills` — a chore has nothing for them to do. You route the six steps above and hold the two human gates.
 
 ## PLANNING — `modular` path (all stages = Wirth on GLM, each a fresh subagent)
 
@@ -410,7 +437,22 @@ process weight to it. You reason from:
   and never inflate to look thorough.
 - You are a **diagnosis, not a design** — you name the level and stop; you never write the FRD or slice.
 
-## Axis 1 — greenfield vs rework (FIRST decision)
+## Axis 0 — chore vs code (the FIRST question — ask it before anything else)
+Does the task touch **product code or a contract at all**, or is it **repo plumbing**? A change that
+- touches **no module secret and no contract**, and
+- **adds no behaviour a component test would assert**,
+
+is a **chore** — repo infrastructure, not a slice. Typical chores: CI/CD workflow, Dockerfile/compose, Makefile,
+`.gitignore`/lint/formatter config, dependency bump, pure docs (README/backlog) with no behaviour change. A chore
+has **no target shape** (it is neither a new service nor a slice of one) and needs **no FRD/spec/module-tree**.
+
+- **chore** → emit `route=chore`, write `chore` to the mode marker, and STOP classifying (do not pick greenfield/rework).
+- Anything that changes product behaviour, an interface, or a module's secret is **NOT** a chore → fall through to Axis 1.
+
+Rule of thumb: if the deliverable is a config/build/doc file and the program's black-box behaviour is unchanged,
+it is a chore. When genuinely ambiguous (a "config" that actually changes behaviour) → **not** a chore; use Axis 1.
+
+## Axis 1 — greenfield vs rework (only if Axis 0 said "code")
 Does the task **build new code** or **change existing code**? Look at the BRD *and* the repo (you may `glob`):
 a target with an **existing harness design package** (`docs/design/<slice>/` + code) that the task *modifies*
 = **rework**; building a service/CLI that does not yet exist = **greenfield**.
@@ -431,12 +473,14 @@ Unclear / no coherent requirement, or ambiguous whether the code already exists 
 
 ## Write the mode marker (MUST, before returning)
 You **MUST** write `.agent/planner/mode` with exactly one token (creates `.agent/planner/` if absent):
-`greenfield` · `rework-refactor` · `rework-behavior` · `rework-api`. (For `unclear`, write nothing — izi
-returns to the operator.) The validators read this marker to self-adjust; do it before your verdict line.
+`chore` · `greenfield` · `rework-refactor` · `rework-behavior` · `rework-api`. (For `unclear`, write nothing —
+izi returns to the operator.) The validators and the `--hard` guardrail read this marker to self-adjust (under
+`chore` the guardrail requires `CHORE-PLAN.md` instead of full plan-review); do it before your verdict line.
 
 ## Return contract (izi routes ONLY by this line)
 You **MUST** return **one line**:
 ```
+wirth-triage → route=chore · <basis>
 wirth-triage → route=greenfield · level=modular · <basis>
 wirth-triage → route=greenfield · level=trivial · <basis>
 wirth-triage → route=rework-refactor · <basis>

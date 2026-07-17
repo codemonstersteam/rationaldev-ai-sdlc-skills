@@ -7,7 +7,7 @@
 // Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -59,10 +59,23 @@ try {
     } catch { /* нет .git/HEAD или detached → не блокируем (fail-open) */ }
   }
 
-  // (2) Gate #1 — реализаторы заблокированы до апрува плана.
+  // (2) Gate #1 — реализаторы заблокированы до апрува плана. Под mode=chore план — одностраничный
+  // CHORE-PLAN.md (полного plan-review.md нет), поэтому требуем его вместо ревью (gate1.approved — всегда).
   if (!isImplementer(role)) process.exit(0)
-  const review = join(root, ".agent", "plan-reviewer", "plan-review.md")
   const gate1 = join(root, ".agent", "gates", "gate1.approved")
+  let mode = ""
+  try { mode = readFileSync(join(root, ".agent", "planner", "mode"), "utf8") } catch { /* нет маркера */ }
+  if (isChoreMode(mode)) {
+    const chorePlan = join(root, ".agent", "planner", "CHORE-PLAN.md")
+    if (!existsSync(chorePlan) || !existsSync(gate1)) {
+      block(
+        "Gate #1 (chore) не пройден: нужны .agent/planner/CHORE-PLAN.md и .agent/gates/gate1.approved " +
+        "перед делегированием реализации (" + normRole(role) + ").",
+      )
+    }
+    process.exit(0)
+  }
+  const review = join(root, ".agent", "plan-reviewer", "plan-review.md")
   if (!existsSync(review) || !existsSync(gate1)) {
     block(
       "Gate #1 не пройден: нужны .agent/plan-reviewer/plan-review.md и .agent/gates/gate1.approved " +

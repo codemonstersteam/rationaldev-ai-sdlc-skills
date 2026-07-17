@@ -51,6 +51,19 @@ await writeFile(join(gdir, ".git", "HEAD"), "ref: refs/heads/feat/x\n")
 assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: gdir }), 0, "@hughes на рабочей ветке (Gate #1 ok) → пропуск"); pass++
 await rm(gdir, { recursive: true, force: true })
 
+// gate-check (chore): mode=chore — implementer требует CHORE-PLAN.md вместо plan-review.md
+const cdir = await mkdtemp(join(tmpdir(), "claude-chore-"))
+await mkdir(join(cdir, ".agent", "planner"), { recursive: true })
+await writeFile(join(cdir, ".agent", "planner", "brd.md"), "# BRD\n")
+await writeFile(join(cdir, ".agent", "planner", "mode"), "chore")
+await mkdir(join(cdir, ".agent", "gates"), { recursive: true })
+await writeFile(join(cdir, ".agent", "gates", "gate1.approved"), "ok\n")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 2, "chore: @hughes без CHORE-PLAN.md → блок"); pass++
+await writeFile(join(cdir, ".agent", "planner", "CHORE-PLAN.md"), "# plan\n")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с CHORE-PLAN.md + gate1 → пропуск"); pass++
+await rm(cdir, { recursive: true, force: true })
+await rm(gdir, { recursive: true, force: true })
+
 // gate-bash: само-запись маркера
 assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate1.approved")), 2, "touch gate1 → блок"); pass++
 assert.equal(runHook("gate-bash.mjs", bash("echo x > .agent/gates/gate1.approved")), 2, "> gate1 → блок"); pass++
@@ -97,4 +110,4 @@ assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобб�
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/23 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)
+console.log(`PASS ${pass}/25 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)

@@ -147,6 +147,7 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 
 | verdict token | You do |
 |---|---|
+| `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages |
 | `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) |
 | `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
 | `route=rework-refactor` | run the **REWORK path §refactor** (below) |
@@ -154,6 +155,32 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 | `route=rework-api` | run the **REWORK path §api** (below) |
 | `route=greenfield · level=epic` | **STOP. Tell the operator: "EPIC-level task (multi-repo). The epic algorithm is NOT YET IMPLEMENTED — I cannot drive it." + targets.** Launch nothing. |
 | `level=unclear` | pass the line to the operator for clarification, wait |
+
+## CHORE lane — repo plumbing, economical, still BY PLAN (route=chore, mode=chore)
+
+A chore (CI/Dockerfile/Makefile/config/dep-bump/docs) is NOT a slice: **no FRD, no spec, no slicer,
+no scaffold, no component tests, no module tree.** But it is still **planned and gated** — a cheap plan +
+one human gate, not zero plan. The front door (`@gilb`) already ran in Step 0; from the `route=chore` verdict:
+
+1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`.agent/planner/CHORE-PLAN.md`**: a one-pager —
+   the file(s) to change, the **verification command** (how we prove it works, e.g. "PR to main, both CI jobs
+   green"), and rollback. Planner does not design a module tree here — it writes the one-pager and returns a line.
+2. **Mini Gate #1** (human): present `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
+   token **`GATE1 APPROVE`** (the `--hard` hook sets `.agent/gates/gate1.approved` on that token — you MUST NOT).
+   Under `mode=chore` the guardrail requires `CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
+3. **WORKING-BRANCH** (as below): `@git-hand mode=start` (`task-type=chore`, `slug`) → cuts `chore/<slug>` from
+   fresh trunk. No code on trunk.
+4. **`@hughes` under `mode=chore`** — writes the file(s); **no io-skills attached** (config/CI/docs, not a module).
+   It self-appends its `green` marker to `done.log` as usual.
+5. **Acceptance = run the verification command** from `CHORE-PLAN.md` — **NOT** `@fagan`'s Go-DoD (`validate-dod`
+   is for a service/CLI slice; a chore has none). If the command is local (lint/build/yaml-valid) run it via the
+   terminal step's Stage 1 equivalent; if it is "green CI on the PR", it **is** Stage 2 of the terminal step below.
+6. **TERMINAL git step** (as in DoD-closure): `@git-hand mode=terminal` → commit (git-conventions) → push → PR →
+   CI. `ci=green` → present **Gate #2** with the green PR as the verification evidence; `ci=red` → `@linger`
+   (K-fuse) → re-terminal. The chore's "verification command green" and the terminal CI verdict are the same signal.
+
+No `@wirth-slicer/usecase/apidesigner/moduledesigner/dijkstra/ticketer`, no `@scaffolder`, no `@wirth-tester`,
+no `@mills` — a chore has nothing for them to do. You route the six steps above and hold the two human gates.
 
 ## PLANNING — `modular` path (all stages = Wirth on GLM, each a fresh subagent)
 

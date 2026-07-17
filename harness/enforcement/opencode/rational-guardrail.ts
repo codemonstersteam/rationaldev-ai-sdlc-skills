@@ -7,7 +7,7 @@ import { join } from "node:path"
 import {
   PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
   parseTicketOutputs, isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK,
-  isImplementer, branchFromHead, isTrunkBranch, toolCallSignature, detectLoop,
+  isImplementer, branchFromHead, isTrunkBranch, toolCallSignature, detectLoop, isChoreMode,
 } from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -245,7 +245,20 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
       }
 
       // Реализация (scaffolder/hughes) и автор компонентных тестов (wirth-tester) заблокированы до Gate #1.
-      if (role !== "hughes" && role !== "wirth-tester" && role !== "scaffolder") return
+      if (!isImplementer(role)) return
+      // Под mode=chore план — одностраничный CHORE-PLAN.md (полного plan-review.md нет): требуем его вместо ревью.
+      let mode = ""
+      try { mode = await readFile(join(agentDir, "planner", "mode"), "utf8") } catch { /* нет маркера */ }
+      if (isChoreMode(mode)) {
+        const chorePlan = join(agentDir, "planner", "CHORE-PLAN.md")
+        if (!(await exists(chorePlan)) || !(await exists(gate1))) {
+          throw new Error(
+            "[rational-guardrail] Gate #1 (chore) не пройден: требуется .agent/planner/CHORE-PLAN.md и апрув " +
+            "оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
+          )
+        }
+        return
+      }
       if (!(await exists(review)) || !(await exists(gate1))) {
         throw new Error(
           "[rational-guardrail] Gate #1 не пройден: требуется " +

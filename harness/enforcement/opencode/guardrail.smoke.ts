@@ -55,6 +55,22 @@ async function run() {
   await writeFile(join(dir, ".agent", "gates", "gate1.approved"), "")
   await hooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
 
+  // C2. mode=chore: implementer требует CHORE-PLAN.md вместо plan-review.md (изолированный каталог)
+  const cdir = await mkdtemp(join(tmpdir(), "rg-chore-"))
+  const chooks: any = await RationalGuardrail({ directory: cdir, worktree: cdir } as any)
+  await mkdir(join(cdir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(cdir, ".agent", "planner", "brd.md"), "# BRD\n")
+  await writeFile(join(cdir, ".agent", "planner", "mode"), "chore")
+  await mkdir(join(cdir, ".agent", "gates"), { recursive: true })
+  await writeFile(join(cdir, ".agent", "gates", "gate1.approved"), "")
+  await assert.rejects(
+    () => chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
+    /CHORE-PLAN/,
+  ); pass++
+  await writeFile(join(cdir, ".agent", "planner", "CHORE-PLAN.md"), "# plan\n")
+  await chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
+  await rm(cdir, { recursive: true, force: true })
+
   // D. decisions.log пишется на делегирование
   await hooks["tool.execute.after"](task("wirth-planner"), { title: "design slice 01" })
   const log = await readFile(join(dir, ".agent", "decisions.log"), "utf8")
@@ -162,7 +178,7 @@ async function run() {
   pass++
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/30 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/32 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
