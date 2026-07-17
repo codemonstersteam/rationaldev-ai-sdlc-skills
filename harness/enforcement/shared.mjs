@@ -48,7 +48,8 @@ export const DESIGN_DIR = "docs/design" // PLAN.md лежит per-slice: docs/de
 export const CHORE_PLAN_MARK = ".agent/planner/CHORE-PLAN.md"
 export const MODE_MARK = ".agent/planner/mode"
 // mode-маркер (пишет @wirth-triage) == "chore"? content от вызывающего (fs-чтение снаружи).
-export const isChoreMode = (modeContent) => String(modeContent || "").trim() === "chore"
+// Срезаем ведущий BOM (﻿) — Windows-тулзы (PowerShell Set-Content) пишут его; trim() его не берёт.
+export const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
 // Готов ли план к акцепту? existsFn(relPath)→bool, slicesFn()→string[] имён под DESIGN_DIR (оба от вызывающего).
 // chore: CHORE-PLAN.md — тоже «план готов» (одностраничник вместо полного пакета).
 export function planReadyForApproval(existsFn, sliceDirsFn) {
