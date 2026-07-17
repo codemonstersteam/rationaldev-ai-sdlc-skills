@@ -21,6 +21,13 @@ A **target profile** is that slice — one cohesive place owning everything a sh
 | `template` (scaffold) | `template-go-api` | `template-go-cli` |
 | `readme_sections` | failure-map · api · build-run | failure-map · usage · build-run |
 | `ctest` (component-test flavour) | compose-service | one-shot-binary |
+| `toolchain` (version sources) | go.mod · Dockerfile golang base | go.mod · Dockerfile golang base |
+
+`toolchain` lists the files that carry the toolchain version (`{label, file, extract, flags}` — `file`
+matches the path, `extract` group 1 is the version). `validate-toolchain-consistency` demands ONE version
+across all of them (a go.mod ↔ Dockerfile skew is a Gate #1 / DoD blocker). The version itself is DATA
+(project files), never prose in a role or skill — the profile only says *where* to look, so another stack
+= its own `toolchain[]`, zero validator/role edits.
 
 Two principles make this correct:
 - **Strategy / Open-Closed (Meyer, SOLID).** Shape-variability lives in ONE object (the profile), so the

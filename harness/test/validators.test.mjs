@@ -464,3 +464,54 @@ test("validateFeasibility: толстый final (wiring+docs+deploy) → blocker
 test("validateFeasibility: README-тикет один → нет ошибок", () => {
   assert.deepEqual(validateFeasibility([TF("module", ["README.md"])]), [])
 })
+
+// --- validateToolchainConsistency (профиль-параметризованная, чисто) ---
+import { validateToolchainConsistency, extractToolchainVersions } from "../lib/validators.mjs"
+// зеркалит harness/target-profiles.json .toolchain (go-backend)
+const TC_SRC = [
+  { label: "go.mod go-директива", file: "(^|/)go\\.mod$", extract: "^go[ \\t]+([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)", flags: "m" },
+  { label: "Dockerfile golang-база", file: "(^|/)[^/]*Dockerfile[^/]*$", extract: "FROM\\s+\\S*golang:([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)", flags: "i" },
+]
+const E = (path, content) => ({ path, content })
+test("validateToolchainConsistency: единая версия (go.mod 1.24 + Dockerfile 1.24) → нет ошибок", () => {
+  assert.deepEqual(validateToolchainConsistency([
+    E("go.mod", "module x\n\ngo 1.24\n"),
+    E("component-tests/service.Dockerfile", "FROM golang:1.24-alpine AS build\n"),
+  ], TC_SRC), [])
+})
+test("validateToolchainConsistency: скос go.mod↔Dockerfile (1.25 vs 1.24) → blocker с обеими версиями", () => {
+  const errs = validateToolchainConsistency([
+    E("go.mod", "module x\n\ngo 1.25\n"),
+    E("component-tests/service.Dockerfile", "FROM golang:1.24-alpine\n"),
+  ], TC_SRC)
+  assert.ok(errs.some((e) => /toolchain-скос/.test(e) && /1\.24/.test(e) && /1\.25/.test(e)))
+})
+test("validateToolchainConsistency: скос между двумя go.mod (main 1.25 ↔ component-tests 1.24) → blocker", () => {
+  const errs = validateToolchainConsistency([
+    E("go.mod", "go 1.25\n"),
+    E("component-tests/go.mod", "go 1.24\n"),
+  ], TC_SRC)
+  assert.ok(errs.some((e) => /toolchain-скос/.test(e)))
+})
+test("validateToolchainConsistency: patch-написание 1.24.0 == тег 1.24 → нет ошибок (major.minor)", () => {
+  assert.deepEqual(validateToolchainConsistency([
+    E("go.mod", "go 1.24.0\n"),
+    E("Dockerfile", "FROM golang:1.24-alpine\n"),
+  ], TC_SRC), [])
+})
+test("validateToolchainConsistency: multi-stage Dockerfile, обе FROM golang одной версии → нет ошибок", () => {
+  assert.deepEqual(validateToolchainConsistency([
+    E("go.mod", "go 1.25\n"),
+    E("component-tests/tool.Dockerfile", "FROM golang:1.25-alpine AS build\nRUN x\nFROM golang:1.25-alpine\n"),
+  ], TC_SRC), [])
+})
+test("validateToolchainConsistency: нет источников/файлов → нет ошибок", () => {
+  assert.deepEqual(validateToolchainConsistency([E("go.mod", "go 1.24\n")], []), [])
+  assert.deepEqual(validateToolchainConsistency([], TC_SRC), [])
+})
+test("extractToolchainVersions: нормализует и извлекает label/path", () => {
+  const found = extractToolchainVersions([E("go.mod", "go 1.24\n")], TC_SRC)
+  assert.equal(found.length, 1)
+  assert.equal(found[0].version, "1.24")
+  assert.equal(found[0].path, "go.mod")
+})

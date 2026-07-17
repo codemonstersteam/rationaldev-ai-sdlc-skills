@@ -308,6 +308,46 @@ export function validateTypeDependencies(tickets) {
   return errors
 }
 
+// --- toolchain-консистентность (профиль-параметризованная) -------------------
+// Скос версии тулчейна (напр. go.mod 1.25 ↔ Dockerfile golang:1.24) = механическая ошибка,
+// ловится ДО семантики @fagan. Версия — ДАННЫЕ (файлы проекта + профиль), НЕ проза ролей:
+// профиль (target-profiles.json .toolchain[]) объявляет ИСТОЧНИКИ версии {label,file,extract,flags}
+// (file — regex пути; extract — regex, группа 1 = версия). Другой стек = свой toolchain[], 0 правок.
+// entries: [{path, content}] (чтение файлов — в CLI/DoD, тут чисто); sources: profile.toolchain||[].
+
+// Сравниваем по major.minor: 1.24 == 1.24.0 (не фолсим patch-написание go-директивы vs Docker-тега),
+// но ловим реальный скос 1.24 ↔ 1.25.
+const normVer = (raw) => String(raw).split(".").slice(0, 2).join(".")
+
+export function extractToolchainVersions(entries, sources = []) {
+  const found = [] // {label, path, raw, version}
+  for (const src of sources) {
+    let fileRe, extractRe
+    try { fileRe = new RegExp(src.file, "i") } catch { continue }
+    try { extractRe = new RegExp(src.extract, "g" + (src.flags || "")) } catch { continue }
+    for (const { path, content } of entries) {
+      if (!fileRe.test(path)) continue
+      extractRe.lastIndex = 0
+      let m
+      while ((m = extractRe.exec(content || "")) !== null) {
+        if (m[1]) found.push({ label: src.label, path, raw: m[1], version: normVer(m[1]) })
+        if (m.index === extractRe.lastIndex) extractRe.lastIndex++ // страховка от zero-width
+      }
+    }
+  }
+  return found
+}
+
+export function validateToolchainConsistency(entries, sources = []) {
+  const found = extractToolchainVersions(entries, sources)
+  const versions = [...new Set(found.map((f) => f.version))]
+  if (versions.length <= 1) return [] // 0/1 версия — скоса нет
+  const byVer = {}
+  for (const f of found) (byVer[f.version] = byVer[f.version] || []).push(`${f.path} (${f.label}: ${f.raw})`)
+  const detail = versions.sort().map((v) => `      ${v} ← ${byVer[v].join(", ")}`).join("\n")
+  return [`toolchain-скос: в проекте ${versions.length} версии тулчейна, должна быть ОДНА (единый go/Docker); бампи ВСЕ манифесты + Docker-базу единым фронтом:\n${detail}`]
+}
+
 // --- Против переусложнения декомпозиции (harden-decomposition) ---------------
 // Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
 // тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один
