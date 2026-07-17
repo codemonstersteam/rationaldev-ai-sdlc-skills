@@ -64,7 +64,9 @@ if (existsSync(design))
     if (arith) { declaredN += Number(arith[1]) + Number(arith[2]); gotN = true }
   }
 
-const errors = validateComponentTests({ business, wip, smoke }, gotN ? declaredN : null)
+// rework-режим (маркер от wirth-triage): baseline-сценарии легитимно НЕ @wip (инвариант, зелёные)
+const rework = (() => { try { return readFileSync(join(root, ".agent", "planner", "mode"), "utf8").trim().startsWith("rework") } catch { return false } })()
+const errors = validateComponentTests({ business, wip, smoke }, gotN ? declaredN : null, { rework })
 if (errors.length) {
   console.error("validate-component-tests: ПОКРЫТИЕ неполно (кол-во / @wip / smoke):")
   for (const e of errors) console.error(`  ✗ ${e}`)

@@ -2,6 +2,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests } from "../lib/validators.mjs"
+import { contractDiff } from "../validate-contract-diff.mjs"
 
 // --- validateFrd ---
 const FRD_OK = `# svc — FRD
@@ -92,6 +93,38 @@ test("validateTicketHeaders: normId 05 == 5 (blocked_by резолвится)", 
   const child = T({ data: { blocked_by: ["1"] } })
   const s = { name: "01.md", data: { id: "01", type: "scaffold", slice: "s", blocked_by: [], inputs: [], outputs: ["cmd/app/main.go"], skills: ["service-scaffold"] } }
   assert.deepEqual(validateTicketHeaders([s, child]), [])
+})
+
+// --- rework-режим: scaffold недопустим (0), а не обязателен (1) ---
+test("validateTicketHeaders rework: 0 scaffold + module → нет ошибок", () => {
+  assert.deepEqual(validateTicketHeaders([T({ data: { blocked_by: [] } })], { rework: true }), [])
+})
+test("validateTicketHeaders rework: есть scaffold → ошибка (проект уже существует)", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { blocked_by: [] } })], { rework: true }).some((e) => /scaffold-тикет недопустим/.test(e)))
+})
+test("validateComponentTests rework: без @wip → нет ошибки про @wip; smoke всё ещё требуется", () => {
+  assert.deepEqual(validateComponentTests({ business: ["a"], wip: 0, smoke: 1 }, 1, { rework: true }), [])
+  assert.ok(validateComponentTests({ business: ["a"], wip: 0, smoke: 0 }, 1, { rework: true }).some((e) => /smoke/i.test(e)))
+})
+test("validateComponentTests greenfield: без @wip → ошибка (защита от гейминга)", () => {
+  assert.ok(validateComponentTests({ business: ["a"], wip: 0, smoke: 1 }, 1).some((e) => /@wip/.test(e)))
+})
+
+// --- contractDiff (rework-api advisory diff-gate) ---
+test("contractDiff: убрали поле → REMOVED", () => {
+  assert.ok(contractDiff({ properties: { a: {}, b: {} } }, { properties: { a: {} } }).some((b) => b.code === "REMOVED" && /b/.test(b.path)))
+})
+test("contractDiff: сменили тип → TYPE_CHANGED", () => {
+  assert.ok(contractDiff({ properties: { a: { type: "integer" } } }, { properties: { a: { type: "string" } } }).some((b) => b.code === "TYPE_CHANGED"))
+})
+test("contractDiff: новое обязательное → NEW_REQUIRED", () => {
+  assert.ok(contractDiff({ properties: { a: {} }, required: [] }, { properties: { a: {} }, required: ["a"] }).some((b) => b.code === "NEW_REQUIRED"))
+})
+test("contractDiff: убрали операцию → REMOVED_OP", () => {
+  assert.ok(contractDiff({ paths: { "/x": {} } }, { paths: {} }).some((b) => b.code === "REMOVED_OP" && b.path === "/x"))
+})
+test("contractDiff: добавили НЕобязательное поле → не breaking", () => {
+  assert.deepEqual(contractDiff({ properties: { a: {} } }, { properties: { a: {}, b: {} } }), [])
 })
 
 // --- io-роутер: skills тикета = ровно нужный набор (имплементер не берёт лишнего) ---

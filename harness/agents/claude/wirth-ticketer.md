@@ -31,6 +31,13 @@ lead slice, `blocked_by: []`, blocks all) → per slice {component RED → modul
 There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
 `@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
+**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-delta.md` is present, you are on
+the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
+- **NO scaffold ticket** — the project already exists (a scaffold ticket in a rework set is an error; `validate-tickets` in rework-mode requires **zero** scaffolds). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
+- Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module`+rework → `@hughes-rework`).
+- **`rework-behavior`/`rework-api`:** additionally cut **ONE `type: component` ticket** for the changed/added scenarios named in the delta (new/changed scenarios tagged `@wip`); the affected `module` tickets `blocked_by` it (RED-first preserved). **`rework-refactor`:** **no** component ticket — behaviour is unchanged, the existing suite is the invariant.
+- Same header contract + `skills` io-router rules as greenfield. Run `validate-layout` self-check as usual.
+
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
 `go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures, **and the root

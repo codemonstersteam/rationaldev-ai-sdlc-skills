@@ -57,7 +57,7 @@ const done = has(".agent/planner/done.log")
 const tkGreen = (id) => done.has(id) || ticketDone.has(id)
 // via=-строки не несут ticket= → in-flight выводим DAG-инференсом: следующий незелёный тикет с зелёными
 // blocked_by, ЕСЛИ реализатор сейчас в полёте (последняя роль — реализатор без action=).
-const implInFlight = ["scaffolder", "hughes", "wirth-tester", "linger"].includes(lastRole) && !lastIsAction
+const implInFlight = ["scaffolder", "hughes", "hughes-rework", "wirth-tester", "linger"].includes(lastRole) && !lastIsAction
 const nextTk = tickets.find((t) => !tkGreen(t.id) && (t.bb || []).every((b) => tkGreen(b)))
 const tkRun = (id) => implInFlight && nextTk && nextTk.id === id
 
