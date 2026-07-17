@@ -35,7 +35,10 @@ sentinel as the last line of `module-tree.md` (optionally `contracts.md`/`c4.md`
 ## In / Out
 **In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` —
 module tree (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula; attach the io
-sub-skill by type via `program-design` Step 6. Always emit a baseline `.agent/planner/rollout-plan.md`
+sub-skill by type via `program-design` Step 6. **Type ownership MUST be explicit (data-deps):** each domain
+type is **owned by exactly one module** (its `New<Type>` constructor); a module whose signature *consumes*
+that type depends on the owner — make this visible in `contracts.md` signatures (`fn(x: OwnedType)`) so the
+ticketer derives the `blocked_by` edge, not only the call-nesting (live-finding 17-07). Always emit a baseline `.agent/planner/rollout-plan.md`
 (default canary window + 4 golden-signal thresholds — so `@michtom` never STOPs for a missing plan);
 expand it + `.agent/planner/network-topology.md` on real NFR. Co-locate each slice's `CONTEXT.md` into
 its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).

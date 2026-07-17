@@ -12,7 +12,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
-import { validatePlan, validateFeasibility, parseDodNumbers } from "./lib/validators.mjs"
+import { validatePlan, validateFeasibility, validateTypeDependencies, parseDodNumbers } from "./lib/validators.mjs"
 
 const root = process.argv[3] || process.cwd()
 const explicit = process.argv[2]
@@ -44,11 +44,11 @@ const tickets = ticketFiles.map(({ rel, abs }) => {
 const taskPath = join(root, "TASK.md")
 const dodNumbers = existsSync(taskPath) ? parseDodNumbers(readFileSync(taskPath, "utf8")) : []
 
-const errors = [...validatePlan(tickets, dodNumbers), ...validateFeasibility(tickets)]
+const errors = [...validatePlan(tickets, dodNumbers), ...validateFeasibility(tickets), ...validateTypeDependencies(tickets)]
 if (errors.length) {
   console.error("validate-plan: ПЛАН НЕЦЕЛОСТЕН (граф/порядок/DoD-замыкание/feasibility):")
   for (const e of errors) console.error(`  ✗ ${e}`)
   process.exit(1)
 }
 const dod = dodNumbers.length ? `, DoD-замыкание ${dodNumbers.length}/${dodNumbers.length}` : ", DoD пропущен (нет TASK §DoD)"
-console.log(`validate-plan: OK — граф blocked_by ацикличен, scaffold-корень, module после component${dod} (${tickets.length} тикетов)`)
+console.log(`validate-plan: OK — граф blocked_by ацикличен, scaffold-корень, module после component, data-deps типов${dod} (${tickets.length} тикетов)`)
