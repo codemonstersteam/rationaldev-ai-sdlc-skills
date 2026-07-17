@@ -14,6 +14,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs"
 import { join, relative, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execSync } from "node:child_process"
+import { validateToolchainConsistency } from "./lib/validators.mjs"
 
 // Профиль формы (target shape) — ЕДИНЫЙ источник harness/target-profiles.json (рядом с этим файлом,
 // резолвится по realpath даже когда validate-dod симлинкнут в проект). Форма проекта — .agent/planner/target
@@ -143,6 +144,16 @@ if (invokedDirectly) {
   // 2) обязательные артефакты (контракт — из профиля: openapi | config+report schema)
   const files = collectFiles(root)
   for (const m of missingArtifacts(files, profile)) fails.push(`артефакт отсутствует: ${m}`)
+
+  // 2b) toolchain-консистентность: единая версия go/Docker (скос = blocker ДО семантики @fagan).
+  //     Источники версии — из профиля (.toolchain[]); версия-агностично (данные, не проза).
+  const tcSources = profile.toolchain || []
+  if (tcSources.length) {
+    const tcRes = tcSources.map((s) => { try { return new RegExp(s.file, "i") } catch { return null } }).filter(Boolean)
+    const tcEntries = files.filter((f) => tcRes.some((re) => re.test(f)))
+      .map((f) => { try { return { path: f, content: readFileSync(join(root, f), "utf8") } } catch { return { path: f, content: "" } } })
+    for (const e of validateToolchainConsistency(tcEntries, tcSources)) fails.push(e)
+  }
 
   // 3) README-структура (набор секций — из профиля: api | usage)
   const readme = join(root, "README.md")
