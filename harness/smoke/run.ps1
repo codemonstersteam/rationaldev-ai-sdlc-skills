@@ -85,6 +85,21 @@ Push-Location $D
 if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "gate заблокировал при апруве" }; Ok
 Pop-Location
 
+# gate-check: mode=chore — implementer требует CHORE-PLAN.md вместо plan-review.md
+$D = Join-Path $Tmp 'gate-chore'
+New-Item -ItemType Directory -Force -Path "$D/.agent/gates" | Out-Null
+New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
+New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null
+Set-Content -NoNewline "$D/.agent/planner/mode" 'chore'
+New-Item -ItemType File -Force -Path "$D/.agent/gates/gate1.approved" | Out-Null
+Push-Location $D
+'{"tool_input":{"subagent_type":"hughes"}}' | node $GC 2>$null
+if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "chore: gate пропустил без CHORE-PLAN.md" }; Ok
+New-Item -ItemType File -Force -Path "$D/.agent/planner/CHORE-PLAN.md" | Out-Null
+'{"tool_input":{"subagent_type":"hughes"}}' | node $GC
+if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "chore: gate заблокировал при CHORE-PLAN.md + gate1" }; Ok
+Pop-Location
+
 # gate-check: не-implementer после фронтдора (brd.md есть) проходит
 $D = Join-Path $Tmp 'gate-planner'; New-Item -ItemType Directory -Force -Path "$D/.agent/planner" | Out-Null
 New-Item -ItemType File -Force -Path "$D/.agent/planner/brd.md" | Out-Null

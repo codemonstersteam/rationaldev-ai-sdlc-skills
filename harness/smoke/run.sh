@@ -94,6 +94,13 @@ D="$TMP/gate-pass"; mkdir -p "$D/.agent/plan-reviewer" "$D/.agent/gates" "$D/.ag
 : > "$D/.agent/plan-reviewer/plan-review.md"; : > "$D/.agent/gates/gate1.approved"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" ) || fail "gate заблокировал при апруве"; ok
 
+# Claude gate-check: mode=chore — implementer требует CHORE-PLAN.md вместо plan-review.md (одностраничник + gate1)
+D="$TMP/gate-chore"; mkdir -p "$D/.agent/gates" "$D/.agent/planner"
+: > "$D/.agent/planner/brd.md"; printf chore > "$D/.agent/planner/mode"; : > "$D/.agent/gates/gate1.approved"
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" 2>/dev/null ); then fail "chore: gate пропустил без CHORE-PLAN.md"; fi; ok
+: > "$D/.agent/planner/CHORE-PLAN.md"
+( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" ) || fail "chore: gate заблокировал при CHORE-PLAN.md + gate1"; ok
+
 # Claude gate-check: не-implementer после фронтдора проходит свободно (brd.md есть)
 D="$TMP/gate-planner"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"wirth-planner"}}' | node "$GC" ) || fail "gate заблокировал planner"; ok

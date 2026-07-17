@@ -44,9 +44,16 @@ export const isTrunkBranch = (branch) => TRUNK_BRANCHES.has(String(branch || "")
 // «go ahead» на фазе OQ поставил gate1 за час до плана). Пути-сигналы (fs-проверку делает вызывающий):
 export const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
 export const DESIGN_DIR = "docs/design" // PLAN.md лежит per-slice: docs/design/<slice>/PLAN.md
+// chore-полоса: одностраничный план вместо FRD/спеки/дизайна. Его наличие = «план собран» для мини Gate #1.
+export const CHORE_PLAN_MARK = ".agent/planner/CHORE-PLAN.md"
+export const MODE_MARK = ".agent/planner/mode"
+// mode-маркер (пишет @wirth-triage) == "chore"? content от вызывающего (fs-чтение снаружи).
+export const isChoreMode = (modeContent) => String(modeContent || "").trim() === "chore"
 // Готов ли план к акцепту? existsFn(relPath)→bool, slicesFn()→string[] имён под DESIGN_DIR (оба от вызывающего).
+// chore: CHORE-PLAN.md — тоже «план готов» (одностраничник вместо полного пакета).
 export function planReadyForApproval(existsFn, sliceDirsFn) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
+  if (existsFn(CHORE_PLAN_MARK)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }
