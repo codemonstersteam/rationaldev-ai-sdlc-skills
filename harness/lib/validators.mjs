@@ -250,6 +250,64 @@ export function validatePlan(tickets, dodNumbers = []) {
   return errors
 }
 
+// --- Data-зависимости типов между module-тикетами (validate-plan data-deps) ------------------
+// Live-finding 17-07: ticketer выводит blocked_by из CALL-графа (вложенности module-tree), но
+// ТИП-зависимость между сиблингами теряется — модуль, потребляющий тип, определённый сиблингом,
+// становится ему параллельным → неверный порядок реализации → на очереди сиблинга конфликт определения
+// типа → имплементер виснет (tempconv: ticket-05 convert потребляет ConvertCommand, определённый
+// ticket-04 command, но blocked_by=[01,02] без ребра 05→04).
+// Механически (консервативно, из СИГНАТУР тикета, без чтения кода):
+//   • ОПРЕДЕЛИТЕЛЬ типа = модуль с конструктором `New<Type>(...)` (valid-by-construction: тип с
+//     unexported-полями + единственная фабрика NewX — дисциплина харнеса);
+//   • ПОТРЕБИТЕЛЬ = модуль, чья сигнатура берёт этот тип аргументом (`fn(x: <Type>)`).
+// Потребитель типа, определённого ДРУГИМ module-тикетом, ОБЯЗАН транзитивно зависеть от него по blocked_by.
+export function validateTypeDependencies(tickets) {
+  const errors = []
+  const IGNORE = new Set(["Result", "Error", "Ok", "Err", "Some", "None"]) // вездесущие/обёртки — не модуль-owned
+  const isDomain = (t) => /^[A-Z]\w*$/.test(t) && !IGNORE.has(t)
+  const mods = []
+  for (const t of tickets) {
+    if (!t.data || t.data.type !== "module" || t.data.id === undefined || !Array.isArray(t.data.blocked_by)) continue
+    const body = t.body || ""
+    const defines = new Set(), consumes = new Set()
+    // ТОЛЬКО собственная сигнатура тикета (метка `Signature:`), не документируемые чужие под-сигнатуры
+    // (иначе head, документируя пайп `NewConvertCommand(...) ->`, ложно «определит» ConvertCommand).
+    const re = /Signature:\s*`?\s*([A-Za-z]\w*)\s*\(([^)]*)\)\s*(?:->|→)/gi
+    let m
+    while ((m = re.exec(body))) {
+      const nc = /^New([A-Z]\w*)$/.exec(m[1]) // конструктор New<Type> ОПРЕДЕЛЯЕТ <Type>
+      if (nc && isDomain(nc[1])) defines.add(nc[1])
+      for (const a of m[2].split(",")) { // аргументные доменные типы = consume
+        const parts = a.split(":")
+        if (parts.length < 2) continue
+        const ty = parts[1].trim().replace(/^[*[\]]+/, "").split(/[<>,\s]/)[0]
+        if (isDomain(ty)) consumes.add(ty)
+      }
+    }
+    mods.push({ id: normId(t.data.id), bb: t.data.blocked_by.map(normId), defines, consumes, name: t.name })
+  }
+  const definer = {} // тип → [id тикетов-определителей]
+  for (const mod of mods) for (const ty of mod.defines) (definer[ty] = definer[ty] || []).push(mod.id)
+  const byId = Object.fromEntries(mods.map((mm) => [mm.id, mm]))
+  const reaches = (from, target, seen = new Set()) => { // транзитивная достижимость по blocked_by
+    if (from === target) return true
+    if (seen.has(from)) return false
+    seen.add(from)
+    const mm = byId[from]
+    return mm ? mm.bb.some((b) => reaches(b, target, seen)) : false
+  }
+  for (const mod of mods) {
+    for (const ty of mod.consumes) {
+      for (const p of definer[ty] || []) {
+        if (p === mod.id) continue
+        if (!mod.bb.some((b) => reaches(b, p)))
+          errors.push(`${mod.name}: использует тип '${ty}' (определён ticket-${p}), но blocked_by=${JSON.stringify(mod.bb)} не зависит от ticket-${p} — добавь его в blocked_by (иначе convert может реализоваться раньше command → тип не определён → имплементер виснет)`)
+      }
+    }
+  }
+  return errors
+}
+
 // --- Против переусложнения декомпозиции (harden-decomposition) ---------------
 // Псевдо-UC/срез = framework (405/404) / boot (config/startup) / generic-error (internal) /
 // тип-тикета (scaffold) — это НЕ user-goal и НЕ внешний вход. По Кокборну: один запрос = один

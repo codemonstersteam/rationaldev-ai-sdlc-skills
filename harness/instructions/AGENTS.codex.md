@@ -660,7 +660,10 @@ sentinel as the last line of `module-tree.md` (optionally `contracts.md`/`c4.md`
 ## In / Out
 **In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` —
 module tree (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula; attach the io
-sub-skill by type via `program-design` Step 6. Always emit a baseline `.agent/planner/rollout-plan.md`
+sub-skill by type via `program-design` Step 6. **Type ownership MUST be explicit (data-deps):** each domain
+type is **owned by exactly one module** (its `New<Type>` constructor); a module whose signature *consumes*
+that type depends on the owner — make this visible in `contracts.md` signatures (`fn(x: OwnedType)`) so the
+ticketer derives the `blocked_by` edge, not only the call-nesting (live-finding 17-07). Always emit a baseline `.agent/planner/rollout-plan.md`
 (default canary window + 4 golden-signal thresholds — so `@michtom` never STOPs for a missing plan);
 expand it + `.agent/planner/network-topology.md` on real NFR. Co-locate each slice's `CONTEXT.md` into
 its `docs/design/<slice>/` (you own the design package; format → `domain-modeling`).
@@ -770,6 +773,13 @@ You are **ONE stage** of the staged planning pipeline; `izi` calls you directly 
   tickets. `outputs` therefore mirror the tree's directory granularity.
 - **The ticket set is a dependency DAG, not a list.** `blocked_by` encodes a cycle-free order (scaffold-root
   → component RED → module×N → wiring ∥ README → infra). The graph *is* the plan.
+- **`blocked_by` MUST include TYPE dependencies, not only call-nesting (MUST — data-deps).** A module that
+  **uses a type defined by another module** (its signature takes that type as an argument; the type has a
+  `New<Type>` constructor owned by the other module) MUST `blocked_by` that module — else the two become
+  parallel siblings, get built in the wrong order, and the consumer redefines the type or the implementer
+  stalls on the conflict (live-finding 17-07: `convert(cmd: ConvertCommand)` didn't `blocked_by` `command`).
+  A ticket's prose **Dependencies** field and its `blocked_by` **MUST agree** — never "Dependencies: none"
+  while the signature imports a sibling's type. `harness/validate-plan.mjs` (`validateTypeDependencies`) hard-blocks a missing type-edge.
 - **Acceptance is load-bearing.** A ticket's `outputs` = exactly what its role deterministically writes, and
   its DoD line is a *testable* condition. The executor needs only the ticket + its `inputs` — never a
   sibling ticket (self-contained).

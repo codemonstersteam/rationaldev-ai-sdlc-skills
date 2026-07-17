@@ -225,7 +225,40 @@ test("validateMermaid: не-C4 блок (flowchart) не трогаем глуб
 })
 
 // --- validatePlan: граф blocked_by (DAG) + порядок + DoD-замыкание + parseDodNumbers ---
-import { validatePlan, parseDodNumbers } from "../lib/validators.mjs"
+import { validatePlan, parseDodNumbers, validateTypeDependencies } from "../lib/validators.mjs"
+
+// --- validateTypeDependencies (data-deps типов между module-тикетами) ---
+// MT(id, blocked_by, signature) — module-тикет с одной сигнатурой в теле.
+const MT = (id, bb, sig) => ({ name: `ticket-${id}.md`, data: { id, type: "module", blocked_by: bb }, body: `- Signature: \`${sig}\`` })
+const CMD = (id, bb) => MT(id, bb, "NewConvertCommand(req: ConvertRequest) -> Result<ConvertCommand, Error>")  // определяет ConvertCommand
+const CONV = (id, bb) => MT(id, bb, "convert(cmd: ConvertCommand) -> Temperature")                             // потребляет ConvertCommand
+
+test("typeDeps: потребитель типа сиблинга БЕЗ ребра → blocker (реальный баг tempconv)", () => {
+  const errs = validateTypeDependencies([CMD("04", ["03"]), CONV("05", ["01", "02"])])
+  assert.ok(errs.some((e) => /ticket-05.*ConvertCommand.*ticket-4/.test(e)))
+})
+test("typeDeps: есть прямое ребро 05→04 → нет ошибок", () => {
+  assert.deepEqual(validateTypeDependencies([CMD("04", ["03"]), CONV("05", ["04"])]), [])
+})
+test("typeDeps: транзитивная достижимость (05→08→04) → нет ошибок", () => {
+  const via = MT("08", ["04"], "wire(x: Foo) -> Bar")
+  assert.deepEqual(validateTypeDependencies([CMD("04", ["03"]), via, CONV("05", ["08"])]), [])
+})
+test("typeDeps: тип определён и потреблён ОДНИМ тикетом → не самозависимость", () => {
+  const self = { name: "ticket-04.md", data: { id: "04", type: "module", blocked_by: ["03"] },
+    body: "Signature: `NewConvertCommand(x: string) -> Result<ConvertCommand, Error>`\nSignature: `use(c: ConvertCommand) -> Temperature`" }
+  assert.deepEqual(validateTypeDependencies([self]), [])
+})
+test("typeDeps: тип НЕ определён ни одним модулем (внешний) → нет ложного ребра", () => {
+  // convert потребляет ConvertCommand, но NewConvertCommand никто не объявляет → не флагаем
+  assert.deepEqual(validateTypeDependencies([CONV("05", ["01", "02"])]), [])
+})
+test("typeDeps: документируемая чужая под-сигнатура (head зовёт NewConvertCommand) НЕ определяет тип", () => {
+  // head документирует пайп, но его СОБСТВЕННАЯ Signature — ProcessConvert; New* в прозе не считается
+  const head = { name: "ticket-08.md", data: { id: "08", type: "module", blocked_by: ["04", "05"] },
+    body: "Pipe: calls NewConvertCommand(req) then convert. Signature: `ProcessConvert(req: ConvertRequest) -> Result<ConvertResponse, Error>`" }
+  assert.deepEqual(validateTypeDependencies([CMD("04", ["03"]), CONV("05", ["04"]), head]), [])
+})
 
 // Минимальный валидный план: scaffold(0) → component(1) → module(2, sink с DoD-1..2)
 const P = () => [
