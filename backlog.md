@@ -455,7 +455,7 @@ outputs: [harness/agents/_shared/{izi,wirth-planner}.md, harness/agents/{claude,
 - [ ] **hunk-хирургия** относительно T04: izi-презентация-хунк отдельно от marker-хунка; сериализация с T04 по одному файлу `izi.md`
 - **verify:** `gen-agents.mjs --check` + `bash harness/smoke/run.sh` PASS. Независим (кроме порядка правки `izi.md` с T04)
 
-### T06 — feasibility-валидаторы тикетов на Gate #1 (гейтить, не генерить)
+### T06 — feasibility-валидаторы тикетов на Gate #1 (гейтить, не генерить) — ✅ 2/4 (scaffold-feasibility + тонкий final в `validateFeasibility`; биекция + module-outputs⊆tree ещё нет)
 Ловят механические ошибки ticketer **до реализации** (не в рантайме). Принцип: LLM пишет тикет как сейчас,
 гейт проверяет инвариант. **generate = предотвратить (системный риск), validate = поймать (выброс, безопасно)** —
 кривой валидатор = пропуск, не порча всех тикетов; меньше парсинга (нужны имена узлов, не весь скелет);
@@ -469,10 +469,10 @@ inputs:  [harness/validate-plan.mjs, harness/validate-tickets.mjs, harness/lib/v
 outputs: [harness/validate-plan.mjs, harness/validate-tickets.mjs, harness/lib/validators.mjs]
 ```
 - [ ] **биекция:** узел module-tree без тикета **ИЛИ** module-тикет на >1 узел = blocker (1:1).
-- [ ] **scaffold-feasibility:** `outputs` scaffold-тикета == известный выход `scaffold.sh` (`cmd/app`, `go.mod`,
+- [x] **scaffold-feasibility:** ✅ (validateFeasibility) `outputs` scaffold-тикета == известный выход `scaffold.sh` (`cmd/app`, `go.mod`,
   `internal/<slug>/…`) — не выдуманный `cmd/<svc>`. Убирает T10 by construction.
 - [ ] **module-outputs ⊆ module-tree:** пути `outputs` module-тикета соответствуют файлам его узла.
-- [ ] **тонкий final:** final-тикет — ≤N accept-пунктов **И** нет logic-файлов в `outputs` (только wiring/README/
+- [x] **тонкий final:** ✅ (validateFeasibility single-concern) final-тикет — ≤N accept-пунктов **И** нет logic-файлов в `outputs` (только wiring/README/
   deploy/DoD). Убирает thin-final by construction.
 - **verify:** `node --test harness/test/validators.test.mjs` — синтетика: узел-сирота → blocker; тикет-монстр → blocker;
   scaffold с `cmd/<svc>` → blocker; толстый final (logic в outputs) → blocker; чистый план → 0.
@@ -589,7 +589,7 @@ advance'ит. Расходятся с фактом → маркер блокир
 **Фикс = вариант A (принято).**
 - [x] **Решение: A.** ticketer объявляет `cmd/app/main.go` как есть, rename НЕТ — `cmd/app` валидная конвенция
   (slice-идентичность в `internal/<slug>/`, не в имени бинаря). Реализовано в `wirth-ticketer.md` (`c125cda`).
-- [ ] **Правило ticketer (обязательно, реализовано):** `outputs` scaffold-тикета = выход `scaffold.sh`/шаблона,
+- [x] ✅ **Правило ticketer (обязательно, реализовано):** `outputs` scaffold-тикета = выход `scaffold.sh`/шаблона,
   не выдумываются. Общее: `outputs` любого тикета = что его роль детерминированно пишет.
 - ~~**B:** `scaffold.sh` сам `mv cmd/app → cmd/<slug>`~~ — **ОТКЛОНЁН по принципу:** scaffolder/скрипт не формируют
   код под слайс, только ставят леса + проверяют. `mv` под slug = slice-работа, не его.
@@ -617,7 +617,7 @@ advance'ит. Расходятся с фактом → маркер блокир
 - **discovered:** прогон 07-07/2 — ошибки закрытия были ticketer-feasibility (scaffold просил невыполнимое, final
   перегружен). Лечится дешевле валидаторами (T06), чем генератором.
 
-### T12 — split-final: убрать «final»-помойку, замыкать слайс шагами конвейера
+### T12 — split-final: убрать «final»-помойку, замыкать слайс шагами конвейера — ✅ СДЕЛАНО (влит в main; wiring/README-слоты в ticketer+skill, DoD-closure=@fagan-шаг)
 Обнаружено на **07-07/3:** thin-final (правило-проза) сделал модули тонкими, но **final всё равно сгрёб**
 wiring+README+Docker+DoD в один тикет → длинный ход → систематический провайдерский idle-timeout (ticket-09
 дропался ×4). **Прозой не чинится** — нужен структурный слот. Ключ: пост-модульные шаги **инвариантны** для
@@ -630,13 +630,13 @@ closeSlice(modules 03..08) -> Gate#2:
     -> Gate #2
 ```
 Docker/`compose`/`run-tests.sh` — **в scaffold** (детерминированный boilerplate, класс T10); linger их запускает, не пишет.
-- [ ] **форма бэклога:** слот `final` → **`wiring` + `README`** (отдельные implementer-тикеты, как `module×N`);
+- [x] ✅ **форма бэклога:** слот `final` → **`wiring` + `README`** (отдельные implementer-тикеты, как `module×N`);
   file-производящий `final` **убрать** — замыкает `linger`-приёмка (уже шаг пайплайна). Правки:
   `implementation-ticket-writer` (ordering + «Integration/final rule»), `wirth-ticketer` (dep-order + «DoD-closure
   = @linger, не тикет»), `program-design` step-11 ticket-template.
-- [ ] **scaffold outputs += `Dockerfile`, `docker-compose.yml`, `run-tests.sh`** (boilerplate из шаблона; см. T10).
-- [ ] **`linger.md` — явный DoD-closure:** снять @wip + build+unit+component green + сверить DoD-1..8 → Gate #2.
-- [ ] **T06-чек одноконцерновость:** implementer-тикет не мешает wiring+README+Docker в `outputs`; file-производящего
+- [x] ✅ (via шаблон git-archive) **scaffold outputs += `Dockerfile`, `docker-compose.yml`, `run-tests.sh`** (boilerplate из шаблона; см. T10).
+- [x] ✅ (DoD-closure =  acceptance-шаг, не  — как уточнилось) **`linger.md` — явный DoD-closure:** снять @wip + build+unit+component green + сверить DoD-1..8 → Gate #2.
+- [x] ✅ (validateFeasibility) **T06-чек одноконцерновость:** implementer-тикет не мешает wiring+README+Docker в `outputs`; file-производящего
   `final` нет → blocker на Gate #1.
 - **механизм:** форма эмитит `wiring`/`README` отдельными слотами → ticketer пишет ТЕЛА, нарезку не решает → куча
   невозможна by construction. Каждый слот = 1 concern → короткий ход → нет idle-timeout.
