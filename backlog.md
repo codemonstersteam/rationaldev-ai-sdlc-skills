@@ -295,11 +295,14 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
   роли редки); (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
 - _Остаётся локальным (правильно, ВНЕ клона):_ `opencode.jsonc` (ключ+прокси), локальный `models.config` override (T5),
   `.agent/` run-state, продукт-код. _Порядок:_ T2 (раздача) → T1/T5 (клон+override) → T3 (ручной update) → T4 (авто) → T6.
-- _Статус:_ ✅ **T1–T6 done** (ветка `feat/self-updating-harness`, PR #63): `bootstrap.sh` (T1), dir-symlinks в
-  `install.sh` (T2), `rationaldev update` (T3), `rationaldev autocheck` + триггеры opencode-плагин/claude
-  SessionStart (T4, модель oh-my-zsh — старт→pull, без store), `lib/models-config.mjs` merge-override (T5),
-  агенты dir-link = вариант (а) (T6). codex — без хук-системы, только ручной `rationaldev update`. Тесты:
-  `rationaldev` smoke 8/8 + `models-config` 6 unit + smoke 31 + guardrail 37/37.
+- _Статус:_ ✅ **T1–T3, T5, T6 done** (ветка `feat/self-updating-harness`, PR #63): `bootstrap.sh` (T1), dir-symlinks в
+  `install.sh` (T2), `rationaldev update` (T3), `lib/models-config.mjs` merge-override (T5), агенты dir-link = вариант (а) (T6).
+  **T4 (авто-апдейт) ОТКЛЮЧЁН** — оставлен только ручной `rationaldev update`. Причина (live 18-07, изолированная сеть):
+  триггеры автопула (`rationaldev autocheck`) делали `git fetch`, а на изолированной сети он **висит минутами** и
+  **вешал старт opencode** (autocheck был в enforcement-плагине). Фикс: (1) autocheck убран из плагина — enforcement
+  не делает сеть на init; (2) `git fetch` в autocheck обёрнут в **fetch-таймаут** (портативно, без `timeout`);
+  (3) SessionStart-хук/shell-триггер сняты. Механизм `autocheck` в скрипте остался (дормантный) — при возврате
+  авто-апдейта триггерить ВНЕ плагина (shell-профиль, в фоне). Тесты: `rationaldev` smoke 8/8 + `models-config` 6 unit + smoke 31 + guardrail 37/37.
 
 ### Детерминированный генератор тикетов по дизайну (ticketer)
 Причина: GLM-ticketer игнорирует прозу декомпозиции и схлопывает слайс в один монстр-тикет

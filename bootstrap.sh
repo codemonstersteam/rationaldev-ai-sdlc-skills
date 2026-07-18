@@ -43,6 +43,7 @@ case ":$PATH:" in
     done
     ;;
 esac
+# Авто-апдейт ОТКЛЮЧЁН (пока только ручной `rationaldev update`). Никаких shell/hook/plugin-триггеров.
 
 cat <<EOF
 
@@ -50,5 +51,5 @@ cat <<EOF
 $PATH_NOTE
   Подключить репо:   rationaldev install <path-to-repo> [claude|opencode|codex]
   Обновить вручную:  rationaldev update
-  Автообновление:    export RATIONALDEV_UPDATE=auto   (на старте сессии тихо git pull)
+  Обновление:        rationaldev update   (вручную; авто-апдейт пока отключён)
 EOF

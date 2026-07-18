@@ -27,11 +27,10 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/codemonstersteam/rationald
 rationaldev install ~/path/to/project          # или: rationaldev install <path> claude|opencode|codex
 ```
 
-Обновление — **само** (клон обновляется, проекты видят это через симлинки, ноль переустановок):
+Обновление — **вручную** `rationaldev update` (`git pull --ff-only` клона; проекты видят новое через симлинки, ноль переустановок). Авто-апдейт пока отключён.
 
 ```sh
-export RATIONALDEV_UPDATE=auto   # на старте сессии тихо `git pull` канонического клона (throttle 1/день)
-rationaldev update               # или вручную в любой момент
+rationaldev update
 ```
 
 > Репо публичный → HTTPS clone/pull **анонимно**, без SSH-ключей и токенов (как oh-my-zsh). Свой форк/зеркало/SSH — `RATIONALDEV_REPO=<url>`.
