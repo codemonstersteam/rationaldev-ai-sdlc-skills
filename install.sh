@@ -139,8 +139,7 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
       # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
       gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
-      # self-update T4: SessionStart → throttled autocheck канонического клона (best-effort; RATIONALDEV_UPDATE=off отключает)
-      au="sh \\\"$BUNDLE/rationaldev\\\" autocheck"
+      # Авто-апдейт ОТКЛЮЧЁН — SessionStart-триггера нет (только ручной `rationaldev update`).
       # permissions: ПОЛНЫЙ доступ субагентам, пока работают (defaultMode bypassPermissions — без промптов
       # ни на bash, ни на правки: столл-на-промпте убивает автономный прогон). allow-лист оставлен как
       # безопасная деградация, если режим позже понизят. Хуки (PreToolUse) имеют ПРИОРИТЕТ и работают
@@ -163,8 +162,7 @@ if [ "$HARD" = yes ]; then
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
     ],
     "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
-    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ],
-    "SessionStart": [ { "hooks": [ { "type": "command", "command": "'"$au"'" } ] } ]
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
   }
 }'
       if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then
@@ -181,16 +179,27 @@ if [ "$HARD" = yes ]; then
   esac
 fi
 
+# --- opencode runner-конфиг: global провайдер/omo-преflight + минимальный проектный opencode.jsonc ---
+# Провайдер+auth → global (~/.config/opencode, шарится); проект → permission+plugin (rational-guardrail,
+# относительным путём), omo вычищается. Модели — во frontmatter (models.config), сюда НЕ пишутся.
+OPENCODE_MSG=""
+if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/null 2>&1; then
+  [ "$NOINPUT" = yes ] && export RATIONALDEV_NOINPUT=1
+  node "$BUNDLE/harness/setup-opencode.mjs" "$PROJ" "$BUNDLE" || true
+  OPENCODE_MSG="$PROJ/opencode.jsonc (permission+plugin) · провайдер в ~/.config/opencode"
+fi
+
 MODELS_MSG="(node не найден)"
 if command -v node >/dev/null 2>&1; then
-  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} medium=${f(t.medium)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
+  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
 fi
 
 echo "rationaldev harness → $RUNNER ($SCOPE)"
 echo "  agents/roles: $AGENTS_DST ($(count "$AGENTS_DST"))"
 echo "  skills:       $SKILLS_DST ($(count "$SKILLS_DST"))"
-echo "  models:       $MODELS_MSG"
+echo "  models:       $MODELS_MSG (2 тира: large=суждение · small=исполнение)"
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
+[ -n "$OPENCODE_MSG" ] && echo "  opencode cfg: $OPENCODE_MSG"
 echo
 echo "Точка входа — роль 'izi' (запусти: $RUNNER --agent izi)."

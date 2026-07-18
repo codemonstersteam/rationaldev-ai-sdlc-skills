@@ -45,6 +45,22 @@ state_dir() { echo "${RATIONALDEV_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/r
 # Обратный порядок ломается на Linux: GNU `stat -f` = статус ФС (не формат!) и «успешно» печатает мусор.
 mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
 
+# git fetch с ТАЙМАУТОМ (портативно, без `timeout` — его нет на macOS): фон + kill. КРИТИЧНО — иначе
+# на изолированной сети `git fetch` до non-routable origin висит минутами и вешает вызывающего (хук/шелл).
+fetch_timeout() {
+  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" 2>/dev/null &
+  fp=$!; i=0; lim="${RATIONALDEV_FETCH_TIMEOUT:-8}"
+  while kill -0 "$fp" 2>/dev/null; do
+    i=$((i+1))
+    if [ "$i" -ge "$lim" ]; then
+      kill "$fp" 2>/dev/null; for c in $(pgrep -P "$fp" 2>/dev/null); do kill "$c" 2>/dev/null; done
+      return 1     # таймаут → считаем offline
+    fi
+    sleep 1
+  done
+  wait "$fp" 2>/dev/null
+}
+
 autocheck() {
   mode="${RATIONALDEV_UPDATE:-notify}"; [ "$mode" = off ] && return 0
   [ -d "$HOME_DIR/.git" ] || return 0
@@ -53,8 +69,8 @@ autocheck() {
     age=$(( $(date +%s) - $(mtime "$stamp") ))
     [ "$age" -lt $(( days * 86400 )) ] && return 0     # throttle: рано проверять
   fi
-  mkdir -p "$sd"; : > "$stamp"                          # отметили проверку до fetch (offline не долбит)
-  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" 2>/dev/null || return 0   # offline → тихо
+  mkdir -p "$sd"; : > "$stamp"                          # отметили проверку до fetch (offline/timeout не долбит)
+  fetch_timeout || return 0                            # offline/изолированная сеть → тихо, НЕ висим
   behind="$(git -C "$HOME_DIR" rev-list --count "HEAD..origin/$CHANNEL" 2>/dev/null || echo 0)"
   [ "${behind:-0}" -gt 0 ] || return 0
   case "$mode" in
