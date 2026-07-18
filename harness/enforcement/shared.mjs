@@ -141,7 +141,7 @@ export function toolCallSignature(tool, args) {
   }
   let a
   try { a = JSON.stringify(norm(args ?? {})) } catch { a = String(args) }
-  return `${tool} ${a}`
+  return `${tool} ${a}`
 }
 
 export function detectLoop(sigs, { runThreshold = 5, cycleRepeats = 3, maxPeriod = 3 } = {}) {

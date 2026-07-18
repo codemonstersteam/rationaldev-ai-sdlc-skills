@@ -70,7 +70,7 @@ LD="$REPO/harness/enforcement/claude/log-decision.mjs"
 # OpenCode --hard кладёт плагин
 P="$TMP/oc-hard"; mkdir -p "$P"
 sh "$REPO/install.sh" opencode "$P" --hard --no-input >/dev/null
-[ -e "$P/.opencode/plugins/rational-guardrail.ts" ] || fail "opencode --hard: нет плагина"; ok
+[ -e "$P/.opencode/plugins/rational-guardrail.mjs" ] || fail "opencode --hard: нет плагина"; ok
 
 # Claude --hard кладёт хуки и settings
 P="$TMP/cl-hard"; mkdir -p "$P"

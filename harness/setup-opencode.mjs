@@ -14,7 +14,7 @@ import { homedir } from "node:os"
 const projectDir = process.argv[2] || process.cwd()
 const bundleRoot = process.argv[3] || join(dirname(new URL(import.meta.url).pathname), "..")
 const OMO = "oh-my-openagent"
-const PLUGIN_REL = "./.opencode/plugins/rational-guardrail.ts"
+const PLUGIN_REL = "./.opencode/plugins/rational-guardrail.mjs"
 
 // Терпимый разбор JSONC: сначала как JSON (opencode использует "//"-КЛЮЧИ, это валидный JSON);
 // если не вышло — срезаем строчные //-комменты (не трогая "://" в строках), блок-комменты и хвостовые запятые.
@@ -89,10 +89,10 @@ const existing = existsSync(projPath) ? (parseJsonc(readFileSync(projPath, "utf8
 const merged = { ...existing }
 merged.$schema = existing.$schema || tmpl.$schema
 merged.permission = existing.permission || tmpl.permission          // своё permission не трогаем
-// plugin: гарантируем rational-guardrail относительным путём И вычищаем omo
+// plugin: гарантируем rational-guardrail (.mjs, относит. путь) И вычищаем omo + СТАРЫЙ guardrail (.ts → .mjs)
 const curPlugins = Array.isArray(existing.plugin) ? existing.plugin : []
-const noOmo = curPlugins.filter((p) => !String(p).includes(OMO))
-merged.plugin = noOmo.some((p) => String(p).includes("rational-guardrail")) ? noOmo : [...noOmo, PLUGIN_REL]
+const clean = curPlugins.filter((p) => !String(p).includes(OMO) && !String(p).includes("rational-guardrail"))
+merged.plugin = [...clean, PLUGIN_REL]
 
 // ── AGENTS.md: свой не трогаем, харнес-инструкции подключаем через `instructions` (без ручного мерджа) ──
 // opencode авто-грузит корневой AGENTS.md. Если он ЧУЖОЙ (не наш симлинк) — линкуем харнес рядом как

@@ -2,5 +2,5 @@
   "$schema": "https://opencode.ai/config.json",
   "//": "Проектный конфиг раннера — минимально достаточный. Провайдер+модели → GLOBAL (~/.config/opencode). Модели ролей → frontmatter (models.config → gen-agents). Здесь ТОЛЬКО проектное: permission (autonomous) + plugin (rational-guardrail, относительным путём). omo здесь быть НЕ должно.",
   "permission": { "*": "allow", "bash": "allow", "edit": "allow", "webfetch": "allow" },
-  "plugin": ["./.opencode/plugins/rational-guardrail.ts"]
+  "plugin": ["./.opencode/plugins/rational-guardrail.mjs"]
 }
