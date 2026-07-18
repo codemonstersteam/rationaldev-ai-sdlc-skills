@@ -121,6 +121,12 @@ canImplement     = brd ∧ planArtifact ∧ approved gate1 ∧ onWorkBranch  -- 
 **Порядок:** T1→T2 (лейн доходит до гейта) → T3 (библиотека) → T4 (intake) → T5/T6 (тест+тикет по библиотеке) →
 T7 (DoD) → T8 (оркестрация+ревью+docs). Каждый тикет — своя ветка/PR, smoke зелёный.
 
+**Статус — эпик РЕАЛИЗОВАН.** T1 (#74) · T2 (#76) · T3 (#77) · T4 (#78) · T5 (#79) · T6 (#80) · T7 (#81) ·
+T8 (izi FOREIGN path + @mills light + impl-routing foreign→@hughes-rework + target-profiles provenance-note).
+`route=foreign` полностью прошит: triage детектит → survey → change-intake → ticketer(cheat-sheet) → planner
+→ @mills light → Gate #1 → git-hand → @wirth-tester(conform)/@hughes-rework → @fagan(verification-cmd) →
+terminal → Gate #2 → canary. Строгие лейны нетронуты. **Хвост:** live-прогон на реальном чужом репо.
+
 ## Риски
 
 | # | Риск | Митигация |

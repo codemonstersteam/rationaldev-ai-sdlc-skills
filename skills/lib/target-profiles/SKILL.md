@@ -61,7 +61,19 @@ validate-contract-frozen   freeze  profile.contract
 That is all — **no stage manifest changes**. If you find yourself editing a role to say "if <shape>",
 STOP: the variation belongs in the profile, not the stage.
 
+## Shape vs provenance — two orthogonal axes (do NOT add a `foreign`/`library` shape)
+A profile here is a **shape** (service / cli): *what* the harness builds, for a **harness-native** target it
+owns end to end. A repo built **outside** the harness is a different axis — **provenance** — handled by the
+**`route=foreign` lane** (`@wirth-triage` Axis 0.5), not by a shape profile. A foreign repo's paradigm (build,
+test runner, fixture format, assert helpers) is **discovered per repo** by `@surveyor` into the repo-local
+`docs/design/_harness/test-harness.md` — it does **not** belong in this global registry. So:
+- Do **NOT** add a `foreign` (or stack-named `library`/`jvm`/`python`) profile here — provenance is not a shape;
+  the per-repo map is the "profile" of a foreign repo. See `docs/features/route-foreign-lane.md`.
+- A new **shape** (a genuinely new *harness-native* deliverable kind) still follows "Adding a shape" above.
+
 ## STOP
 - an `if shape` / `if cli` appearing inside a stage role or validator → STOP, move it into the profile.
 - a shape whose core (DTO/domain/logic/head) differs from other shapes → STOP: that is not a *shape*, it
   is a different requirement — the core must stay shape-agnostic.
+- someone proposing a `foreign`/`library`/stack-named shape profile → STOP: that is **provenance**, use the
+  `route=foreign` lane + the `@surveyor` per-repo map, not a global profile.

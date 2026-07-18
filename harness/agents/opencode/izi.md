@@ -148,7 +148,7 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 | verdict token | You do |
 |---|---|
 | `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages |
-| `route=foreign` | **STOP. Tell the operator: "FOREIGN repo (built outside the harness). The foreign lane (survey → conform-tests → verification-command DoD) is being wired — backlog `route-foreign-lane`, T2–T8 — not yet drivable." + what the pipeline will do.** Launch nothing (mode marker is set, but the lane's stages/gate do not exist yet). |
+| `route=foreign` | run the **FOREIGN path** (below) — a change to a repo built OUTSIDE the harness: survey its paradigm → native-terms delta/tickets → conform-tests (native runner) → verification-command DoD |
 | `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) |
 | `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
 | `route=rework-refactor` | run the **REWORK path §refactor** (below) |
@@ -229,11 +229,35 @@ Greenfield-роли `@wirth-slicer/usecase/moduledesigner/dijkstra` и `@scaffol
 **§refactor:** no `@wirth-apidesigner`, **no** `component` ticket — the existing suite is the invariant.
 **§behavior:** no `@wirth-apidesigner`; **one** `component` ticket (spec untouched). **§api:** step 2 runs.
 
+## FOREIGN path — change to a repo built OUTSIDE the harness (route=foreign, mode=foreign)
+
+A foreign repo has its OWN test/build paradigm (JUnit/pytest/…), no harness design package/spec/`.feature`.
+Greenfield roles (`@wirth-slicer/usecase/apidesigner/moduledesigner/dijkstra`, `@scaffolder`) do **NOT** run.
+The lane **conforms** to the repo — discovers its conventions, never imposes Gherkin/Docker. From the
+`route=foreign` verdict (front door `@gilb` already ran in Step 0):
+
+1. **`@surveyor`** (input: the repo) → **`docs/design/_harness/test-harness.md`** — the repo's paradigm map
+   (runner, fixture format, assert catalog, sibling index, **verification command**). Idempotent — ONCE per
+   repo; its line may be `map fresh … reused`. `STOP` (harness-native / empty / unreadable stack) → operator.
+2. **`@change-intake`** (input: `.agent/planner/brd.md` + repo + the map) → **`docs/foreign/<NNN-slug>/change-delta.md`**
+   + pointer `.agent/planner/change-dir`: affected native modules + **discriminating** scenarios in native terms.
+   No harness design package needed (that STOP is lifted under `mode=foreign`). `STOP` → operator.
+3. **`@wirth-ticketer`** (input: `change-delta` + the map) → `<change-dir>/tickets/`: **module** tickets
+   (native paths), **one `component`** ticket (native discriminating scenarios, **no `@wip`**); each ticket
+   carries a **`### Repo cheat-sheet`** distilled from the map. **NO** scaffold/README. `PARTIAL:` → re-delegate.
+4. **`@wirth-planner`** → `<change-dir>/FOREIGN-PLAN.md` (durable Gate #1 artifact; carries the verification
+   command). Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below, with the foreign notes
+   marked there (`@mills` light; `module`+foreign → `@hughes-rework`; `@fagan` runs the verification command).
+
 ## REVIEW (one pass) + LOCAL FIX
 
 8. `@mills` (input: the slices' `PLAN.md` + path list) — **top-level plan consistency**: decomposition complete,
    slices atomic; ticket order (scaffold → component RED → modules: **one per module-tree node**), scaffold first; contract frozen, `io:`
    set, NFRs not dropped; package coherent. **Does NOT open tickets line by line.** Returns `OK | blocker | escalate`.
+   **Under `mode=foreign`:** `@mills` does a **light** review (input: `FOREIGN-PLAN.md` + `change-delta.md` +
+   the `@surveyor` map) — the greenfield validators (`validate-frd`/`slices`/`layout`) do NOT apply. It checks
+   the **discriminating** scenarios are non-degenerate (old ≠ new on the data) and the plan/tickets are coherent
+   with the map (native paths, assert helpers, verification command). Same `OK | blocker | escalate` line.
 9. IF line = `blocker`: `@linger` (input: Mills verdict + path to the problem) — fixes **locally** (the
    module/artifact at fault; if io-module, reconciles the contract with its caller), **does not rewrite the
    plan**. → restart `@mills`. Mills holds the round counter: round ≥1 with blocker → it returns `escalate`.
@@ -289,17 +313,20 @@ that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s sec
 
 Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate-tickets`): `type`,
 `blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`
-(greenfield); for a **rework** they live in the change folder `<change-dir>/tickets/ticket-N.md` (read `<change-dir>`
-from `.agent/planner/change-dir`, enumerate `ls <change-dir>/tickets/`). Either way route by the header, not the path.
+(greenfield); for a **rework/foreign** they live in the change folder `<change-dir>/tickets/ticket-N.md` (read
+`<change-dir>` from `.agent/planner/change-dir` — `docs/design/<slice>/changes/<slug>/` for rework,
+`docs/foreign/<slug>/` for foreign; enumerate `ls <change-dir>/tickets/`). Route by the header, not the path.
 **The scaffold ticket FIRST and serialized** (all others carry it in `blocked_by`). Route by `type`:
 - `scaffold`  → `@scaffolder` (Qwen): runs `harness/scaffold.sh` (git-clone template + rename + build),
   checks build + component tests, fixes if needed. **Does not read the whole template — cheap** (not @hughes).
-- `component` → `@wirth-tester` (Qwen, skill `component-tests`): mechanically lays the **already-designed**
-  scenarios (`contracts.md`) into executable `.feature`+steps+stubs, tags `@wip`, drives to RED. (Both modes.)
-- `module`    → route by `.agent/planner/mode` (read it ONCE at implementation start; a fixed 2-key table, no
+- `component` → `@wirth-tester` (Qwen): lays the **already-designed** scenarios into executable RED tests.
+  **greenfield/rework** (skill `component-tests`) → `.feature`+steps+stubs, `@wip`. **`mode=foreign`** (skill
+  `conform-tests`) → the repo's **native** runner (JUnit/pytest per the `@surveyor` map), no `@wip`.
+- `module`    → route by `.agent/planner/mode` (read it ONCE at implementation start; a fixed table, no
   judgement): **greenfield** (no marker / `greenfield`) → `@hughes` (implements the NEW module, RED→green);
-  **rework** (`mode` starts with `rework`) → `@hughes-rework` (edits the EXISTING module in place — refactor keeps
-  the suite green, behavior/api drives its `@wip` scenario RED→green). Skill by `io:` from the header in both.
+  **rework** (`mode` starts with `rework`) **OR `foreign`** → `@hughes-rework` (edits the EXISTING module in
+  place — refactor keeps the suite green, behavior/api/foreign drives its RED scenario → green). Skill by `io:`
+  from the header in both (foreign `io: n/a` → no io-skill).
 
 You MUST pass a subagent **only its ticket + the paths in `inputs`** (not the whole backlog). Order by
 `blocked_by`; independent tickets (no shared `blocked_by`) → in parallel. **Fallback:** a ticket without a
