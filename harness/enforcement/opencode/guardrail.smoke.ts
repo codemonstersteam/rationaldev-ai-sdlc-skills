@@ -6,7 +6,7 @@ import assert from "node:assert/strict"
 import { mkdtemp, writeFile, mkdir, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { RationalGuardrail } from "./rational-guardrail.ts"
+import { RationalGuardrail } from "./rational-guardrail.mjs"
 
 const task = (role: string) => ({ tool: "task", args: { subagent: role } })
 

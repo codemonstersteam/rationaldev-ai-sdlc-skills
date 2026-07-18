@@ -121,12 +121,13 @@ if [ "$HARD" = yes ]; then
     opencode)
       [ "$SCOPE" = global ] && pdir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/plugins" || pdir="$PROJ/.opencode/plugins"
       mkdir -p "$pdir"
-      ln -sfn "$ADAPTER/rational-guardrail.ts" "$pdir/rational-guardrail.ts"
-      # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом, чтобы резолвилась и при location-based загрузке
-      ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$(dirname "$pdir")/shared.mjs"
+      # Плагин SELF-CONTAINED .mjs (без crypto/@opencode-ai/shared.mjs) — opencode грузит напрямую,
+      # без транспайла/резолва/полифиллов → не виснет в изолированной сети. Убираем старый .ts-симлинк.
+      rm -f "$pdir/rational-guardrail.ts" "$(dirname "$pdir")/shared.mjs" 2>/dev/null
+      ln -sfn "$ADAPTER/rational-guardrail.mjs" "$pdir/rational-guardrail.mjs"
       # watchdog-настройки плагина (T09b nudge/cooldown) из ЕДИНОГО источника models.config.json → рядом с плагином
       command -v jq >/dev/null 2>&1 && jq '.watchdog // {}' "$BUNDLE/harness/models.config.json" > "$(dirname "$pdir")/rational.config.json" 2>/dev/null || true
-      HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.ts) + watchdog-конфиг"
+      HARDMSG="on → OpenCode-плагин ($pdir/rational-guardrail.mjs, self-contained) + watchdog-конфиг"
       ;;
     claude)
       [ "$SCOPE" = global ] && cbase="$HOME/.claude" || cbase="$PROJ/.claude"
@@ -187,6 +188,8 @@ if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/n
   [ "$NOINPUT" = yes ] && export RATIONALDEV_NOINPUT=1
   node "$BUNDLE/harness/setup-opencode.mjs" "$PROJ" "$BUNDLE" || true
   OPENCODE_MSG="$PROJ/opencode.jsonc (permission+plugin) · провайдер в ~/.config/opencode"
+  # setup-opencode авто-подключил харнес-инструкции через opencode.jsonc "instructions" — правим note
+  [ -e "$PROJ/AGENTS.harness.md" ] && INSTR_NOTE="$(basename "$PROJ")/AGENTS.md (твой) + AGENTS.harness.md — авто через opencode.jsonc instructions"
 fi
 
 MODELS_MSG="(node не найден)"
