@@ -187,6 +187,8 @@ if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/n
   [ "$NOINPUT" = yes ] && export RATIONALDEV_NOINPUT=1
   node "$BUNDLE/harness/setup-opencode.mjs" "$PROJ" "$BUNDLE" || true
   OPENCODE_MSG="$PROJ/opencode.jsonc (permission+plugin) · провайдер в ~/.config/opencode"
+  # setup-opencode авто-подключил харнес-инструкции через opencode.jsonc "instructions" — правим note
+  [ -e "$PROJ/AGENTS.harness.md" ] && INSTR_NOTE="$(basename "$PROJ")/AGENTS.md (твой) + AGENTS.harness.md — авто через opencode.jsonc instructions"
 fi
 
 MODELS_MSG="(node не найден)"

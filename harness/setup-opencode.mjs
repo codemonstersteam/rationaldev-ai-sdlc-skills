@@ -6,7 +6,7 @@
 //                                                относительным путём). Провайдера/моделей тут НЕТ. omo НЕТ.
 //   Модели ролей — frontmatter (models.config → gen-agents), НЕ здесь.
 // omo (oh-my-openagent) гарантированно отсутствует в global (варнинг/чистка) и в project (вычищаем из plugin).
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, mkdirSync, symlinkSync, rmSync, realpathSync, appendFileSync } from "node:fs"
 import { createInterface } from "node:readline"
 import { join, dirname } from "node:path"
 import { homedir } from "node:os"
@@ -94,9 +94,42 @@ const curPlugins = Array.isArray(existing.plugin) ? existing.plugin : []
 const noOmo = curPlugins.filter((p) => !String(p).includes(OMO))
 merged.plugin = noOmo.some((p) => String(p).includes("rational-guardrail")) ? noOmo : [...noOmo, PLUGIN_REL]
 
+// ── AGENTS.md: свой не трогаем, харнес-инструкции подключаем через `instructions` (без ручного мерджа) ──
+// opencode авто-грузит корневой AGENTS.md. Если он ЧУЖОЙ (не наш симлинк) — линкуем харнес рядом как
+// AGENTS.harness.md и перечисляем ОБА в instructions → opencode грузит оба сам.
+const harnessInstr = join(bundleRoot, "harness", "instructions", "AGENTS.opencode.md")
+const projAgents = join(projectDir, "AGENTS.md")
+const harnessName = "AGENTS.harness.md"
+let agentsIsOurs = false
+try { agentsIsOurs = existsSync(projAgents) && existsSync(harnessInstr) && realpathSync(projAgents) === realpathSync(harnessInstr) } catch { /* noop */ }
+if (existsSync(projAgents) && !agentsIsOurs) {
+  try { const p = join(projectDir, harnessName); if (existsSync(p)) rmSync(p); symlinkSync(harnessInstr, p) } catch { /* noop */ }
+  const instr = Array.isArray(existing.instructions) ? existing.instructions.slice() : []
+  for (const f of ["AGENTS.md", harnessName]) if (!instr.includes(f)) instr.push(f)
+  merged.instructions = instr
+  notes.push(`✓ твой AGENTS.md не тронут; харнес → ${harnessName} + opencode.jsonc "instructions" (авто, без ручного мерджа)`)
+}
+
 mkdirSync(projectDir, { recursive: true })
 writeFileSync(projPath, JSON.stringify(merged, null, 2) + "\n")
 notes.push(`✓ PROJECT ${projPath}: permission + plugin (${PLUGIN_REL}), omo отсутствует`)
+
+// ── gitignore harness-СИМЛИНКОВ — иначе git-snapshot opencode на init виснет ("beyond a symbolic link") ──
+// opencode при старте (без --pure) снапшотит рабочую директорию; git не идёт сквозь симлинк на внешний клон.
+// Игнор → git их не видит → snapshot не трогает → не виснет; симлинки остаются (авто-апдейт цел).
+// harness/AGENTS.md/AGENTS.harness.md — СИМЛИНКИ → паттерн БЕЗ слэша (со слэшем симлинк не матчится).
+function ensureGitignore(dir, patterns) {
+  const gi = join(dir, ".gitignore")
+  const cur = existsSync(gi) ? readFileSync(gi, "utf8") : ""
+  const have = cur.split("\n").map((l) => l.trim())
+  const missing = patterns.filter((p) => !have.includes(p))
+  if (!missing.length) return false
+  const pre = cur && !cur.endsWith("\n") ? "\n" : ""
+  appendFileSync(gi, `${pre}\n# rationaldev harness — симлинки на клон; git-snapshot opencode их не трогает\n${missing.join("\n")}\n`)
+  return true
+}
+if (ensureGitignore(projectDir, [".opencode/", "harness", "AGENTS.md", "AGENTS.harness.md"]))
+  notes.push("✓ .gitignore: harness-симлинки исключены (фикс висяка opencode-snapshot)")
 
 if (rl) rl.close()
 console.log(notes.map((n) => "  " + n).join("\n"))
