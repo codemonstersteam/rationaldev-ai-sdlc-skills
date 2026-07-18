@@ -217,10 +217,13 @@ Greenfield-роли `@wirth-slicer/usecase/moduledesigner/dijkstra` и `@scaffol
 ticket list (the planner already assembled them there). Copy from the artifact; invent nothing (you are a
 router). Then ask the accept `question`.
 
-Ask the operator a `question` and **wait**. Acceptance is an **explicit token command** — the operator must
-write exactly **`GATE1 APPROVE`** (optionally with the slice name). Loose words ("ok", "go ahead", "approve",
-"акцепт") are **NOT** acceptance and will not pass the gate — tell the operator to type `GATE1 APPROVE` to
-accept. On that token the enforcement hook **itself** creates `.agent/gates/gate1.approved`.
+Ask the operator a `question` and **wait**. The `question` **MUST** include an option whose label is exactly
+**`GATE1 APPROVE`** (plus a `Reject` option). Acceptance is an **explicit token command** — the operator either
+**selects that option** or **types** exactly **`GATE1 APPROVE`** (optionally with the slice name); both channels
+converge on the same token and the `--hard` plugin sets `.agent/gates/gate1.approved` either way (on the menu
+`question.replied` selection the same as on the typed text). Loose words ("ok", "go ahead", "approve", "акцепт")
+and any other option are **NOT** acceptance and will not pass the gate — tell the operator to select or type
+`GATE1 APPROVE`. On that token the enforcement hook **itself** creates `.agent/gates/gate1.approved`.
 
 - **THE HOOK SETS THE MARKER, NOT YOU. You MUST NEVER `touch`/`>`/write/edit `.agent/gates/gate1.approved`** —
   it is forbidden and the plugin will block it (do not try).
