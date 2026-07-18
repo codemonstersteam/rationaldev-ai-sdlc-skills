@@ -7,7 +7,7 @@ import { join } from "node:path"
 import {
   PIPELINE, GATE_MARK, pickRole, inPipeline, writesGateMarker, doneGreenTicketId, requiresFrontDoor,
   parseTicketOutputs, isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK,
-  isImplementer, branchFromHead, isTrunkBranch, toolCallSignature, detectLoop, isChoreMode,
+  isImplementer, branchFromHead, isTrunkBranch, toolCallSignature, detectLoop, isChoreMode, hasChorePlan, CHORES_DIR,
 } from "../shared.mjs"
 
 // --hard enforcement для OpenCode. Делает ПРИНУДИТЕЛЬНЫМ то, что промпты рекомендуют:
@@ -31,8 +31,9 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
     try { await access(p); return true } catch { return false }
   }
 
-  // Хеш снимка плана НА МОМЕНТ акцепта (аудит, паритет с claude gate-approve.mjs):
-  // все docs/design/*/PLAN.md (sorted) + plan-review.md. best-effort → "na".
+  // Хеш снимка плана НА МОМЕНТ акцепта (аудит, паритет с claude gate-approve.mjs): greenfield
+  // docs/design/*/PLAN.md + rework changes/*/PLAN.md + chore docs/chores/*/CHORE-PLAN.md + plan-review.md
+  // (sorted). best-effort → "na".
   const planHashSnapshot = async (): Promise<string> => {
     try {
       const parts: string[] = []
@@ -41,7 +42,17 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
         .filter((e: any) => e.isDirectory()).map((e: any) => e.name).sort()
       for (const d of dirs) {
         try { parts.push(d + "\n" + await readFile(join(designDir, d, "PLAN.md"), "utf8")) } catch { /* нет PLAN.md */ }
+        try { // change-scoped rework-планы: docs/design/<slice>/changes/<slug>/PLAN.md
+          const changesRoot = join(designDir, d, "changes")
+          for (const ch of (await readdir(changesRoot)).sort())
+            try { parts.push(d + "/" + ch + "\n" + await readFile(join(changesRoot, ch, "PLAN.md"), "utf8")) } catch { /* нет */ }
+        } catch { /* нет changes/ */ }
       }
+      try { // chore-планы: docs/chores/<slug>/CHORE-PLAN.md
+        const choresDir = join(root, CHORES_DIR)
+        for (const c of (await readdir(choresDir)).sort())
+          try { parts.push("chore/" + c + "\n" + await readFile(join(choresDir, c, "CHORE-PLAN.md"), "utf8")) } catch { /* нет */ }
+      } catch { /* нет docs/chores/ */ }
       try { parts.push("plan-review\n" + await readFile(join(root, PLAN_REVIEW_MARK), "utf8")) } catch { /* нет ревью */ }
       return parts.length ? createHash("sha256").update(parts.join("\n---\n")).digest("hex").slice(0, 16) : "na"
     } catch { return "na" }
@@ -81,18 +92,30 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   }
 
   // poka-yoke (T03): по id тикета вернуть его объявленные `outputs`, которых НЕТ или которые пусты.
-  // Тикет ищем в docs/design/*/tickets/ticket-<id>.md; `outputs` парсим regex'ом (flow-массив [a, b]).
+  // Тикет ищем в greenfield docs/design/*/tickets/ И change-scoped docs/design/*/changes/*/tickets/
+  // (доработка кладёт modify-тикеты рядом, не поверх сборки); `outputs` парсим regex'ом (flow-массив [a, b]).
   // Тикет/outputs не нашли → [] (НЕ блокируем: ложный blocker роняет прогон; заголовок ловит validate-tickets).
   const missingOutputs = async (id: string): Promise<string[]> => {
     let text: string | null = null
+    const rx = new RegExp(`^ticket-0*${id}\\.md$`)
+    // Кандидат-каталоги тикетов слайса: собственный tickets/ + каждый changes/<slug>/tickets/.
+    const ticketDirsOf = async (sliceDir: string): Promise<string[]> => {
+      const dirs = [join(sliceDir, "tickets")]
+      try {
+        const changesRoot = join(sliceDir, "changes")
+        for (const ch of await readdir(changesRoot)) dirs.push(join(changesRoot, ch, "tickets"))
+      } catch { /* нет changes/ */ }
+      return dirs
+    }
     try {
       const designDir = join(root, "docs", "design")
-      for (const slice of await readdir(designDir)) {
-        const tdir = join(designDir, slice, "tickets")
-        let files: string[]
-        try { files = await readdir(tdir) } catch { continue }
-        const hit = files.find((f) => new RegExp(`^ticket-0*${id}\\.md$`).test(f))
-        if (hit) { text = await readFile(join(tdir, hit), "utf8"); break }
+      outer: for (const slice of await readdir(designDir)) {
+        for (const tdir of await ticketDirsOf(join(designDir, slice))) {
+          let files: string[]
+          try { files = await readdir(tdir) } catch { continue }
+          const hit = files.find((f) => rx.test(f))
+          if (hit) { text = await readFile(join(tdir, hit), "utf8"); break outer }
+        }
       }
     } catch { return [] }
     if (!text) return []
@@ -250,11 +273,12 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
       let mode = ""
       try { mode = await readFile(join(agentDir, "planner", "mode"), "utf8") } catch { /* нет маркера */ }
       if (isChoreMode(mode)) {
-        const chorePlan = join(agentDir, "planner", "CHORE-PLAN.md")
-        if (!(await exists(chorePlan)) || !(await exists(gate1))) {
+        const existsFn = (rel: string) => existsSync(join(root, rel))
+        const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
+        if (!hasChorePlan(choreDirsFn, existsFn) || !(await exists(gate1))) {
           throw new Error(
-            "[rational-guardrail] Gate #1 (chore) не пройден: требуется .agent/planner/CHORE-PLAN.md и апрув " +
-            "оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
+            "[rational-guardrail] Gate #1 (chore) не пройден: требуется durable план docs/chores/<slug>/CHORE-PLAN.md " +
+            "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
           )
         }
         return
@@ -284,7 +308,8 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
           // ложно ставит маркер и обнуляет человеческий Gate #1. Нет плана → игнорируем.
           const existsFn = (rel: string) => existsSync(join(root, rel))
           const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
-          if (!planReadyForApproval(existsFn, sliceDirsFn)) return
+          const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
+          if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) return
           if (await exists(gate1)) return                   // первый акцепт фиксируется, повтор не клобберит
           await mkdir(join(agentDir, "gates"), { recursive: true })
           await writeFile(gate1, gateMarkerContent({

@@ -33,8 +33,21 @@ for the CONTEXT/ADR format when the change touches domain language.
 - `rework-behavior` → outcomes change, **spec unchanged**; affected-modules + affected component scenarios.
 - `rework-api`      → **spec evolves**; affected-modules + affected scenarios + **spec-delta**.
 
-## Output — `.agent/planner/change-delta.md`
-Write exactly:
+## The CHANGE FOLDER — work-scoped, never on top of greenfield (MUST)
+A rework is its **own** unit of work: its delta/plan/tickets live in a **durable change folder**, they do
+**NOT** overwrite the slice's greenfield `tickets/` (the immutable record of how the slice was built). Compute:
+- **`<slice>`** — the PRIMARY affected slice (the one whose modules the delta changes); its design package is
+  `docs/design/<slice>/`.
+- **`<slug>`** = `<NNN>-<kebab>` — `NNN` = next unused 3-digit id under `docs/design/<slice>/changes/`
+  (`ls` it; empty → `001`), `<kebab>` = short kebab of the change title (e.g. `001-round-precision-4dp`).
+- **`<change-dir>`** = `docs/design/<slice>/changes/<slug>/` — create it (`mkdir -p <change-dir>`).
+
+Write a **run-state pointer** so downstream roles share one source of truth (they do NOT re-derive it):
+`echo "<change-dir>" > .agent/planner/change-dir`. `@wirth-planner` writes `<change-dir>/PLAN.md`,
+`@wirth-ticketer` writes `<change-dir>/tickets/`, `@hughes-rework` reads its ticket there.
+
+## Output — `<change-dir>/change-delta.md`
+Write exactly (into the change folder, NOT `.agent/`):
 1. **Change statement + rationale** — one paragraph: what changes and *why* (the load-bearing reason).
 2. **Affected-modules table** — one row per touched module: `existing package path` · `existing io:` · nature of edit.
 3. **(behavior/api) Affected component scenarios** — which existing outcomes change / which new outcome is added.
@@ -46,5 +59,6 @@ Write exactly:
 - **Mode says refactor/behavior but the change actually requires a contract change** → `STOP: change needs spec-evolve — reclassify as rework-api` (back to the operator; do not silently touch the spec).
 - Change is really a **new service/slice**, not a delta of existing → `STOP: greenfield task, not rework`.
 
-Return izi **one line**: `change-intake → change-delta.md ready (mode=<…>, N modules)` **or** `STOP: <reason>`.
-You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree. izi passes a STOP line to the operator.
+Return izi **one line**: `change-intake → change-delta.md ready (dir=<change-dir>, mode=<…>, N modules)` **or**
+`STOP: <reason>`. You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree;
+you **MUST NOT** write into the slice's greenfield `tickets/`. izi passes a STOP line to the operator.

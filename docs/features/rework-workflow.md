@@ -45,6 +45,22 @@ change-intake (дельта + rationale + change-type; читает текущи
 - **Новые роли:** `change-intake`, `impact-map`, **`hughes-rework`**.
 - **Выкидываем:** `scaffolder` (нечего клонировать).
 
+### Раскладка артефактов — work-scoped, доработка НЕ поверх greenfield (MUST)
+Доработка — своя единица работы: её дельта/план/тикеты живут в **durable change-папке**, не затирая
+greenfield `tickets/` слайса (неизменную запись «как построили»). `@change-intake` считает `<change-dir>` и
+пишет run-state-указатель `.agent/planner/change-dir`; вниз по конвейеру все читают его, а не выводят заново:
+```
+docs/design/slice-<slug>/
+├── tickets/                         # greenfield — НЕ трогаем
+└── changes/<NNN-slug>/              # ← доработка (понятное имя: id по сиблингам + kebab заголовка)
+    ├── change-delta.md   (@change-intake)
+    ├── PLAN.md           (@wirth-planner)
+    └── tickets/          (@wirth-ticketer → @hughes-rework)
+```
+Machines (`validate-tickets`/`validate-plan`/guardrail) **slug-агностичны** — глобят `slice-*/changes/*/tickets/`
+рядом с `slice-*/tickets/` (`lib/ticket-fs.mjs`), имя папки не парсят. Chore (репо-инфра, без слайса) — параллельно:
+`docs/chores/<NNN-slug>/CHORE-PLAN.md`. Реализовано эпиком «Work-scoped тикеты» (backlog).
+
 ## Алгоритм (функциональный стиль)
 
 **Роутер 2×2 — ДАННЫЕ, не условие** (как io-router `io:`→skills):

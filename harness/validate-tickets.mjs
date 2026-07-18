@@ -22,28 +22,18 @@ import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join, isAbsolute } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
 import { validateTicketHeaders } from "./lib/validators.mjs"
+import { discoverTicketFiles } from "./lib/ticket-fs.mjs"
 
 const root = process.argv[3] || process.cwd()
-// Тикеты живут per slice: docs/design/slice-<name>/tickets/ticket-N.md. Если явный каталог задан
-// аргументом — используем его (совместимость/точечная проверка); иначе собираем по всем слайсам.
+// Тикеты живут per slice: greenfield docs/design/slice-<name>/tickets/ + change-scoped
+// docs/design/slice-<name>/changes/<slug>/tickets/ (доработка не затирает сборку). Явный каталог
+// аргументом — точечная проверка; иначе собираем по всем слайсам (оба вида) через ticket-fs.
 const explicit = process.argv[2]
-const ticketFiles = [] // { rel, abs }
-if (explicit) {
-  if (!existsSync(explicit)) { console.error(`validate-tickets: нет каталога тикетов ${explicit}`); process.exit(1) }
-  for (const f of readdirSync(explicit).filter((f) => f.endsWith(".md")).sort())
-    ticketFiles.push({ rel: f, abs: join(explicit, f) })
-} else {
-  const design = join(root, "docs", "design")
-  if (existsSync(design)) {
-    for (const slice of readdirSync(design).filter((d) => d.startsWith("slice-")).sort()) {
-      const td = join(design, slice, "tickets")
-      if (!existsSync(td)) continue
-      for (const f of readdirSync(td).filter((f) => f.endsWith(".md")).sort())
-        ticketFiles.push({ rel: join("docs/design", slice, "tickets", f), abs: join(td, f) })
-    }
-  }
-}
-if (!ticketFiles.length) { console.error(`validate-tickets: не найдено тикетов (docs/design/slice-*/tickets/*.md)`); process.exit(1) }
+const ticketFiles = explicit
+  ? (existsSync(explicit) ? readdirSync(explicit).filter((f) => f.endsWith(".md")).sort().map((f) => ({ rel: f, abs: join(explicit, f) }))
+     : (console.error(`validate-tickets: нет каталога тикетов ${explicit}`), process.exit(1)))
+  : discoverTicketFiles(root)
+if (!ticketFiles.length) { console.error(`validate-tickets: не найдено тикетов (docs/design/slice-*/tickets|changes/*/tickets/*.md)`); process.exit(1) }
 
 const tickets = ticketFiles.map(({ rel, abs }) => ({ name: rel, data: parseFrontmatter(readFileSync(abs, "utf8")).data }))
 // rework-режим (маркер от wirth-triage): в rework scaffold-тикет недопустим (правим существующее)

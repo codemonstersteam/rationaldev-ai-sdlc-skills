@@ -165,6 +165,36 @@ _izi-фиксы (роутер glm-5.2 + вопросы по одному) — в
   - _DoD:_ харнес сам заводит ветку от свежего транка, коммитит/пушит провалидированное состояние, дожимает CI до
     зелёного и презентует Gate #2 с зелёным PR — без ручного git; провайдер переключается конфигом; демо на chore.
 
+### Work-scoped тикеты — доработка/chore в СВОЕЙ durable-папке, не поверх greenfield (из live-прогона rework 18-07)
+Дефект: rework-конвейер пишет `modify`-тикеты в **тот же** `docs/design/slice-<name>/tickets/ticket-N.md`, что и
+greenfield → **затирает** исходные тикеты сборки. Путь захардкожен в 4 местах (`wirth-ticketer.md`,
+`rational-guardrail.ts`, `validate-tickets.mjs`, `validate-plan.mjs`), rework пишет туда же. Итог: запись «как построили»
+теряется, каждая доработка перезатирает предыдущую, нет per-change трассируемости. Chore ту же дисциплину нарушает иначе —
+`CHORE-PLAN.md` живёт эфемерно в `.agent/planner/` (dot-dir, стирается, не ревьюится durable).
+
+**Принцип:** природа работы → её durable папка (open-closed, новый вид = новая ветвь раскладки, без затирания):
+| Вид | Привязка | Папка | Тикеты |
+|---|---|---|---|
+| greenfield | слайс | `docs/design/slice-<slug>/tickets/` | да |
+| **rework** | слайс | `docs/design/slice-<slug>/changes/<NNN-slug>/{change-delta.md, PLAN.md, tickets/, adr/}` | да (modify) |
+| **chore** | репо (без слайса) | `docs/chores/<NNN-slug>/CHORE-PLAN.md` | нет (только план) |
+
+`<NNN-slug>` — понятное имя (монотонный 3-значный id по сиблингам + kebab заголовка). Машины (валидаторы/guardrail)
+**slug-агностичны** — глобят на уровень глубже (`slice-*/changes/*/tickets/`, `docs/chores/*/`), не парсят имя.
+Решение: rework — под слайсом (co-location, [[p1-context-colocation-decided-b]]); chore — top-level `docs/chores/`.
+
+- [x] **T1 — конвенция layout + источник `NNN-slug`.** `change-intake` присваивает change-slug и делает `change-delta.md`
+  durable под `changes/<slug>/`; общее правило имени (id по сиблингам + kebab). `rework-workflow.md` документирует.
+- [x] **T2 — ticketer rework-путь** → `changes/<slug>/tickets/` (greenfield-путь не трогаем). `wirth-ticketer.md` + `implementation-ticket-writer`.
+- [x] **T3 — planner rework+chore-путь** → `changes/<slug>/PLAN.md` (rework) · `docs/chores/<slug>/CHORE-PLAN.md` (chore, из `.agent/`). `wirth-planner.md`.
+- [x] **T4 — валидаторы** ищут тикеты в `slice-*/tickets/` **И** `slice-*/changes/*/tickets/` — единый fs-хелпер `lib/ticket-fs.mjs` (DRY, дублирование было в обоих) + тест. `validate-tickets.mjs`, `validate-plan.mjs`.
+- [x] **T5 — guardrail** резолв тикета по change-папкам + chore Gate #1 по durable `docs/chores/*/CHORE-PLAN.md` (не `.agent/`); pure-хелперы в `shared.mjs` + smoke. `rational-guardrail.ts`, `gate-check.mjs`, `gate-approve.mjs`.
+- [x] **T6 — izi rework-ветка** — перечисление/передача change-scoped tickets dir (`ls .../changes/<slug>/tickets/`). `izi.md`.
+- [x] **T7 — hughes-rework** читает тикет из change-папки (путь из шапки). `hughes-rework.md`.
+- [x] **T8 — backlog + docs** — зафиксировать конвенцию. `backlog.md`, `rework-workflow.md`.
+_Порядок:_ T1 (конвенция) → T2/T3 (продюсеры) → T4/T5 (гейты) → T6/T7 (потребители) → T8 (док). Ведётся в одной ветке `feat/work-scoped-tickets`.
+_Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work-scoped-tickets`): fs-хелпер+валидаторы, guardrail (opencode+claude)+shared+smoke, роли change-intake/ticketer/planner/izi/hughes-rework, docs. Тесты: 146 unit + guardrail 34/34 + claude-hooks 25/25 + smoke 30. **Остаток — live-приёмка:** прогнать izi-rework на tempconv после мержа → убедиться, что тикеты легли в `changes/<slug>/`, greenfield `tickets/` цел.
+
 ### Перевод скиллов на английский (i18n) — оптимум, не минимум
 Цель: все `skills/lib/*` на английском, лаконичные, без потери сути; tier-agnostic (GLM…Opus).
 Статус (16-07, пересчёт): **тело переведено у всех 33** — Фаза 1 завершена. Остаётся только Фаза 3 (литералы) и опц. Фаза 2 (тест):
@@ -209,6 +239,26 @@ _izi-фиксы (роутер glm-5.2 + вопросы по одному) — в
 ### Инфраструктура репозитория
 - [ ] Сверить сквозные номера версий доков/скиллов (часть `v1.0`, observability `v2.0`, contract-tests `0.1/draft`) — версии скиллов/ролей теперь машиночитаемы в `skills/INDEX.json`
 - [ ] `docs/02_MEASUREMENT.md §2.4` — переименовать «Платформа данных / Аналитика-отчётность» → «Отчётность» (analytics как роль убран)
+
+### Self-updating harness distribution (dir-symlinks + `rationaldev update`) — как oh-my-zsh/flutter
+**Проблема:** `install.sh` линкует **пофайлово** → новые файлы харнеса (роли/валидаторы/конфиги,
+напр. `vcs-providers.json`, `git-hand.md`) **не долетают** в уже-установленные проекты без
+переустановки. Симптом ловили вживую 18-07: `git-hand`/`vcs-providers` не пропали в песочницу.
+**Модель oh-my-zsh/flutter:** канонический git-клон бандла в известном месте (`~/.rationaldev`
+или `$XDG_DATA_HOME/rationaldev`); проекты ссылаются только на него.
+- [ ] **P1 Линковать КАТАЛОГИ, не файлы** (ключевой сдвиг): `.opencode/agent` → `harness/agents/opencode`,
+  `.opencode/skills` → `skills/lib`, `harness/` → бандл `harness/`, `.opencode/plugins` →
+  `harness/enforcement/opencode`. Тогда `git pull` в бандле = мгновенное обновление всех проектов,
+  **включая новые файлы**, ноль переустановок. Проекции ролей закоммичены → `pull` их приносит,
+  генератор гонять не надо (кроме локальной смены `models.config.json`).
+- [ ] **P1 Команда `rationaldev update`** (как `omz update`/`flutter upgrade`):
+  `git -C ~/.rationaldev pull --ff-only`. Опц. авто-апдейт: чек на старте izi (`git fetch` +
+  сравнить `HEAD` vs `origin/main`), аналог `UPDATE_ZSH_DAYS`.
+- [ ] **P2 Компромисс (решить):** dir-symlink на `.opencode/agent` → нельзя подкинуть проект-локальную
+  роль в тот же каталог. Варианты: (а) агенты тоже dir-link (проект-локальные роли редки);
+  (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
+- _Остаётся локальным (правильно):_ `opencode.jsonc` (ключ+прокси), `models.config.json`,
+  `.agent/` run-state, продукт-код.
 
 ### Детерминированный генератор тикетов по дизайну (ticketer)
 Причина: GLM-ticketer игнорирует прозу декомпозиции и схлопывает слайс в один монстр-тикет

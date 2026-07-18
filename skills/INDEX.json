@@ -266,7 +266,8 @@
         "requirements"
       ],
       "outputs": [
-        ".agent/planner/change-delta.md",
+        "docs/design/<slice>/changes/<slug>/change-delta.md",
+        ".agent/planner/change-dir",
         ".agent/decisions.log"
       ]
     },
@@ -367,11 +368,14 @@
       "inputs": [
         ".agent/planner/frd.md",
         ".agent/planner/slices.md",
+        ".agent/planner/change-dir",
+        ".agent/planner/mode",
         "docs/design",
         "api-specification"
       ],
       "outputs": [
         "docs/design",
+        "docs/chores",
         ".agent/decisions.log"
       ]
     },

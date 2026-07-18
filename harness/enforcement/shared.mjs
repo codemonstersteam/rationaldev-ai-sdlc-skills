@@ -44,17 +44,26 @@ export const isTrunkBranch = (branch) => TRUNK_BRANCHES.has(String(branch || "")
 // «go ahead» на фазе OQ поставил gate1 за час до плана). Пути-сигналы (fs-проверку делает вызывающий):
 export const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
 export const DESIGN_DIR = "docs/design" // PLAN.md лежит per-slice: docs/design/<slice>/PLAN.md
-// chore-полоса: одностраничный план вместо FRD/спеки/дизайна. Его наличие = «план собран» для мини Gate #1.
-export const CHORE_PLAN_MARK = ".agent/planner/CHORE-PLAN.md"
+// chore-полоса: одностраничный план вместо FRD/спеки/дизайна. Chore — репо-инфра, не слайс → живёт
+// durable в docs/chores/<NNN-slug>/CHORE-PLAN.md (а не эфемерно в .agent/): своя папка = ревью-пригодно,
+// переживает прогон (принцип «природа работы → durable папка»). Machines slug-агностичны (глобят docs/chores/*).
+export const CHORES_DIR = "docs/chores"
+export const CHORE_PLAN_FILE = "CHORE-PLAN.md"
 export const MODE_MARK = ".agent/planner/mode"
 // mode-маркер (пишет @wirth-triage) == "chore"? content от вызывающего (fs-чтение снаружи).
 // Срезаем ведущий BOM (﻿) — Windows-тулзы (PowerShell Set-Content) пишут его; trim() его не берёт.
 export const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
-// Готов ли план к акцепту? existsFn(relPath)→bool, slicesFn()→string[] имён под DESIGN_DIR (оба от вызывающего).
-// chore: CHORE-PLAN.md — тоже «план готов» (одностраничник вместо полного пакета).
-export function planReadyForApproval(existsFn, sliceDirsFn) {
+// Есть ли durable chore-план docs/chores/<slug>/CHORE-PLAN.md? choreDirsFn()→подкаталоги docs/chores/;
+// existsFn(relPath)→bool (оба инжектит вызывающий — fs снаружи, ядро чистое/тестируемое).
+export function hasChorePlan(choreDirsFn, existsFn) {
+  for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
+  return false
+}
+// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()→string[] имён подкаталогов
+// под DESIGN_DIR / CHORES_DIR (все от вызывающего). chore: durable CHORE-PLAN.md — тоже «план собран».
+export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
-  if (existsFn(CHORE_PLAN_MARK)) return true
+  if (hasChorePlan(choreDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }

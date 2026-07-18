@@ -137,12 +137,13 @@ A chore (CI/Dockerfile/Makefile/config/dep-bump/docs) is NOT a slice: **no FRD, 
 no scaffold, no component tests, no module tree.** But it is still **planned and gated** — a cheap plan +
 one human gate, not zero plan. The front door (`@gilb`) already ran in Step 0; from the `route=chore` verdict:
 
-1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`.agent/planner/CHORE-PLAN.md`**: a one-pager —
-   the file(s) to change, the **verification command** (how we prove it works, e.g. "PR to main, both CI jobs
-   green"), and rollback. Planner does not design a module tree here — it writes the one-pager and returns a line.
-2. **Mini Gate #1** (human): present `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
+1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`docs/chores/<NNN-slug>/CHORE-PLAN.md`** (durable
+   own folder, NOT `.agent/`; pointer `.agent/planner/chore-dir`): a one-pager — the file(s) to change, the
+   **verification command** (how we prove it works, e.g. "PR to main, both CI jobs green"), and rollback.
+   Planner does not design a module tree here — it writes the one-pager and returns a line.
+2. **Mini Gate #1** (human): present the `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
    token **`GATE1 APPROVE`** (the `--hard` hook sets `.agent/gates/gate1.approved` on that token — you MUST NOT).
-   Under `mode=chore` the guardrail requires `CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
+   Under `mode=chore` the guardrail requires a durable `docs/chores/<slug>/CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
 3. **WORKING-BRANCH** (as below): `@git-hand mode=start` (`task-type=chore`, `slug`) → cuts `chore/<slug>` from
    fresh trunk. No code on trunk.
 4. **`@hughes` under `mode=chore`** — writes the file(s); **no io-skills attached** (config/CI/docs, not a module).
@@ -185,15 +186,19 @@ no `@mills` — a chore has nothing for them to do. You route the six steps abov
 Greenfield-роли `@wirth-slicer/usecase/moduledesigner/dijkstra` и `@scaffolder` **НЕ участвуют** (проект уже
 есть). You read the label, follow the sequence — you compute nothing. All three sub-routes share:
 
-1. `@change-intake` (input: `.agent/planner/brd.md` + existing repo) → `.agent/planner/change-delta.md`
-   (delta, rationale, affected-modules). Decides fit/STOP itself — on `STOP` pass it to the operator.
+1. `@change-intake` (input: `.agent/planner/brd.md` + existing repo) → creates the **change folder**
+   `<change-dir>` = `docs/design/<slice>/changes/<NNN-slug>/`, writes `<change-dir>/change-delta.md`
+   (delta, rationale, affected-modules) and the pointer `.agent/planner/change-dir`. Its status line carries
+   `dir=<change-dir>` — the rework's plan/tickets live THERE, never on top of the slice's greenfield `tickets/`.
+   Decides fit/STOP itself — on `STOP` pass it to the operator.
 2. **§api ONLY** — `@wirth-apidesigner` (input: existing contract + the delta's spec-delta) → **evolves**
    `api-specification/*` (new `x-frozen` version). Then run `node harness/validate-contract-diff.mjs` →
    an **advisory** breaking-list; **announce it to the operator** (a major is theirs to accept), do NOT block.
-3. `@wirth-ticketer` (input: `change-delta` + existing design) → `docs/design/slice-<name>/tickets/ticket-N.md`:
-   **module** tickets from the affected-modules list, **NO scaffold**; **§behavior/§api** also cut **one
-   `component` ticket** (changed/added scenarios, `@wip`). On `PARTIAL:` re-delegate the rest to it.
-4. `@wirth-planner` → `PLAN.md`. Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below.
+3. `@wirth-ticketer` (input: `change-delta` + existing design) → `<change-dir>/tickets/ticket-N.md`
+   (change folder, NOT the slice's greenfield `tickets/`): **module** tickets from the affected-modules list,
+   **NO scaffold**; **§behavior/§api** also cut **one `component` ticket** (changed/added scenarios, `@wip`).
+   On `PARTIAL:` re-delegate the rest to it.
+4. `@wirth-planner` → `<change-dir>/PLAN.md`. Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below.
 
 **§refactor:** no `@wirth-apidesigner`, **no** `component` ticket — the existing suite is the invariant.
 **§behavior:** no `@wirth-apidesigner`; **one** `component` ticket (spec untouched). **§api:** step 2 runs.
@@ -254,7 +259,9 @@ that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s sec
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
 Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate-tickets`): `type`,
-`blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`.
+`blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`
+(greenfield); for a **rework** they live in the change folder `<change-dir>/tickets/ticket-N.md` (read `<change-dir>`
+from `.agent/planner/change-dir`, enumerate `ls <change-dir>/tickets/`). Either way route by the header, not the path.
 **The scaffold ticket FIRST and serialized** (all others carry it in `blocked_by`). Route by `type`:
 - `scaffold`  → `@scaffolder` (Qwen): runs `harness/scaffold.sh` (git-clone template + rename + build),
   checks build + component tests, fixes if needed. **Does not read the whole template — cheap** (not @hughes).
@@ -521,8 +528,21 @@ for the CONTEXT/ADR format when the change touches domain language.
 - `rework-behavior` → outcomes change, **spec unchanged**; affected-modules + affected component scenarios.
 - `rework-api`      → **spec evolves**; affected-modules + affected scenarios + **spec-delta**.
 
-## Output — `.agent/planner/change-delta.md`
-Write exactly:
+## The CHANGE FOLDER — work-scoped, never on top of greenfield (MUST)
+A rework is its **own** unit of work: its delta/plan/tickets live in a **durable change folder**, they do
+**NOT** overwrite the slice's greenfield `tickets/` (the immutable record of how the slice was built). Compute:
+- **`<slice>`** — the PRIMARY affected slice (the one whose modules the delta changes); its design package is
+  `docs/design/<slice>/`.
+- **`<slug>`** = `<NNN>-<kebab>` — `NNN` = next unused 3-digit id under `docs/design/<slice>/changes/`
+  (`ls` it; empty → `001`), `<kebab>` = short kebab of the change title (e.g. `001-round-precision-4dp`).
+- **`<change-dir>`** = `docs/design/<slice>/changes/<slug>/` — create it (`mkdir -p <change-dir>`).
+
+Write a **run-state pointer** so downstream roles share one source of truth (they do NOT re-derive it):
+`echo "<change-dir>" > .agent/planner/change-dir`. `@wirth-planner` writes `<change-dir>/PLAN.md`,
+`@wirth-ticketer` writes `<change-dir>/tickets/`, `@hughes-rework` reads its ticket there.
+
+## Output — `<change-dir>/change-delta.md`
+Write exactly (into the change folder, NOT `.agent/`):
 1. **Change statement + rationale** — one paragraph: what changes and *why* (the load-bearing reason).
 2. **Affected-modules table** — one row per touched module: `existing package path` · `existing io:` · nature of edit.
 3. **(behavior/api) Affected component scenarios** — which existing outcomes change / which new outcome is added.
@@ -534,8 +554,9 @@ Write exactly:
 - **Mode says refactor/behavior but the change actually requires a contract change** → `STOP: change needs spec-evolve — reclassify as rework-api` (back to the operator; do not silently touch the spec).
 - Change is really a **new service/slice**, not a delta of existing → `STOP: greenfield task, not rework`.
 
-Return izi **one line**: `change-intake → change-delta.md ready (mode=<…>, N modules)` **or** `STOP: <reason>`.
-You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree. izi passes a STOP line to the operator.
+Return izi **one line**: `change-intake → change-delta.md ready (dir=<change-dir>, mode=<…>, N modules)` **or**
+`STOP: <reason>`. You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree;
+you **MUST NOT** write into the slice's greenfield `tickets/`. izi passes a STOP line to the operator.
 
 ---
 
@@ -873,8 +894,13 @@ lead slice, `blocked_by: []`, blocks all) → per slice {component RED → modul
 There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
 `@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
-**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-delta.md` is present, you are on
-the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
+**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-dir` is present (a rework: it
+points to `<change-dir>` = `docs/design/<slice>/changes/<slug>/`, where `@change-intake` wrote `change-delta.md`),
+you are on the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
+- **WRITE INTO THE CHANGE FOLDER — never on top of greenfield (MUST).** Rework tickets go to
+  **`<change-dir>/tickets/ticket-N.md`** (read `<change-dir>` from `.agent/planner/change-dir`), NOT
+  `docs/design/<slice>/tickets/`. The slice's greenfield `tickets/` is the immutable record of how it was built;
+  overwriting it destroys per-change traceability. `mkdir -p <change-dir>/tickets` first.
 - **NO scaffold ticket** — the project already exists (a scaffold ticket in a rework set is an error; `validate-tickets` in rework-mode requires **zero** scaffolds). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
 - Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module`+rework → `@hughes-rework`).
 - **`rework-behavior`/`rework-api`:** additionally cut **ONE `type: component` ticket** for the changed/added scenarios named in the delta (new/changed scenarios tagged `@wip`); the affected `module` tickets `blocked_by` it (RED-first preserved). **`rework-refactor`:** **no** component ticket — behaviour is unchanged, the existing suite is the invariant.
@@ -982,7 +1008,22 @@ You **MUST** verify the package is complete (every slice has design, tickets are
 — if something is missing, return **STOP** to the orchestrator naming the unfinished stage. Append the
 decision → `.agent/decisions.log`.
 
-Produce exactly your output and return **one line**: `planner → PLAN.md ready (N slices, M tickets)`.
+## REWORK / CHORE modes — the plan lands in the WORK's OWN durable folder (MUST, never on greenfield)
+Each unit of work owns its plan folder; you never overwrite the slice's greenfield `PLAN.md`/`tickets/`.
+- **REWORK** (`.agent/planner/change-dir` present → `<change-dir>` = `docs/design/<slice>/changes/<slug>/`):
+  write **`<change-dir>/PLAN.md`** (NOT the slice `PLAN.md`). It indexes the change: links to
+  `<change-dir>/change-delta.md` + the affected slice design + `<change-dir>/tickets/`, and the Gate #1 summary
+  (what changes + why, the affected-module list, the RED→GREEN scenarios, regression invariants). `M tickets` =
+  the change's tickets under `<change-dir>/tickets/`.
+- **CHORE** (`.agent/planner/mode` = `chore`): the task is repo-infra, not a slice → write a durable one-pager
+  **`docs/chores/<slug>/CHORE-PLAN.md`** (NOT `.agent/planner/`). `<slug>` = `<NNN>-<kebab>`, `NNN` = next unused
+  3-digit id under `docs/chores/` (`ls`; empty → `001`), `<kebab>` from the task title (e.g. `001-ci-on-pr`).
+  Content: the **file list** to add/change + the **verification command** (how «green» is proven) + **rollback**.
+  No FRD/slices/spec/tickets. Write pointer `echo "docs/chores/<slug>" > .agent/planner/chore-dir`; `mkdir -p`
+  the folder first.
+
+Produce exactly your output and return **one line**: `planner → PLAN.md ready (N slices, M tickets)` (greenfield),
+`planner → PLAN.md ready (<change-dir>, M tickets)` (rework), or `planner → CHORE-PLAN.md ready (docs/chores/<slug>)` (chore).
 
 ---
 
@@ -1242,8 +1283,11 @@ You **edit in place** at the existing paths — you do **NOT** re-scaffold and d
   (`api-specification/**` is `ask` — the api-evolve is `@wirth-apidesigner`'s, already done before Gate #1).
 
 ## Input (else STOP)
-**ONE rework ticket** + the affected-module paths it names + the change-delta. The plan is frozen after Gate #1;
-no ticket / handoff not approved / package incomplete → STOP.
+**ONE rework ticket** + the affected-module paths it names + the change-delta. The ticket and delta live in the
+**change folder** `<change-dir>` = `docs/design/<slice>/changes/<slug>/` (pointer `.agent/planner/change-dir`):
+your ticket is `<change-dir>/tickets/ticket-NN.md`, the delta is `<change-dir>/change-delta.md` — **not** the
+slice's greenfield `tickets/` (that is the untouched build record). The plan is frozen after Gate #1; no ticket /
+handoff not approved / package incomplete → STOP.
 
 ## Tests — use the ticket's command, do NOT probe Docker
 Run the module's **unit** command; if the ticket's `Verify` line has a component/smoke command, run **exactly
