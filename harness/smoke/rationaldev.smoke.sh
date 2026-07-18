@@ -11,7 +11,9 @@ pass=0; fail() { echo "FAIL: $1"; exit 1; }; ok() { pass=$((pass+1)); }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 REMOTE="$T/remote.git"; CLONE="$T/clone"
-git init -q --bare "$REMOTE"
+# -b main: default-ветка remote = main (иначе на CI, где init.defaultBranch=master, клон получает unborn HEAD
+# → `git rev-parse HEAD` = "fatal: Needed a single revision", и ff-update падает).
+git init -q --bare -b main "$REMOTE"
 git clone -q "$REMOTE" "$T/seed" 2>/dev/null
 ( cd "$T/seed" && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init && git push -q origin HEAD:main )
 git clone -q "$REMOTE" "$CLONE" 2>/dev/null
