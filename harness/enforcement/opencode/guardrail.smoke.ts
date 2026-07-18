@@ -190,8 +190,31 @@ async function run() {
   for (let i = 0; i < 6; i++) await hLoop3["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } })
   pass++
 
+  // N. (git-workflow) On-trunk poka-yoke: реализатор на транке блокируется («сначала @git-hand mode=start»);
+  // @git-hand НЕ реализатор → режет ветку сам, проходит. Паритет с claude-хуком (claude-hooks.smoke.mjs 1.7).
+  // Изолированный корень с .git/HEAD; фронтдор пройден (brd.md), чтобы ловить именно on-trunk, не грил.
+  const ndir = await mkdtemp(join(tmpdir(), "rg-ontrunk-"))
+  await mkdir(join(ndir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(ndir, ".agent", "planner", "brd.md"), "# BRD\n")
+  await mkdir(join(ndir, ".git"), { recursive: true })
+  const nhooks: any = await RationalGuardrail({ directory: ndir, worktree: ndir } as any)
+  // HEAD на транке → реализатор заблокирован, @git-hand (не реализатор) проходит
+  await writeFile(join(ndir, ".git", "HEAD"), "ref: refs/heads/main\n")
+  await assert.rejects(
+    () => nhooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
+    /Старт на транке/,
+  ); pass++
+  await nhooks["tool.execute.before"](task("git-hand"), { args: { subagent: "git-hand" } }); pass++
+  // HEAD на рабочей ветке → on-trunk НЕ срабатывает: hughes упирается уже в Gate #1, не в транк (детект специфичен)
+  await writeFile(join(ndir, ".git", "HEAD"), "ref: refs/heads/chore/x\n")
+  await assert.rejects(
+    () => nhooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
+    /Gate #1/,
+  ); pass++
+  await rm(ndir, { recursive: true, force: true })
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/34 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/37 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
