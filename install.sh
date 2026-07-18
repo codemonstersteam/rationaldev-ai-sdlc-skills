@@ -195,6 +195,15 @@ fi
 MODELS_MSG="(node не найден)"
 if command -v node >/dev/null 2>&1; then
   MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
+  # binding-валидация (opencode): резолвятся ли модели тиров/ролей к провайдеру в global config (п.4 patch-install)
+  if [ "$RUNNER" = opencode ]; then
+    BIND="$(node "$BUNDLE/harness/validate-model-binding.mjs" opencode 2>&1)"   # висячие ссылки → stderr (покажем)
+    printf '%s\n' "$BIND" | grep -vE '^BINDING:' | grep -q . && printf '%s\n' "$BIND" | grep -vE '^BINDING:'
+    case "$(printf '%s' "$BIND" | grep '^BINDING:')" in
+      "BINDING: ok")   MODELS_MSG="$MODELS_MSG · binding: ✓" ;;
+      "BINDING: fail"*) n="$(printf '%s' "$BIND" | sed -n 's/^BINDING: fail //p')"; MODELS_MSG="$MODELS_MSG · binding: ✗ ($n висячих — см. выше; настрой провайдера/модели в ~/.config/opencode)" ;;
+    esac
+  fi
 fi
 
 echo "rationaldev harness → $RUNNER ($SCOPE)"
