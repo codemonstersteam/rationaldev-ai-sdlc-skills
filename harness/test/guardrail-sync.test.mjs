@@ -1,66 +1,57 @@
-// Drift-guard: инлайн-копия чистых функций в rational-guardrail.mjs ДОЛЖНА совпадать с ../enforcement/shared.mjs.
-// Плагин self-contained (не импортит shared.mjs, чтобы opencode не резолвил внешнее в изоляции), но логика —
-// единый источник. Этот тест ловит рассинхрон: гоняет обе копии на одних входах, требует равенства.
+// Плагин rational-guardrail.mjs: (1) exports ТОЛЬКО функции (загрузчик opencode перебирает Object.values
+// и падает "Plugin export is not a function" на любом non-function export); (2) инлайн-копия чистых
+// функций/констант из ../enforcement/shared.mjs должна совпадать (единый источник для claude-хуков).
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import * as S from "../enforcement/shared.mjs"
-import * as P from "../enforcement/opencode/rational-guardrail.mjs"
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { dirname, join } from "node:path"
+import * as PLUGIN from "../enforcement/opencode/rational-guardrail.mjs"
 
-test("константы идентичны shared.mjs", () => {
-  assert.equal(P.GATE_MARK, S.GATE_MARK)
-  assert.equal(P.DESIGN_DIR, S.DESIGN_DIR)
-  assert.equal(P.CHORES_DIR, S.CHORES_DIR)
-  assert.equal(P.CHORE_PLAN_FILE, S.CHORE_PLAN_FILE)
-  assert.equal(P.PLAN_REVIEW_MARK, S.PLAN_REVIEW_MARK)
-  assert.deepEqual([...P.PIPELINE].sort(), [...S.PIPELINE].sort())
-  assert.deepEqual([...P.IMPLEMENTERS].sort(), [...S.IMPLEMENTERS].sort())
-  assert.deepEqual([...P.TRUNK_BRANCHES].sort(), [...S.TRUNK_BRANCHES].sort())
-  assert.deepEqual(P.ROLE_KEYS, S.ROLE_KEYS)
+const HERE = dirname(fileURLToPath(import.meta.url))
+const sharedSrc = readFileSync(join(HERE, "..", "enforcement", "shared.mjs"), "utf8")
+const pluginSrc = readFileSync(join(HERE, "..", "enforcement", "opencode", "rational-guardrail.mjs"), "utf8")
+
+// (1) КОНТРАКТ ЗАГРУЗЧИКА opencode: каждый export — функция ИЛИ { server: fn }. Иначе TypeError на загрузке.
+test("opencode-loader: все exports плагина — функции (не Set/массив/строка)", () => {
+  const bad = Object.entries(PLUGIN).filter(([, v]) => !(typeof v === "function" || (v && typeof v.server === "function")))
+  assert.deepEqual(bad.map(([k]) => k), [], "non-function exports сломают загрузчик opencode ('Plugin export is not a function')")
+  assert.ok(typeof PLUGIN.RationalGuardrail === "function", "RationalGuardrail экспортирован как функция")
 })
 
-// (fn-имя, [входы...]) — гоняем shared vs plugin, требуем равный результат.
-const cases = [
-  ["pickRole", [{ subagent: "hughes" }], [{ agent: "gilb" }], [{}], ["x"]],
-  ["normRole", ["@Hughes "], ["  IZI"]],
-  ["isImplementer", ["hughes"], ["izi"], ["@wirth-tester"]],
-  ["inPipeline", ["gilb"], ["general"], ["git-hand"]],
-  ["requiresFrontDoor", ["gilb"], ["wirth-triage"]],
-  ["branchFromHead", ["ref: refs/heads/main\n"], ["ref: refs/heads/feat/x\n"], ["deadbeef"], [""]],
-  ["isTrunkBranch", ["main"], ["master"], ["feat/x"], [""]],
-  ["isChoreMode", ["chore"], [" chore "], ["﻿chore"], ["foo"]],
-  ["writesGateMarker", ["touch .agent/gates/gate1.approved"], ["echo x > .agent/gates/gate1.approved"], ["ls .agent/gates/gate1.approved"]],
-  ["doneGreenTicketId", ['echo "ticket-05 slice green" >> .agent/planner/done.log'], ["ls x"]],
-  ["parseTicketOutputs", ["outputs: [a.go, b.go]"], ["no outputs here"]],
-  ["isOperatorApproval", ["GATE1 APPROVE"], ["gate1   approve slice-01"], ["go ahead"]],
-  ["gateMarkerContent", [{ timestamp: "t", source: "s", prompt: "p\tq", planHash: "h" }], [{ timestamp: "t", source: "s", prompt: "" }]],
-  ["toolCallSignature", ["read", { path: "x", b: 1 }], ["edit", { content: "z", path: "f" }]],
-]
-
-for (const [fn, ...inputs] of cases) {
-  test(`${fn} — plugin ≡ shared на ${inputs.length} векторах`, () => {
-    for (const args of inputs) {
-      const got = P[fn](...args), want = S[fn](...args)
-      assert.deepEqual(got, want, `${fn}(${JSON.stringify(args)}): plugin=${JSON.stringify(got)} shared=${JSON.stringify(want)}`)
+// (2) DRIFT: инлайн ≡ shared.mjs ПО ЛОГИКЕ (не по форматированию). Снимаем комменты (после пробела/начала
+// строки — регэкспы с `\/` не трогаем) и схлопываем пробелы, потом извлекаем декларацию по имени и сравниваем.
+const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[\s;(,{[])\/\/[^\n]*/g, "$1")
+function decl(rawText, name) {
+  const lines = stripComments(rawText).split("\n")
+  const re = new RegExp(`^(export\\s+)?(function\\s+${name}\\b|const\\s+${name}\\s*=)`)
+  const start = lines.findIndex((l) => re.test(l))
+  if (start < 0) return null
+  let depth = 0, out = []
+  for (let i = start; i < lines.length; i++) {
+    out.push(lines[i])
+    for (const ch of lines[i]) {
+      if (ch === "{" || ch === "(" || ch === "[") depth++
+      else if (ch === "}" || ch === ")" || ch === "]") depth--
     }
-  })
+    if (depth <= 0) break
+  }
+  return out.join("\n").replace(/^export\s+/, "").replace(/\s+/g, " ").trim()   // нормализуем пробелы
 }
 
-test("hasChorePlan — plugin ≡ shared", () => {
-  const dirs = () => ["001-x"], ok = (r) => r === "docs/chores/001-x/CHORE-PLAN.md", no = () => false
-  assert.equal(P.hasChorePlan(dirs, ok), S.hasChorePlan(dirs, ok))
-  assert.equal(P.hasChorePlan(dirs, no), S.hasChorePlan(dirs, no))
-})
+const INLINED = [
+  "GATE_MARK", "PIPELINE", "IMPLEMENTERS", "requiresFrontDoor", "TRUNK_BRANCHES", "branchFromHead",
+  "isTrunkBranch", "PLAN_REVIEW_MARK", "DESIGN_DIR", "CHORES_DIR", "CHORE_PLAN_FILE", "isChoreMode",
+  "hasChorePlan", "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
+  "inPipeline", "writesGateMarker", "doneGreenTicketId", "parseTicketOutputs", "isOperatorApproval",
+  "gateMarkerContent", "toolCallSignature", "detectLoop",
+]
 
-test("planReadyForApproval — plugin ≡ shared", () => {
-  const rev = (set) => (r) => set.has(r)
-  const v1 = [rev(new Set([".agent/plan-reviewer/plan-review.md"])), () => [], () => []]
-  const v2 = [rev(new Set(["docs/design/slice-01/PLAN.md"])), () => ["slice-01"], () => []]
-  const v3 = [rev(new Set(["docs/chores/001/CHORE-PLAN.md"])), () => [], () => ["001"]]
-  const v4 = [rev(new Set()), () => ["s"], () => ["c"]]
-  for (const v of [v1, v2, v3, v4]) assert.equal(P.planReadyForApproval(...v), S.planReadyForApproval(...v))
-})
-
-test("detectLoop — plugin ≡ shared", () => {
-  for (const sigs of [["a", "a", "a", "a", "a"], ["a", "b", "a", "b"], ["r", "e", "r", "e", "r", "e"], ["x"]])
-    assert.equal(P.detectLoop(sigs), S.detectLoop(sigs))
-})
+for (const name of INLINED) {
+  test(`drift: ${name} — плагин ≡ shared.mjs (исходник)`, () => {
+    const s = decl(sharedSrc, name), p = decl(pluginSrc, name)
+    assert.ok(s, `${name} не найден в shared.mjs`)
+    assert.ok(p, `${name} не найден в плагине (инлайн потерян?)`)
+    assert.equal(p, s, `${name} разошёлся между плагином и shared.mjs — синхронь инлайн`)
+  })
+}
