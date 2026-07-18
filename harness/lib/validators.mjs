@@ -130,6 +130,23 @@ export function validateTicketHeaders(tickets, opts = {}) {
   return errors
 }
 
+// foreign-лейн: module-тикет = ОДИН нативный модуль (foreign не имеет module-tree для сверки, поэтому
+// декомпозицию бэкстопит здесь). >1 КОДОВОГО output → адаптер+логика слиплись в один тикет (модульность/
+// малый контекст слетели). WARNING, не blocker: изредка нативный модуль = 2 файла (класс+компаньон); docs
+// (.md) и ресурсы/фикстуры (.csv/.json/resources) не считаются кодом. io: none — только чистое ядро.
+const CODE_EXT = /\.(java|kt|scala|py|go|ts|js|rb|cs|cpp|cc|c|rs|php|swift|clj|ex)$/i
+export function foreignModuleOutputWarnings(tickets) {
+  const warns = []
+  for (const t of tickets || []) {
+    if (!t.data || t.data.type !== "module") continue
+    const outs = Array.isArray(t.data.outputs) ? t.data.outputs : []
+    const code = outs.filter((o) => CODE_EXT.test(String(o)))
+    if (code.length > 1)
+      warns.push(`${t.name}: foreign module-тикет с ${code.length} кодовыми outputs — один тикет = один модуль (раздели адаптер и логику): ${code.join(", ")}`)
+  }
+  return warns
+}
+
 // --- T06 feasibility: тикет-контракт выполним конкретной ролью (ловит постановочные ошибки на Gate #1) ---
 // Механизирует манифест-правила (T10 scaffold cmd/app · split-final single-concern) в детерминированный гейт.
 // tickets: [{ name, data }] — data.type, data.outputs. Чисто: без fs.
