@@ -7,10 +7,11 @@
 #   RATIONALDEV_REPO=<url|path> RATIONALDEV_HOME=~/.rationaldev sh bootstrap.sh
 #
 # Клон потребляется read-only; проекты — dir-symlinks на него (T2), обновление — `rationaldev update`/периодика (T4).
-# Idempotent: клон уже есть → апдейтит. Приватный репо → нужен git-доступ (SSH-ключ или gh auth).
+# Idempotent: клон уже есть → апдейтит. Репо ПУБЛИЧНЫЙ → HTTPS clone/pull анонимно, ноль настройки (как omz).
+# Форк/зеркало/SSH — через RATIONALDEV_REPO=<url>.
 set -eu
 
-REPO="${RATIONALDEV_REPO:-git@github.com:codemonstersteam/rationaldev-ai-sdlc-skills.git}"
+REPO="${RATIONALDEV_REPO:-https://github.com/codemonstersteam/rationaldev-ai-sdlc-skills.git}"
 HOME_DIR="${RATIONALDEV_HOME:-$HOME/.rationaldev}"
 CHANNEL="${RATIONALDEV_CHANNEL:-main}"
 BINDIR="${RATIONALDEV_BIN:-$HOME/.local/bin}"
