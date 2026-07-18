@@ -7,7 +7,7 @@
 import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
-import { isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR } from "../shared.mjs"
+import { isOperatorApproval, planReadyForApproval, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR, FOREIGN_DIR } from "../shared.mjs"
 
 // Хеш снимка плана НА МОМЕНТ акцепта (аудит): greenfield docs/design/*/PLAN.md + rework changes/*/PLAN.md
 // + chore docs/chores/*/CHORE-PLAN.md + plan-review.md (sorted). best-effort: сбой → "na" (provenance, не enforcement).
@@ -59,7 +59,8 @@ try {
   const existsFn = (rel) => existsSync(join(root, rel))
   const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
   const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
-  if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) process.exit(0)
+  const foreignDirsFn = () => { try { return readdirSync(join(root, FOREIGN_DIR)) } catch { return [] } }
+  if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn, foreignDirsFn)) process.exit(0)
 
   const gatesDir = join(root, ".agent", "gates")
   const marker = join(gatesDir, "gate1.approved")

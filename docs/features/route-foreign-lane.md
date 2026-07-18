@@ -99,6 +99,12 @@ canImplement     = brd ∧ planArtifact ∧ approved gate1 ∧ onWorkBranch  -- 
 - **Путь по соглашению** (`docs/design/_harness/`, как `docs/chores/`), без поля `test_harness_ref` в профиле.
 - **`@mills`** держим лёгким ревью (discriminating не degenerate + plan↔lib), не выкидываем.
 
+### Путь-конвенции (зафиксированы в T2, параллель chore)
+
+- **`docs/design/_harness/test-harness.md`** — репо-уровневая библиотека парадигмы (пишет `@surveyor`, ×1 на репо).
+- **`docs/foreign/<NNN-slug>/FOREIGN-PLAN.md`** — durable per-change план (артефакт Gate #1; пишет `@wirth-planner`).
+  Гейт под `mode=foreign` требует его вместо `plan-review.md` (как chore требует `CHORE-PLAN.md`).
+
 ## Тикеты
 
 | # | Тикет | Суть | Файлы (ядро) |

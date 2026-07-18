@@ -59,11 +59,24 @@ export function hasChorePlan(choreDirsFn, existsFn) {
   for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
   return false
 }
-// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()→string[] имён подкаталогов
-// под DESIGN_DIR / CHORES_DIR (все от вызывающего). chore: durable CHORE-PLAN.md — тоже «план собран».
-export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
+// foreign-полоса (route-foreign-lane): ЧУЖОЙ (не-harness) репо. План-делта живёт durable в
+// docs/foreign/<NNN-slug>/FOREIGN-PLAN.md (своя папка, параллель chore) — ревью-пригодно, переживает прогон.
+// Парадигму репо разведывает @surveyor в docs/design/_harness/ (репо-уровень, ОТДЕЛЬНО от плана).
+// Machines slug-агностичны (глобят docs/foreign/*).
+export const FOREIGN_DIR = "docs/foreign"
+export const FOREIGN_PLAN_FILE = "FOREIGN-PLAN.md"
+export const isForeignMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "foreign"
+export function hasForeignPlan(foreignDirsFn, existsFn) {
+  for (const c of foreignDirsFn() || []) if (existsFn(FOREIGN_DIR + "/" + c + "/" + FOREIGN_PLAN_FILE)) return true
+  return false
+}
+// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()/foreignDirsFn()→string[] имён
+// подкаталогов под DESIGN_DIR / CHORES_DIR / FOREIGN_DIR (все от вызывающего). chore: durable CHORE-PLAN.md,
+// foreign: durable FOREIGN-PLAN.md — тоже «план собран».
+export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => [], foreignDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
   if (hasChorePlan(choreDirsFn, existsFn)) return true
+  if (hasForeignPlan(foreignDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }

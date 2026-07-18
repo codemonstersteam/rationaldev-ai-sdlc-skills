@@ -63,6 +63,19 @@ await mkdir(join(cdir, "docs", "chores", "001-ci-on-pr"), { recursive: true })
 await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
 assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с docs/chores/<slug>/CHORE-PLAN.md + gate1 → пропуск"); pass++
 await rm(cdir, { recursive: true, force: true })
+
+// gate-check (foreign, route-foreign-lane): mode=foreign — implementer требует FOREIGN-PLAN.md вместо plan-review.md
+const fdir = await mkdtemp(join(tmpdir(), "claude-foreign-"))
+await mkdir(join(fdir, ".agent", "planner"), { recursive: true })
+await writeFile(join(fdir, ".agent", "planner", "brd.md"), "# BRD\n")
+await writeFile(join(fdir, ".agent", "planner", "mode"), "foreign")
+await mkdir(join(fdir, ".agent", "gates"), { recursive: true })
+await writeFile(join(fdir, ".agent", "gates", "gate1.approved"), "ok\n")
+assert.equal(runHook("gate-check.mjs", task("hughes-rework"), { CLAUDE_PROJECT_DIR: fdir }), 2, "foreign: @hughes-rework без durable FOREIGN-PLAN.md → блок"); pass++
+await mkdir(join(fdir, "docs", "foreign", "001-extend-2027"), { recursive: true })
+await writeFile(join(fdir, "docs", "foreign", "001-extend-2027", "FOREIGN-PLAN.md"), "# plan\n")
+assert.equal(runHook("gate-check.mjs", task("hughes-rework"), { CLAUDE_PROJECT_DIR: fdir }), 0, "foreign: @hughes-rework с docs/foreign/<slug>/FOREIGN-PLAN.md + gate1 → пропуск"); pass++
+await rm(fdir, { recursive: true, force: true })
 await rm(gdir, { recursive: true, force: true })
 
 // gate-bash: само-запись маркера
@@ -111,4 +124,4 @@ assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобб�
 await rm(adir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/25 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)
+console.log(`PASS ${pass}/27 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + foreign + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)
