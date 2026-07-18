@@ -34,12 +34,12 @@ export RATIONALDEV_UPDATE=auto   # на старте сессии тихо `git 
 rationaldev update               # или вручную в любой момент
 ```
 
-> Приватный репо → нужен git-доступ (SSH-ключ или `gh auth`). Свой форк/зеркало — `RATIONALDEV_REPO=<url>`.
+> Репо публичный → HTTPS clone/pull **анонимно**, без SSH-ключей и токенов (как oh-my-zsh). Свой форк/зеркало/SSH — `RATIONALDEV_REPO=<url>`.
 
 ### Установка (альтернатива) — локальный клон
 
 ```sh
-git clone git@github.com:codemonstersteam/rationaldev-ai-sdlc-skills
+git clone https://github.com/codemonstersteam/rationaldev-ai-sdlc-skills
 cd rationaldev-ai-sdlc-skills
 ./install.sh claude ~/path/to/project     # или --global — для всех проектов; раннеры: claude|opencode|codex
 ```
