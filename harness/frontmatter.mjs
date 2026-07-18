@@ -1,6 +1,8 @@
 // Минимальный парсер frontmatter (подмножество YAML под схему ролей/скиллов).
-// Поддержка: скаляры, flow-массивы [a, b], вложенные карты по отступам (2 пробела).
-// Общий для gen-agents.mjs (роли) и gen-skill-index.mjs (скиллы) — один парсер, не два.
+// Поддержка: скаляры, flow-массивы [a, b], BLOCK-массивы (key:\n  - a\n  - b), вложенные карты
+// по отступам (2 пробела). Общий для gen-agents.mjs (роли) и gen-skill-index.mjs (скиллы) — один парсер.
+// Block-списки — потому что модель естественно эмитит их на длинных путях (outputs тикета); парсер
+// должен принять стандартный YAML, а не заставлять втискивать всё в flow (робастность «в базе без ретраев»).
 
 function unquote(s) {
   s = s.trim()
@@ -20,22 +22,32 @@ function parseScalar(v) {
 
 function parseYaml(src) {
   const root = {}
-  const stack = [{ indent: -1, obj: root }]
-  for (const raw of src.split("\n")) {
-    if (raw.trim() === "" || raw.trim().startsWith("#")) continue
+  const stack = [{ indent: -1, container: root }]
+  // только значимые строки (без пустых/комментов) — чтобы lookahead смотрел на след. РЕАЛЬНУЮ строку.
+  const lines = src.split("\n").filter((l) => l.trim() !== "" && !l.trim().startsWith("#"))
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]
     const indent = raw.length - raw.replace(/^\s+/, "").length
-    const ci = raw.indexOf(":")
-    if (ci === -1) continue
-    const key = unquote(raw.slice(0, ci))
-    const val = raw.slice(ci + 1).trim()
+    const trimmed = raw.trim()
     while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop()
-    const parent = stack[stack.length - 1].obj
-    if (val === "") {
-      const child = {}
-      parent[key] = child
-      stack.push({ indent, obj: child })
+    const container = stack[stack.length - 1].container
+    if (trimmed.startsWith("- ")) {                 // элемент block-массива
+      if (Array.isArray(container)) container.push(parseScalar(trimmed.slice(2)))
+      continue
+    }
+    const ci = trimmed.indexOf(":")
+    if (ci === -1) continue
+    const key = unquote(trimmed.slice(0, ci))
+    const val = trimmed.slice(ci + 1).trim()
+    if (val === "") {                                // block-массив ИЛИ вложенная карта — по след. строке
+      const next = lines[i + 1]
+      const nextIndent = next ? next.length - next.replace(/^\s+/, "").length : -1
+      const isSeq = next && nextIndent > indent && next.trim().startsWith("- ")
+      const child = isSeq ? [] : {}
+      container[key] = child
+      stack.push({ indent, container: child })
     } else {
-      parent[key] = parseScalar(val)
+      container[key] = parseScalar(val)
     }
   }
   return root

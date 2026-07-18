@@ -20,6 +20,30 @@ test("пустой flow-массив []", () => {
   assert.deepEqual(data.blocked_by, [])
 })
 
+test("block-массив (key:\\n  - a\\n  - b)", () => {
+  const { data } = parseFrontmatter("---\noutputs:\n  - src/x/Wrapper.java\n  - src/x/util/Logic.java\n---\n")
+  assert.deepEqual(data.outputs, ["src/x/Wrapper.java", "src/x/util/Logic.java"])
+})
+
+test("block-массив, затем ключ верхнего уровня (поп до корня)", () => {
+  const { data } = parseFrontmatter("---\ninputs:\n  - a.md\n  - b.md\nio: none\n---\n")
+  assert.deepEqual(data.inputs, ["a.md", "b.md"])
+  assert.equal(data.io, "none") // не проглочен block-массивом
+})
+
+test("block-массив с кавычками элементов", () => {
+  const { data } = parseFrontmatter("---\nskills:\n  - \"db-io\"\n  - 'db-schema'\n---\n")
+  assert.deepEqual(data.skills, ["db-io", "db-schema"])
+})
+
+test("тикет-заголовок block-style (реальный кейс pzdc) парсится", () => {
+  const src = "---\nid: \"01\"\ntype: module\nblocked_by: []\noutputs:\n  - src/main/A.java\n  - src/main/util/B.java\nio: n/a\n---\nтело\n"
+  const { data } = parseFrontmatter(src)
+  assert.equal(data.type, "module")
+  assert.deepEqual(data.outputs, ["src/main/A.java", "src/main/util/B.java"])
+  assert.deepEqual(data.blocked_by, [])
+})
+
 test("вложенная карта (2 пробела)", () => {
   const { data } = parseFrontmatter("---\npermission:\n  read: allow\n  bash:\n    \"*\": deny\n---\n")
   assert.equal(data.permission.read, "allow")
