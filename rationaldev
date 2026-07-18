@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+# rationaldev — управление self-updating харнесом (как omz/flutter).
+#   rationaldev update    # git pull --ff-only канонического клона; проекты видят обновление через dir-symlinks (T2)
+#
+# Канонический клон — $RATIONALDEV_HOME (дефолт ~/.rationaldev); если скрипт лежит В клоне, берём его корень.
+# Канал — $RATIONALDEV_CHANNEL (дефолт main): можно закрепиться на релиз-теге/ветке (flutter channels).
+# ИНВАРИАНТ pristine-клона: клон потребляется read-only; локальные правки → апдейт отменяется (не клоббрим).
+set -eu
+
+SELF="$(cd "$(dirname "$0")" && pwd)"
+# Приоритет: явный $RATIONALDEV_HOME > клон, в котором лежит скрипт > дефолт ~/.rationaldev.
+if [ -n "${RATIONALDEV_HOME:-}" ]; then HOME_DIR="$RATIONALDEV_HOME"
+elif [ -d "$SELF/.git" ]; then HOME_DIR="$SELF"
+else HOME_DIR="$HOME/.rationaldev"; fi
+CHANNEL="${RATIONALDEV_CHANNEL:-main}"
+
+update() {
+  [ -d "$HOME_DIR/.git" ] || { echo "rationaldev: нет git-клона в $HOME_DIR (сначала bootstrap — см. backlog T1)"; exit 1; }
+  # pristine: любые локальные правки (в т.ч. незакоммиченный models.config) → abort, чтобы ff-pull не конфликтовал
+  if [ -n "$(git -C "$HOME_DIR" status --porcelain)" ]; then
+    echo "rationaldev: клон $HOME_DIR не чист — апдейт отменён (pristine-инвариант)."
+    echo "  верни клон в чистое состояние; кастомизацию держи в локальном override ВНЕ клона (models.config → T5)."
+    exit 1
+  fi
+  before="$(git -C "$HOME_DIR" rev-parse --short HEAD)"
+  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" || { echo "rationaldev: git fetch не удался (offline?) — пропуск."; exit 0; }
+  if ! git -C "$HOME_DIR" merge --ff-only "origin/$CHANNEL" >/dev/null 2>&1; then
+    echo "rationaldev: не fast-forward (клон разошёлся с origin/$CHANNEL) — апдейт отменён (pristine-инвариант)."; exit 1
+  fi
+  after="$(git -C "$HOME_DIR" rev-parse --short HEAD)"
+  if [ "$before" = "$after" ]; then
+    echo "rationaldev: уже актуально ($after, канал $CHANNEL)."
+  else
+    n="$(git -C "$HOME_DIR" rev-list --count "$before..$after" 2>/dev/null || echo '?')"
+    echo "rationaldev: обновлено $before → $after ($n коммитов, канал $CHANNEL). Проекты подхватят через dir-symlinks."
+  fi
+}
+
+case "${1:-help}" in
+  update)              update ;;
+  help|-h|--help|"")   echo "usage: rationaldev update    # обновить канонический клон ($HOME_DIR, канал $CHANNEL)" ;;
+  *)                   echo "rationaldev: неизвестная команда '$1' (есть: update)"; exit 1 ;;
+esac

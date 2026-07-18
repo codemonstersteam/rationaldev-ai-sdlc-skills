@@ -258,12 +258,12 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
 - [ ] **T1 · P1 — bootstrap канонического клона.** Установщик (`curl … | sh`, как oh-my-zsh) клонит бандл
   в `$RATIONALDEV_HOME`, ставит dir-symlinks (T2). Один источник правды вместо произвольного dev-пути.
   Сейчас `install.sh` предполагает бандл уже локально по случайному пути — bootstrap этого нет.
-- [ ] **T2 · P1 — линковать КАТАЛОГИ, не файлы** (ключевой сдвиг раздачи): `.opencode/agent` →
+- [x] **T2 · P1 — линковать КАТАЛОГИ, не файлы** (ключевой сдвиг раздачи): `.opencode/agent` →
   `harness/agents/opencode`, `.opencode/skills` → `skills/lib`, `harness/` → бандл `harness/`,
   `.opencode/plugins` → `harness/enforcement/opencode`. Тогда `git pull` в бандле = мгновенное
   обновление всех проектов, **включая новые файлы**, ноль переустановок. Проекции ролей закоммичены →
   `pull` их приносит, генератор не нужен (при read-only-клоне `_shared`/`models.config` локально не правят).
-- [ ] **T3 · P1 — команда `rationaldev update`** (ручная, как `omz update`/`flutter upgrade`):
+- [x] **T3 · P1 — команда `rationaldev update`** (ручная, как `omz update`/`flutter upgrade`):
   `git -C $RATIONALDEV_HOME pull --ff-only`. Инвариант pristine-клона: dirty/diverged → **abort + warn**,
   никогда не клоббрить/rebase (в клоне нет локальных коммитов). Показать «updated X→Y, N commits».
 - [ ] **T4 · P1 — ПЕРИОДИЧЕСКИЙ авто-апдейт** (главное требование — «main продвинулся → подтянуть», flutter/omz-стиль):

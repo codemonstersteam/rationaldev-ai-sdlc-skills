@@ -114,4 +114,7 @@ grep -q "via=claude-hook" "$D/.agent/decisions.log" || fail "log-decision без
 # Раздача моделей по ролям (тир + оверрайд + наследование), самовосстановление конфига
 node "$REPO/component-tests/model-distribution/run.mjs" >/dev/null || fail "model-distribution: роли получили неверные модели"; ok
 
-echo "PASS $pass — harness smoke (установка + enforcement + модели)"
+# self-update: `rationaldev update` (T3 — ff-pull, up-to-date, pristine-abort)
+sh "$REPO/harness/smoke/rationaldev.smoke.sh" >/dev/null || fail "rationaldev update smoke упал"; ok
+
+echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update)"
