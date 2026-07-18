@@ -30,3 +30,6 @@ Thumbs.db
 experiments/token-bench/baseline-run*/
 **/flow.jsonl
 **/usage.jsonl
+
+# Референс-PDF (внешние материалы, не часть репо)
+docs/references/*.pdf
