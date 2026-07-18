@@ -267,6 +267,7 @@
       ],
       "outputs": [
         "docs/design/<slice>/changes/<slug>/change-delta.md",
+        "docs/foreign/<slug>/change-delta.md",
         ".agent/planner/change-dir",
         ".agent/decisions.log"
       ]
