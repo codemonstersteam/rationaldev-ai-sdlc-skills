@@ -44,7 +44,7 @@ const INLINED = [
   "isTrunkBranch", "PLAN_REVIEW_MARK", "DESIGN_DIR", "CHORES_DIR", "CHORE_PLAN_FILE", "isChoreMode",
   "hasChorePlan", "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
   "inPipeline", "writesGateMarker", "doneGreenTicketId", "parseTicketOutputs", "isOperatorApproval",
-  "gateMarkerContent", "toolCallSignature", "detectLoop",
+  "gateMarkerContent", "answerTextFromEvent", "toolCallSignature", "detectLoop",
 ]
 
 for (const name of INLINED) {

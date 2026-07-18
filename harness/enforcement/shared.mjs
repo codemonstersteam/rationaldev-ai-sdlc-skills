@@ -127,6 +127,22 @@ export function gateMarkerContent({ timestamp, source, prompt, planHash }) {
   ].join("\n")
 }
 
+// Текст выбора оператора из НАТИВНОГО меню opencode (event `question.replied`) — параллель chat.message-акцепту.
+// На Gate #1 izi показывает `question` с опциями; выбор пункта opencode шлёт событием question.replied (v2-канал),
+// а НЕ chat.message. Хук акцепта слушал только чат → выбор пункта не срабатывал, приходилось ПЕЧАТАТЬ «GATE1 APPROVE»
+// (наблюдение прогона). Достаём лейблы выбранных опций (`answers` — вложенные массивы строк; ключ payload —
+// `properties` в v1-обёртке события ИЛИ `data` в v2), склеиваем в строку; токен ли это — решает isOperatorApproval.
+// io: none, никогда не бросает; не-question-событие → "".
+export function answerTextFromEvent(event) {
+  const type = String(event?.type || "")
+  if (!(type.includes("question") && type.includes("replied"))) return ""
+  const body = event?.properties ?? event?.data ?? {}
+  const out = []
+  const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (typeof v === "string") out.push(v) }
+  walk(body?.answers)
+  return out.join(" ")
+}
+
 // ── anti-loop: детект застревания субагента (петля без прогресса) ────────────
 // Субагент (напр. hughes/Qwen на конфликте типа) уходит в петлю повтора ОДНОГО действия без
 // новых outputs. Детект — по СИГНАТУРАМ tool-call'ов: канонизируем (tool + отсортированные args);

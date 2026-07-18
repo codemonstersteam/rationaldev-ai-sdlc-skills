@@ -121,6 +121,18 @@ function detectLoop(sigs, { runThreshold = 5, cycleRepeats = 3, maxPeriod = 3 } 
   return null
 }
 
+// Текст выбора оператора из нативного меню opencode (event question.replied) — параллель chat.message-акцепту
+// Gate #1. answers — вложенные массивы строк (лейблы опций); payload-ключ properties (v1) | data (v2). io: none.
+function answerTextFromEvent(event) {
+  const type = String(event?.type || "")
+  if (!(type.includes("question") && type.includes("replied"))) return ""
+  const body = event?.properties ?? event?.data ?? {}
+  const out = []
+  const walk = (v) => { if (Array.isArray(v)) v.forEach(walk); else if (typeof v === "string") out.push(v) }
+  walk(body?.answers)
+  return out.join(" ")
+}
+
 // ── ПЛАГИН ──────────────────────────────────────────────────────────────────────
 // --hard enforcement для OpenCode: decisions.log на каждое делегирование + Gate #1 + фронтдор + on-trunk +
 // poka-yoke outputs + anti-loop + watchdog (session.error). НИКАКОГО сетевого/блокирующего I/O на init.
@@ -251,6 +263,22 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
   const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
   const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
 
+  // Единый акцепт Gate #1 — из ДВУХ каналов: печатный токен в чате (chat.message) ИЛИ выбор пункта
+  // нативного меню opencode (event question.replied). Одна идемпотентная запись маркера, одна защита
+  // (план собран + маркер ещё не стоит). Оператор — только через плагин; izi маркер ставить НЕ может.
+  const tryOperatorApproval = async (text, source) => {
+    if (!isOperatorApproval(text)) return
+    if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) return
+    if (await exists(gate1)) return
+    await mkdir(join(agentDir, "gates"), { recursive: true })
+    await writeFile(gate1, gateMarkerContent({
+      timestamp: new Date().toISOString(),
+      source,
+      prompt: text,
+      planHash: await planHashSnapshot(),
+    }))
+  }
+
   return {
     "tool.execute.before": async (input, output) => {
       const tool = input?.tool
@@ -353,22 +381,12 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
         )
     },
 
-    // Gate #1 акцепт: оператор пишет токен «GATE1 APPROVE» в чат → плагин ставит маркер (если план собран).
+    // Gate #1 акцепт (канал 1): оператор ПЕЧАТАЕТ токен «GATE1 APPROVE» в чат → плагин ставит маркер (если план собран).
     "chat.message": async (_input, output) => {
       try {
         const parts = output?.parts ?? []
         const text = parts.filter((p) => p?.type === "text").map((p) => String(p.text ?? "")).join(" ")
-        if (isOperatorApproval(text)) {
-          if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) return
-          if (await exists(gate1)) return
-          await mkdir(join(agentDir, "gates"), { recursive: true })
-          await writeFile(gate1, gateMarkerContent({
-            timestamp: new Date().toISOString(),
-            source: "operator-approval-via-chat",
-            prompt: text,
-            planHash: await planHashSnapshot(),
-          }))
-        }
+        await tryOperatorApproval(text, "operator-approval-via-chat")
       } catch { /* best-effort */ }
     },
 
@@ -386,9 +404,15 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       } catch { /* аудит best-effort */ }
     },
 
-    // session.error → нативно будим izi (замена tmux-сторожа). Дебаунс по сессии.
+    // event-канал: (a) Gate #1 акцепт (канал 2) — выбор пункта нативного меню opencode (question.replied);
+    // (b) session.error → нативно будим izi (замена tmux-сторожа, дебаунс по сессии).
     event: async ({ event }) => {
-      if (event?.type !== "session.error") return
+      const type = String(event?.type || "")
+      if (type.includes("question") && type.includes("replied")) {
+        try { await tryOperatorApproval(answerTextFromEvent(event), "operator-approval-via-menu") } catch { /* best-effort */ }
+        return
+      }
+      if (type !== "session.error") return
       const p = event?.properties ?? {}
       const sid = String(p.sessionID ?? p.info?.id ?? p.error?.data?.sessionID ?? "global")
       await wakeIzi(sid)
