@@ -32,6 +32,16 @@ for arg in "$@"; do
   esac
 done
 
+# opencode: дефолтный override-путь ВНЕ клона (клон остаётся pristine для `rationaldev update`). Дерив тиров
+# и правки моделей пишутся ТУДА, а не в клон-дефолт openrouter/*. Если оператор задал RATIONALDEV_MODELS сам —
+# уважаем. loadModelsConfig мерджит override поверх клон-дефолта в рантайме (gen-agents + валидатор).
+RD_MODELS_DEFAULTED=""
+if [ "$RUNNER" = opencode ] && [ -z "${RATIONALDEV_MODELS:-}" ]; then
+  # тот же base, что у global opencode-конфига (XDG_CONFIG_HOME | ~/.config) — иначе дерив читает провайдера
+  # из одного места, а override пишет в другое.
+  RATIONALDEV_MODELS="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/rationaldev-models.json"; export RATIONALDEV_MODELS; RD_MODELS_DEFAULTED=1
+fi
+
 # --- модели: интерактивная настройка тиров + перегенерация проекций ---
 # configure-models сам молчит, если stdin не TTY (CI/пайп). gen-agents идемпотентен.
 if command -v node >/dev/null 2>&1; then
@@ -188,21 +198,29 @@ if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/n
   [ "$NOINPUT" = yes ] && export RATIONALDEV_NOINPUT=1
   node "$BUNDLE/harness/setup-opencode.mjs" "$PROJ" "$BUNDLE" || true
   OPENCODE_MSG="$PROJ/opencode.jsonc (permission+plugin) · провайдер в ~/.config/opencode"
+  # Провайдер теперь гарантированно в global → добить неинтерактивный ДЕРИВ тиров из него + перегенерацию
+  # (идемпотентно: связка уже ok → no-op). Ловит fresh-install (провайдер создан ЗДЕСЬ, позже line-38
+  # configure-models) И --no-input (line-38 пропущен) → клон-дефолт openrouter/* не доедет до проекций.
+  node "$BUNDLE/harness/configure-models.mjs" opencode < /dev/null || true
+  node "$BUNDLE/harness/gen-agents.mjs" >/dev/null 2>&1 || true
   # setup-opencode авто-подключил харнес-инструкции через opencode.jsonc "instructions" — правим note
   [ -e "$PROJ/AGENTS.harness.md" ] && INSTR_NOTE="$(basename "$PROJ")/AGENTS.md (твой) + AGENTS.harness.md — авто через opencode.jsonc instructions"
 fi
 
 MODELS_MSG="(node не найден)"
 if command -v node >/dev/null 2>&1; then
-  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
-  # binding-валидация (opencode): резолвятся ли модели тиров/ролей к провайдеру в global config (п.4 patch-install)
+  # binding-валидация (opencode): резолвятся ли модели тиров/ролей к провайдеру в global. TIERS/BINDING —
+  # из override-merged конфига (учёт RATIONALDEV_MODELS), поэтому показывают РЕАЛЬНЫЕ модели, не клон-дефолт.
   if [ "$RUNNER" = opencode ]; then
-    BIND="$(node "$BUNDLE/harness/validate-model-binding.mjs" opencode 2>&1)"   # висячие ссылки → stderr (покажем)
-    printf '%s\n' "$BIND" | grep -vE '^BINDING:' | grep -q . && printf '%s\n' "$BIND" | grep -vE '^BINDING:'
+    BIND="$(node "$BUNDLE/harness/validate-model-binding.mjs" opencode 2>&1)"   # висячие ссылки → stderr; TIERS/BINDING → stdout
+    printf '%s\n' "$BIND" | grep -vE '^(TIERS|BINDING):' | grep -q . && printf '%s\n' "$BIND" | grep -vE '^(TIERS|BINDING):'
+    MODELS_MSG="$(printf '%s' "$BIND" | sed -n 's/^TIERS: //p')"; [ -n "$MODELS_MSG" ] || MODELS_MSG="см. models.config.json"
     case "$(printf '%s' "$BIND" | grep '^BINDING:')" in
       "BINDING: ok")   MODELS_MSG="$MODELS_MSG · binding: ✓" ;;
       "BINDING: fail"*) n="$(printf '%s' "$BIND" | sed -n 's/^BINDING: fail //p')"; MODELS_MSG="$MODELS_MSG · binding: ✗ ($n висячих — см. выше; настрой провайдера/модели в ~/.config/opencode)" ;;
     esac
+  else
+    MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
   fi
 fi
 
@@ -210,6 +228,10 @@ echo "rationaldev harness → $RUNNER ($SCOPE)"
 echo "  agents/roles: $AGENTS_DST ($(count "$AGENTS_DST"))"
 echo "  skills:       $SKILLS_DST ($(count "$SKILLS_DST"))"
 echo "  models:       $MODELS_MSG (2 тира: large=суждение · small=исполнение)"
+if [ "$RUNNER" = opencode ] && [ -n "${RATIONALDEV_MODELS:-}" ]; then
+  echo "  models-override: $RATIONALDEV_MODELS (клон pristine)"
+  [ -n "$RD_MODELS_DEFAULTED" ] && echo "                → добавь в профиль, чтобы opencode/rationaldev update его видели: export RATIONALDEV_MODELS=$RATIONALDEV_MODELS"
+fi
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
 [ -n "$OPENCODE_MSG" ] && echo "  opencode cfg: $OPENCODE_MSG"
