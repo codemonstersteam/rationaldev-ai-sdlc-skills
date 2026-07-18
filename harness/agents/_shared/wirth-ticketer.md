@@ -81,8 +81,12 @@ you are on the **rework** path — cut tickets from the **change-delta's affecte
 **FOREIGN mode (`.agent/planner/mode` = `foreign` — `change-dir` points to `docs/foreign/<slug>/`).** Like
 rework (cut tickets from the delta's affected-modules + one component ticket, **NO** scaffold/README, write into
 `<change-dir>/tickets/`), with three foreign specifics:
-- **Native paths, not `internal/<slug>/`.** A `module` ticket's `outputs` are the repo's **real** source paths
-  from `change-delta.md`; `io: n/a (foreign)`. The `component` ticket's scenarios are the delta's native
+- **ONE `module` ticket per affected module — `outputs` = exactly ONE native module (foreign equivalent of
+  greenfield's "one ticket per module-tree node").** Never bundle: the adapter/wrapper and the logic `util` are
+  two modules → **two tickets**, not one with two `outputs`. Cite the native path from `change-delta.md`'s
+  one-row-per-module table; **`io:` = that module's native I/O touchpoints from the delta** (spark sources /
+  cache / store + FM failure modes — for `conform-tests` adapter-branch coverage), `io: n/a` only for pure glue
+  (a delegating `@Service` wrapper). The `component` ticket's scenarios are the delta's native
   `test-class::method` set (**no `@wip`** — native runner). Implementer = `@hughes-rework`, tester =
   `@wirth-tester` (loads `conform-tests`). **Skip the `validate-layout` self-check** (a non-harness repo has no
   `internal/<slug>/` layout); `validate-tickets` already treats `foreign` as scaffold-less.

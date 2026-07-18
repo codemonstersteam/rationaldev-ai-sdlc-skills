@@ -21,7 +21,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join, isAbsolute } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
-import { validateTicketHeaders } from "./lib/validators.mjs"
+import { validateTicketHeaders, foreignModuleOutputWarnings } from "./lib/validators.mjs"
 import { discoverTicketFiles } from "./lib/ticket-fs.mjs"
 
 const root = process.argv[3] || process.cwd()
@@ -56,4 +56,7 @@ if (errors.length) {
   for (const e of errors) console.error(`  ✗ ${e}`)
   process.exit(1)
 }
+// foreign-бэкстоп декомпозиции (module-tree нет для сверки): >1 кодовый output в module-тикете → WARNING,
+// не фейлит (нативный модуль изредка = 2 файла), но @mills/оператор увидят слипшийся адаптер+логику.
+if (mode === "foreign") for (const w of foreignModuleOutputWarnings(tickets)) console.error(`  ⚠ ${w}`)
 console.log(`validate-tickets: OK — ${tickets.length} тикетов, заголовки валидны, blocked_by/inputs целы, scaffold один`)

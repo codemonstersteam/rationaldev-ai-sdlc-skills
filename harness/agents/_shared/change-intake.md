@@ -75,8 +75,19 @@ harness design package, spec, or `.feature` suite:
 - **Read `docs/design/_harness/test-harness.md`** (the `@surveyor` map — runner, fixture format, assert catalog,
   sibling index, known gaps) as the stand-in for the missing design package + spec. **Absent → `STOP: no repo
   map — run @surveyor first`** (the foreign lane order is triage → surveyor → you).
-- **Affected-modules table** — cite the repo's **real** source paths (from the map / repo), with the repo's own
-  notion of a module boundary; there is no harness `io:` to quote (write `io: n/a (foreign)`).
+- **Affected-modules table — ONE row per native module (a module = one Parnas secret, not a file-pile).** The
+  repo's OWN structure already carries the decomposition — honor it: an adapter/wrapper (`@Service` glue, hides
+  the framework binding) and the logic it delegates to (the `util`/calc, hides the computation) are **DISTINCT
+  modules → distinct rows**, never one. Cite each module's **real** source path (from the map / repo). If the
+  repo is a genuine monolith (one file, no split to inherit) → one row, and scope the change to its affected
+  methods (do NOT restructure the file — that would be *impose*). This is the module-tree's "one node = one
+  secret" discipline, applied to the repo's existing modules instead of a designed tree.
+- **`io:` on foreign = the module's NATIVE I/O touchpoints, not `n/a`.** The harness io-taxonomy
+  (http/db/queue/llm) does not apply, but I/O isolation still does — at the **test boundary**: name each
+  module's real I/O (e.g. `spark: source.Transaction, cache.card_info (reader-n2), result-store (FM-04 read,
+  write)`) so `conform-tests` can count its **adapter branches** (`1 + Σ`) and the tester knows which fixtures
+  to build. Pure glue that only delegates (a `@Service` wrapper) is the sole `io: n/a`. We do NOT refactor the
+  repo to isolate I/O in code (impose); isolation-for-tests comes from the repo's own fixture injection (the map).
 - **Change folder = `docs/foreign/<slug>/`** (NOT `docs/design/<slice>/changes/` — foreign has no slice). Same
   `<NNN>-<kebab>` slug; `ls docs/foreign/` for the next id (empty → `001`); `mkdir -p` it; pointer
   `echo "<change-dir>" > .agent/planner/change-dir`. `@wirth-planner` writes `<change-dir>/FOREIGN-PLAN.md`.
