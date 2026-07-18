@@ -8,15 +8,40 @@
 Научная основа — труды великих инженеров (Wirth, Hughes, Michtom, Linger, Mills, Witt)
 и статьи автора. Подробнее — **[`CONCEPT.md`](CONCEPT.md)**.
 
-## Быстрый старт (Claude Code)
+## Быстрый старт
 
-Репозиторий — **подключаемый мультиагентный харнес**: ставишь его в проект, и Claude
+Репозиторий — **подключаемый мультиагентный харнес**: ставишь его в проект, и агент
 ведёт задачу по SDLC-ролям сам, без ручного переключения агентов.
 
+### Установка (рекомендуется) — one-liner, как oh-my-zsh
+
 ```sh
-git clone https://github.com/codemonstersteam/rationaldev-ai-sdlc-skills
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/codemonstersteam/rationaldev-ai-sdlc-skills/main/bootstrap.sh)"
+```
+
+Скрипт **сам** клонирует харнес в канонический `~/.rationaldev` (`$RATIONALDEV_HOME`) и ставит
+команду `rationaldev` в `PATH`. Ничего вручную качать не нужно. Дальше подключаешь **любой** репо
+одной командой (раннер авто-детектится по `.claude`/`.opencode`):
+
+```sh
+rationaldev install ~/path/to/project          # или: rationaldev install <path> claude|opencode|codex
+```
+
+Обновление — **само** (клон обновляется, проекты видят это через симлинки, ноль переустановок):
+
+```sh
+export RATIONALDEV_UPDATE=auto   # на старте сессии тихо `git pull` канонического клона (throttle 1/день)
+rationaldev update               # или вручную в любой момент
+```
+
+> Приватный репо → нужен git-доступ (SSH-ключ или `gh auth`). Свой форк/зеркало — `RATIONALDEV_REPO=<url>`.
+
+### Установка (альтернатива) — локальный клон
+
+```sh
+git clone git@github.com:codemonstersteam/rationaldev-ai-sdlc-skills
 cd rationaldev-ai-sdlc-skills
-./install.sh claude ~/path/to/project     # или --global — для всех проектов
+./install.sh claude ~/path/to/project     # или --global — для всех проектов; раннеры: claude|opencode|codex
 ```
 
 Установщик **интерактивно спросит три модели** — большую/среднюю/малую (`large`/`medium`/`small`);
