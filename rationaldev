@@ -36,8 +36,34 @@ update() {
   fi
 }
 
+# --- T4: периодический авто-апдейт (flutter/omz-стиль) ------------------------
+# Состояние (метка последней проверки) — ВНЕ клона (клон pristine): $RATIONALDEV_STATE.
+# Режим $RATIONALDEV_UPDATE=auto|notify|off (дефолт notify); интервал $RATIONALDEV_UPDATE_DAYS (дефолт 1).
+# Вызывается на СТАРТЕ сессии (opencode-плагин/claude-хук), throttled — не на каждый ход.
+state_dir() { echo "${RATIONALDEV_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/rationaldev}"; }
+mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
+
+autocheck() {
+  mode="${RATIONALDEV_UPDATE:-notify}"; [ "$mode" = off ] && return 0
+  [ -d "$HOME_DIR/.git" ] || return 0
+  days="${RATIONALDEV_UPDATE_DAYS:-1}"; sd="$(state_dir)"; stamp="$sd/last-update-check"
+  if [ -f "$stamp" ]; then
+    age=$(( $(date +%s) - $(mtime "$stamp") ))
+    [ "$age" -lt $(( days * 86400 )) ] && return 0     # throttle: рано проверять
+  fi
+  mkdir -p "$sd"; : > "$stamp"                          # отметили проверку до fetch (offline не долбит)
+  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" 2>/dev/null || return 0   # offline → тихо
+  behind="$(git -C "$HOME_DIR" rev-list --count "HEAD..origin/$CHANNEL" 2>/dev/null || echo 0)"
+  [ "${behind:-0}" -gt 0 ] || return 0
+  case "$mode" in
+    auto)   echo "rationaldev: auto-update ($behind коммит(ов))"; update ;;   # ff-pull, pristine-guard внутри
+    notify) echo "rationaldev: доступно обновление — $behind коммит(ов) в origin/$CHANNEL. Запусти: rationaldev update" ;;
+  esac
+}
+
 case "${1:-help}" in
   update)              update ;;
-  help|-h|--help|"")   echo "usage: rationaldev update    # обновить канонический клон ($HOME_DIR, канал $CHANNEL)" ;;
-  *)                   echo "rationaldev: неизвестная команда '$1' (есть: update)"; exit 1 ;;
+  autocheck)           autocheck ;;
+  help|-h|--help|"")   echo "usage: rationaldev <update|autocheck>   # клон $HOME_DIR, канал $CHANNEL, режим ${RATIONALDEV_UPDATE:-notify}" ;;
+  *)                   echo "rationaldev: неизвестная команда '$1' (есть: update, autocheck)"; exit 1 ;;
 esac

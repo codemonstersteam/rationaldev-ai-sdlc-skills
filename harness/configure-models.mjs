@@ -8,14 +8,19 @@
 // Если stdin НЕ интерактивен (CI/смоук/пайп) — ничего не спрашивает и конфиг не трогает,
 // чтобы установка не зависала. Пер-ролевые оверрайды (roles) не трогаются — правь вручную.
 
-import { readFileSync, writeFileSync } from "node:fs"
+import { writeFileSync } from "node:fs"
 import { createInterface } from "node:readline"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { loadModelsConfig } from "./lib/models-config.mjs"
 
 const runner = process.argv[2]
 const ROOT = dirname(fileURLToPath(import.meta.url))
-const CONFIG = join(ROOT, "models.config.json")
+const CLONE_CONFIG = join(ROOT, "models.config.json")
+// pristine-клон (T5): если задан локальный override RATIONALDEV_MODELS (ВНЕ клона) — правки моделей
+// пишем ТУДА (клон остаётся чистым для `rationaldev update`); иначе — в клон (как раньше).
+const OVERRIDE = process.env.RATIONALDEV_MODELS
+const CONFIG = OVERRIDE || CLONE_CONFIG
 
 const RUNNERS = ["claude", "opencode", "codex"]
 if (!RUNNERS.includes(runner)) {
@@ -23,7 +28,8 @@ if (!RUNNERS.includes(runner)) {
   process.exit(1)
 }
 
-const cfg = JSON.parse(readFileSync(CONFIG, "utf8"))
+// База = клон-дефолт ← существующий override (сохраняем прежние правки при повторном запуске).
+const cfg = loadModelsConfig(ROOT)
 if (!cfg[runner]) cfg[runner] = { tiers: {}, roles: {} }
 if (!cfg[runner].tiers) cfg[runner].tiers = {}
 

@@ -21,6 +21,23 @@ export const RationalGuardrail: Plugin = async ({ directory, worktree, client }:
   const pick = (...c: unknown[]) =>
     c.find((p): p is string => typeof p === "string" && p.length > 0 && p !== "/")
   const root = pick(worktree, directory) ?? process.cwd()
+
+  // self-update T4: периодический autocheck НА СТАРТЕ СЕССИИ (throttled+mode внутри скрипта; НЕ mid-session).
+  // Полностью изолировано от enforcement: свой try/catch, async execFile (init не блокируется), timeout,
+  // сбой/оффлайн проглатывается. Клон-корень = 4 уровня вверх от этого файла (…/harness/enforcement/opencode/).
+  try {
+    if (process.env.RATIONALDEV_UPDATE !== "off") {
+      const bin = join(new URL(".", import.meta.url).pathname, "..", "..", "..", "rationaldev")
+      if (existsSync(bin)) {
+        const { execFile } = await import("node:child_process")
+        execFile("sh", [bin, "autocheck"], { timeout: 20000 }, (_e: any, stdout: any) => {
+          const msg = String(stdout || "").trim()
+          if (msg) console.log("[rationaldev] " + msg)   // notify → лог; auto тянет сам (проекты подхватят через symlinks)
+        })
+      }
+    }
+  } catch { /* авто-апдейт не критичен для guardrail */ }
+
   const agentDir = join(root, ".agent")
   const logPath = join(agentDir, "decisions.log")
   const gate1 = join(agentDir, "gates", "gate1.approved")

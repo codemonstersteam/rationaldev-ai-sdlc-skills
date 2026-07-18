@@ -139,6 +139,8 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
       # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
       gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
+      # self-update T4: SessionStart → throttled autocheck канонического клона (best-effort; RATIONALDEV_UPDATE=off отключает)
+      au="sh \\\"$BUNDLE/rationaldev\\\" autocheck"
       # permissions: ПОЛНЫЙ доступ субагентам, пока работают (defaultMode bypassPermissions — без промптов
       # ни на bash, ни на правки: столл-на-промпте убивает автономный прогон). allow-лист оставлен как
       # безопасная деградация, если режим позже понизят. Хуки (PreToolUse) имеют ПРИОРИТЕТ и работают
@@ -161,7 +163,8 @@ if [ "$HARD" = yes ]; then
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
     ],
     "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
-    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ],
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "'"$au"'" } ] } ]
   }
 }'
       if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then

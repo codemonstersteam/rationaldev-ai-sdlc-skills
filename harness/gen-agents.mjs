@@ -12,6 +12,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseFrontmatter } from "./frontmatter.mjs"
 import { resolveModel as resolveModelCore, resolveTemp as resolveTempCore } from "./lib/resolve-model.mjs"
+import { loadModelsConfig } from "./lib/models-config.mjs"
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const SHARED = join(ROOT, "agents", "_shared")
@@ -21,7 +22,8 @@ const SHARED = join(ROOT, "agents", "_shared")
 // харнес не привязан к Anthropic). Резолвинг на роль: roles[<роль>] > tiers[<тир>] >
 // (ничего → `model` опущен, раннер берёт модель пользователя).
 const TIERS = ["large", "medium", "small"]
-const MODELS = JSON.parse(readFileSync(join(ROOT, "models.config.json"), "utf8"))
+// Клон-дефолт ← локальный override (RATIONALDEV_MODELS, вне клона) — держит клон pristine (T5).
+const MODELS = loadModelsConfig(ROOT)
 
 // Резолвинг вынесен в чистое ядро harness/lib/resolve-model.mjs (юнит-тестируемо, config параметром).
 // Здесь — тонкие обёртки, замыкающие MODELS (call sites не меняются).

@@ -25,6 +25,7 @@ NROLES="$(ls "$REPO/harness/agents/_shared"/*.md 2>/dev/null | wc -l | tr -d ' '
 node "$REPO/harness/gen-skill-index.mjs" --check >/dev/null || fail "skill-index: устарел или битая ссылка роль→скилл"; ok
 
 # юнит-тесты чистых модулей харнеса (frontmatter, ядра валидаторов, resolveModel) — dogfood
+export RATIONALDEV_UPDATE=off   # смоук не должен дёргать self-update autocheck (сеть/реальный клон)
 node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness unit-тесты (node --test) упали"; ok
 
 # --- Claude ---

@@ -255,7 +255,7 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
 дефолт `~/.rationaldev`); проекты ссылаются только на него; клон **потребляется read-only**
 (вся кастомизация — в локальных override ВНЕ клона, иначе `pull --ff-only` конфликтует).
 
-- [ ] **T1 · P1 — bootstrap канонического клона.** Установщик (`curl … | sh`, как oh-my-zsh) клонит бандл
+- [x] **T1 · P1 — bootstrap канонического клона.** Установщик (`curl … | sh`, как oh-my-zsh) клонит бандл
   в `$RATIONALDEV_HOME`, ставит dir-symlinks (T2). Один источник правды вместо произвольного dev-пути.
   Сейчас `install.sh` предполагает бандл уже локально по случайному пути — bootstrap этого нет.
 - [x] **T2 · P1 — линковать КАТАЛОГИ, не файлы** (ключевой сдвиг раздачи): `.opencode/agent` →
@@ -266,7 +266,7 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
 - [x] **T3 · P1 — команда `rationaldev update`** (ручная, как `omz update`/`flutter upgrade`):
   `git -C $RATIONALDEV_HOME pull --ff-only`. Инвариант pristine-клона: dirty/diverged → **abort + warn**,
   никогда не клоббрить/rebase (в клоне нет локальных коммитов). Показать «updated X→Y, N commits».
-- [ ] **T4 · P1 — ПЕРИОДИЧЕСКИЙ авто-апдейт** (главное требование — «main продвинулся → подтянуть», flutter/omz-стиль):
+- [x] **T4 · P1 — ПЕРИОДИЧЕСКИЙ авто-апдейт** (главное требование — «main продвинулся → подтянуть», flutter/omz-стиль):
   - **Триггер:** на старте сессии/izi, **throttled** по метке `last-update-check` (дефолт-интервал `1 день`,
     как `UPDATE_ZSH_DAYS`) — не на каждый вызов.
   - **Режим (config):** `RATIONALDEV_UPDATE=auto|notify|off` — `auto` тихо `pull --ff-only`; `notify`
@@ -290,16 +290,23 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
     роли+плагин раннер грузит в память на старте (уже иммунны) → mid-session меняются ТОЛЬКО on-demand скиллы →
     **preload скиллов на старте (#43)** закрывает и их без store. **Атомарность апдейта (материализация+flip,
     не in-place `pull`) нужна в ОБОИХ случаях** — даже старт-только-сессия попадает в окно полу-записи при in-place.
-- [ ] **T5 · P1 — граница локального override (консистентность, чинит дыру ff-pull).** Клон pristine →
+- [x] **T5 · P1 — граница локального override (консистентность, чинит дыру ff-pull).** Клон pristine →
   всё, что проект/раннер кастомизируют, живёт ВНЕ клона: `opencode.jsonc` (ключ+прокси) уже вне;
   **`models.config.json` СЕЙЧАС в клоне** (его пишет `configure-models` при установке) → при ff-pull
   конфликт. Вынести раскладку тиров в локальный override (клон-дефолт + локальный merge), либо
   документировать «не править в клоне». Без этого T3/T4 ломаются на первой же кастомизации моделей.
-- [ ] **T6 · P2 — компромисс dir-link агентов (решить):** dir-symlink на `.opencode/agent` → нельзя
+- [x] **T6 · P2 — компромисс dir-link агентов (решить):** dir-symlink на `.opencode/agent` → нельзя
   подкинуть проект-локальную роль в тот же каталог. Варианты: (а) агенты тоже dir-link (проект-локальные
   роли редки); (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
 - _Остаётся локальным (правильно, ВНЕ клона):_ `opencode.jsonc` (ключ+прокси), локальный `models.config` override (T5),
   `.agent/` run-state, продукт-код. _Порядок:_ T2 (раздача) → T1/T5 (клон+override) → T3 (ручной update) → T4 (авто) → T6.
+- _Статус:_ ✅ **T1–T6 реализованы** (ветка `feat/self-updating-harness`): `bootstrap.sh` (T1), dir-symlinks в
+  `install.sh` (T2), `rationaldev update` (T3), `rationaldev autocheck` + триггеры opencode-плагин/claude
+  SessionStart (T4), `lib/models-config.mjs` merge-override (T5), агенты dir-link = вариант (а) (T6). Тесты:
+  `rationaldev` smoke 8/8 + `models-config` 6 unit + smoke 31 + guardrail 37/37. **Остаток (follow-up внутри T4):**
+  полный immutable-store + refcount-GC для строгой mid-session-гарантии при N параллельных сессий (сейчас v1 —
+  триггер только на старте, throttled, дефолт `notify`; store описан выше как «как закрыть mid-session»); codex —
+  без хук-системы, только ручной `rationaldev update`.
 
 ### Детерминированный генератор тикетов по дизайну (ticketer)
 Причина: GLM-ticketer игнорирует прозу декомпозиции и схлопывает слайс в один монстр-тикет

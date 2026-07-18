@@ -23,4 +23,21 @@ if RATIONALDEV_HOME="$CLONE" sh "$BIN" update >/dev/null 2>&1; then fail "гря
 # 4. нет .git → внятная ошибка
 RATIONALDEV_HOME="$T/nope" sh "$BIN" update 2>&1 | grep -q "нет git-клона" || fail "no-clone не обработан"; ok
 
-echo "PASS $pass/4 — rationaldev update smoke"
+# --- autocheck (T4 периодика): пере-склонируем и продвинем remote на 1 коммит ---
+CLONE2="$T/clone2"; ST="$T/state"
+git clone -q "$REMOTE" "$CLONE2" 2>/dev/null
+( cd "$T/seed" && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m next2 && git push -q origin HEAD:main )
+# 5. notify: есть отставание → сообщает про обновление
+RATIONALDEV_HOME="$CLONE2" RATIONALDEV_STATE="$ST" RATIONALDEV_UPDATE=notify sh "$BIN" autocheck | grep -q "доступно обновление" || fail "notify не сообщил"; ok
+# 6. throttle: сразу второй раз → молчит (метка свежая)
+out="$(RATIONALDEV_HOME="$CLONE2" RATIONALDEV_STATE="$ST" RATIONALDEV_UPDATE=notify sh "$BIN" autocheck)"
+[ -z "$out" ] || fail "throttle не сработал (ждали тишину)"; ok
+# 7. off: ничего даже без throttle
+rm -f "$ST/last-update-check"
+out="$(RATIONALDEV_HOME="$CLONE2" RATIONALDEV_STATE="$ST" RATIONALDEV_UPDATE=off sh "$BIN" autocheck)"
+[ -z "$out" ] || fail "off не молчит"; ok
+# 8. auto: тянет обновление
+rm -f "$ST/last-update-check"
+RATIONALDEV_HOME="$CLONE2" RATIONALDEV_STATE="$ST" RATIONALDEV_UPDATE=auto sh "$BIN" autocheck | grep -q "обновлено" || fail "auto не подтянул"; ok
+
+echo "PASS $pass/8 — rationaldev update+autocheck smoke"
