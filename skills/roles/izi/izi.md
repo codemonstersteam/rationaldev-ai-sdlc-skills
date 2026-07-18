@@ -329,6 +329,11 @@ author or the fixer — separation of duties). Input = slice path + slug. `@faga
 (README faithfulness, no-hardcode), and on both-green **strips `@wip`** (its only write — the acceptance
 signature the implementer was forbidden to touch). It produces nothing else and never repairs.
 
+- **Under `mode=foreign`:** the trigger's `validate-layout` check does NOT apply (a non-harness repo has no
+  `internal/<slug>/` layout) — the trigger is just every foreign ticket `green` in `done.log`. `@fagan`
+  self-adjusts: it runs the repo's **own verification command** from the `@surveyor` map
+  (`docs/design/_harness/`) — the native suite green — **not** `validate-dod`, and there is **no `@wip`** to
+  strip. Everything else (separation of duties, `FAIL → @linger`, then Gate #2) is identical.
 - `accepted` → proceed to `## TERMINAL git step` below (commit/push/CI), **then** present Gate #2. `@fagan
   accepted` = "done AND locally validated" — the state is now safe to commit.
 - `FAIL: <item>` → route the defect to `@linger` (the fixer, K=2 fuse); on `@linger` green, call
