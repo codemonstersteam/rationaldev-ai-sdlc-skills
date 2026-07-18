@@ -59,22 +59,56 @@ if (globalPlugins.some((p) => String(p).includes(OMO))) {
   } else notes.push("  (нельзя убрать без интерактива — сделай вручную)")
 }
 
-// ── 2. GLOBAL: провайдер ──────────────────────────────────────────────────
+// ── 2. GLOBAL: провайдер (+ блок models с лимитами для кастомного провайдера) ──────
+// Опрос моделей провайдера: id/name/context/output/modalities?/capabilities? → provider.<id>.models[<id>].
+// Кастомному провайдеру (baseURL) модели ОБЯЗАНЫ быть объявлены (opencode не знает их из реестра) — иначе
+// binding-валидатор ругнётся, а opencode не резолвит модель. Registry-провайдеру (openrouter) — не нужно.
+async function askModels(providerName) {
+  const models = {}
+  console.log(`  Модели провайдера '${providerName}' (Enter на id — стоп; лимиты — по спецификации провайдера):`)
+  for (;;) {
+    const id = await ask("    model id (напр. tensorzero::function_name::frontier; Enter — стоп)", "")
+    if (!id) break
+    const mname = await ask("      name (человекочитаемое)", id)
+    const context = parseInt(await ask("      limit.context", "250144"), 10)
+    const output = parseInt(await ask("      limit.output", "8192"), 10)
+    models[id] = { name: mname, limit: { context, output } }
+  }
+  return models
+}
 const hasProvider = global.provider && typeof global.provider === "object" && Object.keys(global.provider).length > 0
-if (hasProvider) {
+if (hasProvider && interactive) {
+  // Провайдер есть — проверяем полноту блока models у КАСТОМНЫХ (baseURL) провайдеров.
+  for (const [pname, p] of Object.entries(global.provider)) {
+    const isCustom = !!(p?.options && typeof p.options.baseURL === "string" && p.options.baseURL)
+    const hasModels = p?.models && Object.keys(p.models).length > 0
+    if (isCustom && hasModels) { notes.push(`✓ GLOBAL '${pname}': провайдер + модели описаны (${Object.keys(p.models).join(", ")})`); continue }
+    if (isCustom && !hasModels) {
+      console.log(`\nКастомный провайдер '${pname}' без блока models (opencode их не знает).`)
+      const add = (await ask(`  Описать модели '${pname}'? (Y/n)`, "Y")).toLowerCase()
+      if (!add.startsWith("n")) {
+        p.models = { ...(p.models || {}), ...(await askModels(pname)) }
+        mkdirSync(globalDir, { recursive: true }); writeFileSync(globalPath, JSON.stringify(global, null, 2) + "\n")
+        notes.push(`✓ GLOBAL '${pname}': модели дописаны (${Object.keys(p.models).join(", ")})`)
+      }
+    } else notes.push(`✓ GLOBAL '${pname}': registry-провайдер (модели из реестра opencode)`)
+  }
+} else if (hasProvider) {
   notes.push(`✓ GLOBAL провайдер уже настроен: ${Object.keys(global.provider).join(", ")}`)
 } else if (interactive) {
   console.log("\nВ global (~/.config/opencode) нет провайдера — настроим (auth шарится на все проекты).")
   const name = await ask("Провайдер (id, напр. openrouter)", "openrouter")
-  const baseURL = await ask("baseURL (Enter — дефолт провайдера)", "")
+  const baseURL = await ask("baseURL (Enter — дефолт/registry-провайдер)", "")
   const apiKey = await ask("API-ключ (или {env:VAR})", "")
   const options = {}
   if (baseURL) options.baseURL = baseURL
   if (apiKey) options.apiKey = apiKey
-  global.provider = { ...(global.provider || {}), [name]: { options } }
+  const entry = { options }
+  if (baseURL) { const m = await askModels(name); if (Object.keys(m).length) entry.models = m }   // кастомный → модели
+  global.provider = { ...(global.provider || {}), [name]: entry }
   mkdirSync(globalDir, { recursive: true })
   writeFileSync(globalPath, JSON.stringify(global, null, 2) + "\n")
-  notes.push(`✓ GLOBAL провайдер '${name}' записан в ${globalPath}`)
+  notes.push(`✓ GLOBAL провайдер '${name}'${entry.models ? ` + модели (${Object.keys(entry.models).join(", ")})` : ""} записан в ${globalPath}`)
 } else {
   notes.push(`⚠ GLOBAL провайдера нет и нет интерактива — задай его в ${globalPath} вручную (иначе opencode не достучится до модели).`)
 }
