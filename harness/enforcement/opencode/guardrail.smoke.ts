@@ -38,6 +38,8 @@ async function run() {
 
   // B. Прочие роли проходят свободно
   await hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }); pass++
+  // B1. @surveyor (foreign lane, route-foreign-lane T3) — в closed-set, не implementer → проходит (brd.md есть)
+  await hooks["tool.execute.before"](task("surveyor"), { args: { subagent: "surveyor" } }); pass++
 
   // B2. Делегация ВНЕ пайплайн-набора (@general / general-purpose) блокируется в источнике (мис-роут)
   await assert.rejects(
@@ -264,7 +266,7 @@ async function run() {
   await rm(chatdir, { recursive: true, force: true })
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/42 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/43 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
