@@ -61,8 +61,13 @@ lead slice, `blocked_by: []`, blocks all) → per slice {component RED → modul
 There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
 `@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
-**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-delta.md` is present, you are on
-the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
+**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-dir` is present (a rework: it
+points to `<change-dir>` = `docs/design/<slice>/changes/<slug>/`, where `@change-intake` wrote `change-delta.md`),
+you are on the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
+- **WRITE INTO THE CHANGE FOLDER — never on top of greenfield (MUST).** Rework tickets go to
+  **`<change-dir>/tickets/ticket-N.md`** (read `<change-dir>` from `.agent/planner/change-dir`), NOT
+  `docs/design/<slice>/tickets/`. The slice's greenfield `tickets/` is the immutable record of how it was built;
+  overwriting it destroys per-change traceability. `mkdir -p <change-dir>/tickets` first.
 - **NO scaffold ticket** — the project already exists (a scaffold ticket in a rework set is an error; `validate-tickets` in rework-mode requires **zero** scaffolds). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
 - Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module`+rework → `@hughes-rework`).
 - **`rework-behavior`/`rework-api`:** additionally cut **ONE `type: component` ticket** for the changed/added scenarios named in the delta (new/changed scenarios tagged `@wip`); the affected `module` tickets `blocked_by` it (RED-first preserved). **`rework-refactor`:** **no** component ticket — behaviour is unchanged, the existing suite is the invariant.

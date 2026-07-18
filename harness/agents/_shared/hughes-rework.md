@@ -53,8 +53,11 @@ You **edit in place** at the existing paths — you do **NOT** re-scaffold and d
   (`api-specification/**` is `ask` — the api-evolve is `@wirth-apidesigner`'s, already done before Gate #1).
 
 ## Input (else STOP)
-**ONE rework ticket** + the affected-module paths it names + the change-delta. The plan is frozen after Gate #1;
-no ticket / handoff not approved / package incomplete → STOP.
+**ONE rework ticket** + the affected-module paths it names + the change-delta. The ticket and delta live in the
+**change folder** `<change-dir>` = `docs/design/<slice>/changes/<slug>/` (pointer `.agent/planner/change-dir`):
+your ticket is `<change-dir>/tickets/ticket-NN.md`, the delta is `<change-dir>/change-delta.md` — **not** the
+slice's greenfield `tickets/` (that is the untouched build record). The plan is frozen after Gate #1; no ticket /
+handoff not approved / package incomplete → STOP.
 
 ## Tests — use the ticket's command, do NOT probe Docker
 Run the module's **unit** command; if the ticket's `Verify` line has a component/smoke command, run **exactly

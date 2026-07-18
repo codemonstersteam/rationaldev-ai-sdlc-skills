@@ -36,4 +36,19 @@ You **MUST** verify the package is complete (every slice has design, tickets are
 — if something is missing, return **STOP** to the orchestrator naming the unfinished stage. Append the
 decision → `.agent/decisions.log`.
 
-Produce exactly your output and return **one line**: `planner → PLAN.md ready (N slices, M tickets)`.
+## REWORK / CHORE modes — the plan lands in the WORK's OWN durable folder (MUST, never on greenfield)
+Each unit of work owns its plan folder; you never overwrite the slice's greenfield `PLAN.md`/`tickets/`.
+- **REWORK** (`.agent/planner/change-dir` present → `<change-dir>` = `docs/design/<slice>/changes/<slug>/`):
+  write **`<change-dir>/PLAN.md`** (NOT the slice `PLAN.md`). It indexes the change: links to
+  `<change-dir>/change-delta.md` + the affected slice design + `<change-dir>/tickets/`, and the Gate #1 summary
+  (what changes + why, the affected-module list, the RED→GREEN scenarios, regression invariants). `M tickets` =
+  the change's tickets under `<change-dir>/tickets/`.
+- **CHORE** (`.agent/planner/mode` = `chore`): the task is repo-infra, not a slice → write a durable one-pager
+  **`docs/chores/<slug>/CHORE-PLAN.md`** (NOT `.agent/planner/`). `<slug>` = `<NNN>-<kebab>`, `NNN` = next unused
+  3-digit id under `docs/chores/` (`ls`; empty → `001`), `<kebab>` from the task title (e.g. `001-ci-on-pr`).
+  Content: the **file list** to add/change + the **verification command** (how «green» is proven) + **rollback**.
+  No FRD/slices/spec/tickets. Write pointer `echo "docs/chores/<slug>" > .agent/planner/chore-dir`; `mkdir -p`
+  the folder first.
+
+Produce exactly your output and return **one line**: `planner → PLAN.md ready (N slices, M tickets)` (greenfield),
+`planner → PLAN.md ready (<change-dir>, M tickets)` (rework), or `planner → CHORE-PLAN.md ready (docs/chores/<slug>)` (chore).

@@ -58,9 +58,10 @@ await writeFile(join(cdir, ".agent", "planner", "brd.md"), "# BRD\n")
 await writeFile(join(cdir, ".agent", "planner", "mode"), "chore")
 await mkdir(join(cdir, ".agent", "gates"), { recursive: true })
 await writeFile(join(cdir, ".agent", "gates", "gate1.approved"), "ok\n")
-assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 2, "chore: @hughes без CHORE-PLAN.md → блок"); pass++
-await writeFile(join(cdir, ".agent", "planner", "CHORE-PLAN.md"), "# plan\n")
-assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с CHORE-PLAN.md + gate1 → пропуск"); pass++
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 2, "chore: @hughes без durable CHORE-PLAN.md → блок"); pass++
+await mkdir(join(cdir, "docs", "chores", "001-ci-on-pr"), { recursive: true })
+await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с docs/chores/<slug>/CHORE-PLAN.md + gate1 → пропуск"); pass++
 await rm(cdir, { recursive: true, force: true })
 await rm(gdir, { recursive: true, force: true })
 

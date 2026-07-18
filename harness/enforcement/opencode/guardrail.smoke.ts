@@ -55,7 +55,8 @@ async function run() {
   await writeFile(join(dir, ".agent", "gates", "gate1.approved"), "")
   await hooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
 
-  // C2. mode=chore: implementer требует CHORE-PLAN.md вместо plan-review.md (изолированный каталог)
+  // C2. mode=chore: implementer требует DURABLE chore-план docs/chores/<slug>/CHORE-PLAN.md (не .agent/),
+  // вместо plan-review.md (изолированный каталог). mode-маркер остаётся run-state в .agent/planner/mode.
   const cdir = await mkdtemp(join(tmpdir(), "rg-chore-"))
   const chooks: any = await RationalGuardrail({ directory: cdir, worktree: cdir } as any)
   await mkdir(join(cdir, ".agent", "planner"), { recursive: true })
@@ -67,7 +68,8 @@ async function run() {
     () => chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
     /CHORE-PLAN/,
   ); pass++
-  await writeFile(join(cdir, ".agent", "planner", "CHORE-PLAN.md"), "# plan\n")
+  await mkdir(join(cdir, "docs", "chores", "001-ci-on-pr"), { recursive: true })
+  await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
   await chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
   await rm(cdir, { recursive: true, force: true })
 
@@ -107,6 +109,17 @@ async function run() {
   // J3: output существует, но ПУСТ → deny
   await writeFile(join(dir, "internal", "demo", "logic.go"), "")
   await assert.rejects(() => bash(doneMark), /poka-yoke/); pass++
+
+  // J4: (work-scoped) тикет ЖИВЁТ в change-папке changes/<slug>/tickets/ — poka-yoke его РЕЗОЛВИТ
+  // (доработка не в slice/tickets/). Объявленный output отсутствует → deny.
+  const chTdir = join(dir, "docs", "design", slug, "changes", "001-precision", "tickets")
+  await mkdir(chTdir, { recursive: true })
+  await writeFile(join(chTdir, "ticket-07.md"),
+    `---\nid: 07\ntype: module\nslice: ${slug}\nblocked_by: []\ninputs: [x]\noutputs: [internal/demo/round.go]\nio: none\nskills: []\n---\n`)
+  const chMark = `echo "ticket-07 ${slug} green" >> .agent/planner/done.log`
+  await assert.rejects(() => bash(chMark), /poka-yoke/); pass++            // output нет → deny (тикет найден в changes/)
+  await writeFile(join(dir, "internal", "demo", "round.go"), "package demo\n")
+  await bash(chMark); pass++                                              // output создан → allow
 
   // F. Регресс (баг "/"): directory="/" НЕ используется как корень → фоллбэк на cwd, без EROFS-краша.
   const origCwd = process.cwd()
@@ -201,7 +214,7 @@ async function run() {
   await rm(ndir, { recursive: true, force: true })
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/35 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/37 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

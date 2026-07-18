@@ -7,7 +7,8 @@
 // Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode } from "../shared.mjs"
+import { readdirSync } from "node:fs"
+import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -66,10 +67,11 @@ try {
   let mode = ""
   try { mode = readFileSync(join(root, ".agent", "planner", "mode"), "utf8") } catch { /* нет маркера */ }
   if (isChoreMode(mode)) {
-    const chorePlan = join(root, ".agent", "planner", "CHORE-PLAN.md")
-    if (!existsSync(chorePlan) || !existsSync(gate1)) {
+    const existsFn = (rel) => existsSync(join(root, rel))
+    const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
+    if (!hasChorePlan(choreDirsFn, existsFn) || !existsSync(gate1)) {
       block(
-        "Gate #1 (chore) не пройден: нужны .agent/planner/CHORE-PLAN.md и .agent/gates/gate1.approved " +
+        "Gate #1 (chore) не пройден: нужны durable план docs/chores/<slug>/CHORE-PLAN.md и .agent/gates/gate1.approved " +
         "перед делегированием реализации (" + normRole(role) + ").",
       )
     }

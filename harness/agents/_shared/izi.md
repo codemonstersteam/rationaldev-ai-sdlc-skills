@@ -167,12 +167,13 @@ A chore (CI/Dockerfile/Makefile/config/dep-bump/docs) is NOT a slice: **no FRD, 
 no scaffold, no component tests, no module tree.** But it is still **planned and gated** — a cheap plan +
 one human gate, not zero plan. The front door (`@gilb`) already ran in Step 0; from the `route=chore` verdict:
 
-1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`.agent/planner/CHORE-PLAN.md`**: a one-pager —
-   the file(s) to change, the **verification command** (how we prove it works, e.g. "PR to main, both CI jobs
-   green"), and rollback. Planner does not design a module tree here — it writes the one-pager and returns a line.
-2. **Mini Gate #1** (human): present `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
+1. **`@wirth-planner`** (input: `.agent/planner/brd.md`) → **`docs/chores/<NNN-slug>/CHORE-PLAN.md`** (durable
+   own folder, NOT `.agent/`; pointer `.agent/planner/chore-dir`): a one-pager — the file(s) to change, the
+   **verification command** (how we prove it works, e.g. "PR to main, both CI jobs green"), and rollback.
+   Planner does not design a module tree here — it writes the one-pager and returns a line.
+2. **Mini Gate #1** (human): present the `CHORE-PLAN.md` verbatim, ask the operator to accept with the same explicit
    token **`GATE1 APPROVE`** (the `--hard` hook sets `.agent/gates/gate1.approved` on that token — you MUST NOT).
-   Under `mode=chore` the guardrail requires `CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
+   Under `mode=chore` the guardrail requires a durable `docs/chores/<slug>/CHORE-PLAN.md` + `gate1.approved` (NOT full `plan-review.md`).
 3. **WORKING-BRANCH** (as below): `@git-hand mode=start` (`task-type=chore`, `slug`) → cuts `chore/<slug>` from
    fresh trunk. No code on trunk.
 4. **`@hughes` under `mode=chore`** — writes the file(s); **no io-skills attached** (config/CI/docs, not a module).
@@ -215,15 +216,19 @@ no `@mills` — a chore has nothing for them to do. You route the six steps abov
 Greenfield-роли `@wirth-slicer/usecase/moduledesigner/dijkstra` и `@scaffolder` **НЕ участвуют** (проект уже
 есть). You read the label, follow the sequence — you compute nothing. All three sub-routes share:
 
-1. `@change-intake` (input: `.agent/planner/brd.md` + existing repo) → `.agent/planner/change-delta.md`
-   (delta, rationale, affected-modules). Decides fit/STOP itself — on `STOP` pass it to the operator.
+1. `@change-intake` (input: `.agent/planner/brd.md` + existing repo) → creates the **change folder**
+   `<change-dir>` = `docs/design/<slice>/changes/<NNN-slug>/`, writes `<change-dir>/change-delta.md`
+   (delta, rationale, affected-modules) and the pointer `.agent/planner/change-dir`. Its status line carries
+   `dir=<change-dir>` — the rework's plan/tickets live THERE, never on top of the slice's greenfield `tickets/`.
+   Decides fit/STOP itself — on `STOP` pass it to the operator.
 2. **§api ONLY** — `@wirth-apidesigner` (input: existing contract + the delta's spec-delta) → **evolves**
    `api-specification/*` (new `x-frozen` version). Then run `node harness/validate-contract-diff.mjs` →
    an **advisory** breaking-list; **announce it to the operator** (a major is theirs to accept), do NOT block.
-3. `@wirth-ticketer` (input: `change-delta` + existing design) → `docs/design/slice-<name>/tickets/ticket-N.md`:
-   **module** tickets from the affected-modules list, **NO scaffold**; **§behavior/§api** also cut **one
-   `component` ticket** (changed/added scenarios, `@wip`). On `PARTIAL:` re-delegate the rest to it.
-4. `@wirth-planner` → `PLAN.md`. Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below.
+3. `@wirth-ticketer` (input: `change-delta` + existing design) → `<change-dir>/tickets/ticket-N.md`
+   (change folder, NOT the slice's greenfield `tickets/`): **module** tickets from the affected-modules list,
+   **NO scaffold**; **§behavior/§api** also cut **one `component` ticket** (changed/added scenarios, `@wip`).
+   On `PARTIAL:` re-delegate the rest to it.
+4. `@wirth-planner` → `<change-dir>/PLAN.md`. Then the shared **REVIEW → Gate #1 → IMPLEMENTATION → DoD-closure** below.
 
 **§refactor:** no `@wirth-apidesigner`, **no** `component` ticket — the existing suite is the invariant.
 **§behavior:** no `@wirth-apidesigner`; **one** `component` ticket (spec untouched). **§api:** step 2 runs.
@@ -284,7 +289,9 @@ that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s sec
 ## IMPLEMENTATION — one ticket at a time, route by type label; step-cap + K=2
 
 Read routing **from the ticket's YAML header** (guaranteed by `@mills`/`validate-tickets`): `type`,
-`blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`.
+`blocked_by`, `inputs`. You compute nothing. Tickets live per slice at `docs/design/slice-<name>/tickets/ticket-N.md`
+(greenfield); for a **rework** they live in the change folder `<change-dir>/tickets/ticket-N.md` (read `<change-dir>`
+from `.agent/planner/change-dir`, enumerate `ls <change-dir>/tickets/`). Either way route by the header, not the path.
 **The scaffold ticket FIRST and serialized** (all others carry it in `blocked_by`). Route by `type`:
 - `scaffold`  → `@scaffolder` (Qwen): runs `harness/scaffold.sh` (git-clone template + rename + build),
   checks build + component tests, fixes if needed. **Does not read the whole template — cheap** (not @hughes).

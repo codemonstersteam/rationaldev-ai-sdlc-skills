@@ -13,27 +13,17 @@ import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
 import { validatePlan, validateFeasibility, validateTypeDependencies, parseDodNumbers } from "./lib/validators.mjs"
+import { discoverTicketFiles } from "./lib/ticket-fs.mjs"
 
 const root = process.argv[3] || process.cwd()
 const explicit = process.argv[2]
 
-const ticketFiles = [] // { rel, abs }
-if (explicit) {
-  if (!existsSync(explicit)) { console.error(`validate-plan: нет каталога тикетов ${explicit}`); process.exit(1) }
-  for (const f of readdirSync(explicit).filter((f) => f.endsWith(".md")).sort())
-    ticketFiles.push({ rel: f, abs: join(explicit, f) })
-} else {
-  const design = join(root, "docs", "design")
-  if (existsSync(design)) {
-    for (const slice of readdirSync(design).filter((d) => d.startsWith("slice-")).sort()) {
-      const td = join(design, slice, "tickets")
-      if (!existsSync(td)) continue
-      for (const f of readdirSync(td).filter((f) => f.endsWith(".md")).sort())
-        ticketFiles.push({ rel: join("docs/design", slice, "tickets", f), abs: join(td, f) })
-    }
-  }
-}
-if (!ticketFiles.length) { console.error("validate-plan: не найдено тикетов (docs/design/slice-*/tickets/*.md)"); process.exit(1) }
+// greenfield slice-*/tickets/ + change-scoped slice-*/changes/*/tickets/ (см. lib/ticket-fs.mjs).
+const ticketFiles = explicit
+  ? (existsSync(explicit) ? readdirSync(explicit).filter((f) => f.endsWith(".md")).sort().map((f) => ({ rel: f, abs: join(explicit, f) }))
+     : (console.error(`validate-plan: нет каталога тикетов ${explicit}`), process.exit(1)))
+  : discoverTicketFiles(root)
+if (!ticketFiles.length) { console.error("validate-plan: не найдено тикетов (docs/design/slice-*/tickets|changes/*/tickets/*.md)"); process.exit(1) }
 
 const tickets = ticketFiles.map(({ rel, abs }) => {
   const { data, body } = parseFrontmatter(readFileSync(abs, "utf8"))
