@@ -1026,6 +1026,24 @@ you are on the **rework** path — cut tickets from the **change-delta's affecte
 - **`rework-behavior`/`rework-api`:** additionally cut **ONE `type: component` ticket** for the changed/added scenarios named in the delta (new/changed scenarios tagged `@wip`); the affected `module` tickets `blocked_by` it (RED-first preserved). **`rework-refactor`:** **no** component ticket — behaviour is unchanged, the existing suite is the invariant.
 - Same header contract + `skills` io-router rules as greenfield. Run `validate-layout` self-check as usual.
 
+**FOREIGN mode (`.agent/planner/mode` = `foreign` — `change-dir` points to `docs/foreign/<slug>/`).** Like
+rework (cut tickets from the delta's affected-modules + one component ticket, **NO** scaffold/README, write into
+`<change-dir>/tickets/`), with three foreign specifics:
+- **Native paths, not `internal/<slug>/`.** A `module` ticket's `outputs` are the repo's **real** source paths
+  from `change-delta.md`; `io: n/a (foreign)`. The `component` ticket's scenarios are the delta's native
+  `test-class::method` set (**no `@wip`** — native runner). Implementer = `@hughes-rework`, tester =
+  `@wirth-tester` (loads `conform-tests`). **Skip the `validate-layout` self-check** (a non-harness repo has no
+  `internal/<slug>/` layout); `validate-tickets` already treats `foreign` as scaffold-less.
+- **Each ticket carries a `### Repo cheat-sheet` section** — a FOCUSED excerpt distilled from the `@surveyor`
+  map `docs/design/_harness/test-harness.md`, scoped to THAT ticket, so the tester/implementer read the ticket,
+  not the whole map or the whole test-tree (the failure this lane fixes: research burned every ticket). For a
+  `component` ticket: the target test-class/file, the assert helper (with the map's sibling `file:line`), the
+  fixture format, and the 1–2 neighbours to mimic. For a `module` ticket: the native source path(s), the
+  build/single-test command, and any **known gap** that bites. **Cite the map — invent nothing;** if the map is
+  absent, `STOP: run @surveyor first`.
+- **The verification command** (from the map) is named in the `component` ticket's DoD — that is the foreign
+  lane's acceptance, not `.feature`/Docker. The tester runs it instead of `validate-component-tests` (Gherkin-only).
+
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,
 `go.mod` (module renamed to the slug), `internal/<slug>/…`, config/fixtures, **and the root
