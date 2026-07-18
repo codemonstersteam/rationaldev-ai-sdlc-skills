@@ -214,8 +214,39 @@ async function run() {
   ); pass++
   await rm(ndir, { recursive: true, force: true })
 
+  // O. (Gate #1 акцепт из ДВУХ каналов) Оператор акцептует план И печатью токена в чат (chat.message),
+  // И выбором пункта нативного меню opencode (event question.replied) — второй канал раньше не срабатывал.
+  const gpath = (d: string) => join(d, ".agent", "gates", "gate1.approved")
+  const planReady = async (d: string) => {
+    await mkdir(join(d, ".agent", "plan-reviewer"), { recursive: true })
+    await writeFile(join(d, ".agent", "plan-reviewer", "plan-review.md"), "OK")   // план собран → акцепт разрешён
+  }
+  const exists = async (p: string) => { try { await readFile(p); return true } catch { return false } }
+  // O1. МЕНЮ-канал: question.replied с выбранной опцией «GATE1 APPROVE» → плагин ставит маркер.
+  const mdir = await mkdtemp(join(tmpdir(), "rg-accept-menu-"))
+  const mh: any = await RationalGuardrail({ directory: mdir, worktree: mdir } as any)
+  await planReady(mdir)
+  assert.equal(await exists(gpath(mdir)), false)
+  await mh.event({ event: { type: "question.replied", properties: { answers: [["GATE1 APPROVE"]] } } })
+  assert.equal(await exists(gpath(mdir)), true); pass++
+  // O2. МЕНЮ-канал, выбор НЕ-акцепт-пункта (Reject) → маркер НЕ ставится (только явный токен акцептует).
+  const rdir = await mkdtemp(join(tmpdir(), "rg-accept-reject-"))
+  const rh: any = await RationalGuardrail({ directory: rdir, worktree: rdir } as any)
+  await planReady(rdir)
+  await rh.event({ event: { type: "question.replied", data: { answers: [["Reject / вернуть на доработку"]] } } })
+  assert.equal(await exists(gpath(rdir)), false); pass++
+  // O3. ЧАТ-канал (регресс): печать токена в чат по-прежнему ставит маркер.
+  const chatdir = await mkdtemp(join(tmpdir(), "rg-accept-chat-"))
+  const th: any = await RationalGuardrail({ directory: chatdir, worktree: chatdir } as any)
+  await planReady(chatdir)
+  await th["chat.message"]({}, { parts: [{ type: "text", text: "GATE1 APPROVE" }] })
+  assert.equal(await exists(gpath(chatdir)), true); pass++
+  await rm(mdir, { recursive: true, force: true })
+  await rm(rdir, { recursive: true, force: true })
+  await rm(chatdir, { recursive: true, force: true })
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/37 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/40 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
