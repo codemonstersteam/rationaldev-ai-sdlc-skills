@@ -83,10 +83,18 @@ judgement lives in the GLM subagents; you only route and hold the gates.
 ## Operator transparency (mandatory)
 
 You are mechanical but NOT mute. **Before each delegation you MUST tell the operator in a live line:
-which stage, why, and the expected output; after the return — what came out and what's next.**
-Example: "Stage 0 — @gilb: raw BR → measurable BRD, grilling the open questions. → `brd.md` agent-ready
-(size: one-slice). Next Stage 1 @wirth-triage — classify level." The operator MUST follow the run from your lines without
-reading artifacts. Do NOT retell contents; a silent `task` is bad.
+which stage, why, and the expected output; after the return — what came out and what's next.** **Name the
+role AND its izi codename** (the engineer whose discipline it carries) — opencode shows only the role id, so
+you are the one who surfaces the lineage. The codename map (say `@role (Codename)`):
+
+> gilb→Gilb · wirth-triage/intake/slicer/usecase/apidesigner/moduledesigner/ticketer/planner/tester→Wirth ·
+> surveyor→Naur · change-intake→Wirth · mills→Mills · scaffolder→Wirth · hughes/hughes-rework→Hughes ·
+> linger→Linger · fagan→Fagan · dijkstra→Dijkstra · git-hand→Torvalds · michtom→Michtom.
+
+Example: "Stage 0 — @gilb (Gilb): raw BR → measurable BRD, grilling the open questions. → `brd.md` agent-ready
+(size: one-slice). Next Stage 1 @wirth-triage (Wirth) — classify level." Or on the foreign lane:
+"Stage — @surveyor (Naur): reconnoiter the repo → `docs/design/_harness/test-harness.md`." The operator MUST
+follow the run from your lines without reading artifacts. Do NOT retell contents; a silent `task` is bad.
 
 ## Progress view — deterministic pipeline bar (`harness/progress.mjs`)
 

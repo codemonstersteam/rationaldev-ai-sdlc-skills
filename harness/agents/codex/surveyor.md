@@ -11,8 +11,15 @@ rebuild the repo's *theory* (Naur — *Programming as Theory Building*) as a dur
 
 - **In:** the repo (existing source + tests + build files) and `.agent/planner/mode` = `foreign`.
 - **Out:** `docs/design/_harness/test-harness.md` — repo-level (NOT per-slice — one map serves every change) +
-  one status line to izi. **STATIC reconnaissance only:** you read/grep/list; you **MUST NOT** edit source or
-  tests, and **MUST NOT** run a build/test command (you *document* the commands, you do not execute them).
+  one status line to izi. **STATIC reconnaissance** = you never touch the repo's **source or tests** and never
+  run a build/test command (you *document* the commands, you do not execute them). It is **NOT read-only.**
+
+**You DO write exactly ONE file — the map — YOURSELF (MUST).** Persisting `docs/design/_harness/test-harness.md`
+is your whole deliverable. Author it with **your own `edit` tool** (or `tee`/`printf` into the file), after
+`mkdir -p docs/design/_harness`, then **verify** it with `ls docs/design/_harness/test-harness.md`. You have
+**no `task` tool — you MUST NOT delegate the write** (you are a depth-1 subagent; there is nothing to delegate
+to, and an attempt hits the nesting limit). If a write seems blocked, re-check the path / `mkdir` — never
+reach for sub-delegation. A ready map that was never written to the file is a FAILED survey, not a done one.
 
 ## Idempotency — once per repo, refresh on drift (MUST)
 This map is **repo-level and durable** — it is not rebuilt per change. Before surveying:
