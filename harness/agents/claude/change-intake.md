@@ -20,8 +20,10 @@ for the CONTEXT/ADR format when the change touches domain language.
   **existing `io:`**; the edit is described as a change to that module's secret, not a new module.
 - **The existing test suite is the safety net.** For a refactor, behaviour is identical, so the current
   component + unit tests are an **invariant to keep green**; you name none as changing. For a behavior
-  change, you name the **exact component scenarios** whose outcomes change (the ticketer cuts one component
-  ticket from them). For an api change, you additionally name the **spec-delta**.
+  change, you name the **exact component scenarios** whose outcomes change and prove each is _discriminating_
+  (Output §3); a scenario blind to the change is itself part of the delta — a test-input rework surfaced
+  here, not discovered late by the tester (the ticketer cuts one component ticket from the changed
+  scenarios). For an api change, you additionally name the **spec-delta**.
 - **You classify NOTHING.** `wirth-triage` already wrote `.agent/planner/mode` (`rework-refactor` /
   `rework-behavior` / `rework-api`) and routed izi to you. You **read** the mode and produce the matching delta.
 
@@ -50,7 +52,14 @@ Write a **run-state pointer** so downstream roles share one source of truth (the
 Write exactly (into the change folder, NOT `.agent/`):
 1. **Change statement + rationale** — one paragraph: what changes and *why* (the load-bearing reason).
 2. **Affected-modules table** — one row per touched module: `existing package path` · `existing io:` · nature of edit.
-3. **(behavior/api) Affected component scenarios** — which existing outcomes change / which new outcome is added.
+3. **(behavior/api) Affected component scenarios — must be discriminating.** List each changed scenario as
+   `scenario · input · output(current) · output(changed) · RED-reason`. For every row, **counterfactually
+   evaluate the asserted boundary value under both the current and the changed module** — the two outputs must
+   **differ**; that difference *is* the RED→GREEN. Equal outputs ⇒ the scenario is **degenerate** (a no-op
+   blind to the change, e.g. `100 C → "212"` at any precision): the existing test is **too insensitive**, so
+   the delta owes a **test-input rework** — a discriminating input (e.g. `0.01 C → 32.018`, current=`32.02` ≠
+   changed=`32.018`) — not a re-asserted literal. No affected scenario ships without both computed outputs:
+   cause→effect must be traceable on the data, **including the test itself**.
 4. **(api only) Spec-delta** — which operations/fields the contract must gain/change/remove (input for `@wirth-apidesigner`
    to *evolve* the existing frozen contract). You do NOT edit the spec yourself.
 
