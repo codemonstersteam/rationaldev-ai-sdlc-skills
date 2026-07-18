@@ -41,7 +41,9 @@ update() {
 # Режим $RATIONALDEV_UPDATE=auto|notify|off (дефолт notify); интервал $RATIONALDEV_UPDATE_DAYS (дефолт 1).
 # Вызывается на СТАРТЕ сессии (opencode-плагин/claude-хук), throttled — не на каждый ход.
 state_dir() { echo "${RATIONALDEV_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/rationaldev}"; }
-mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
+# mtime файла. GNU `stat -c %Y` СНАЧАЛА (на macOS падает чисто → BSD `stat -f %m`).
+# Обратный порядок ломается на Linux: GNU `stat -f` = статус ФС (не формат!) и «успешно» печатает мусор.
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
 
 autocheck() {
   mode="${RATIONALDEV_UPDATE:-notify}"; [ "$mode" = off ] && return 0
