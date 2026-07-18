@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 # Смоук `rationaldev update` (T3): ff-pull, up-to-date, pristine-abort. Локальный bare-remote, без сети.
 set -eu
+# CI хардит git file-transport (CVE-2022-39253) → clone/fetch локального bare-remote блокируется.
+# Смоук использует ТОЛЬКО локальные тест-репо → разрешаем file-протокол для всех git-вызовов (вкл. дочерний
+# git внутри `rationaldev`). Применяется лишь в процессе смоука; продакшн-`rationaldev` это не трогает.
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN="$REPO/rationaldev"
 pass=0; fail() { echo "FAIL: $1"; exit 1; }; ok() { pass=$((pass+1)); }
