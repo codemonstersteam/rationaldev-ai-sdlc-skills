@@ -247,25 +247,59 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
 - [ ] Сверить сквозные номера версий доков/скиллов (часть `v1.0`, observability `v2.0`, contract-tests `0.1/draft`) — версии скиллов/ролей теперь машиночитаемы в `skills/INDEX.json`
 - [ ] `docs/02_MEASUREMENT.md §2.4` — переименовать «Платформа данных / Аналитика-отчётность» → «Отчётность» (analytics как роль убран)
 
-### Self-updating harness distribution (dir-symlinks + `rationaldev update`) — как oh-my-zsh/flutter
+### Self-updating harness distribution — dir-symlinks + periodic auto-update (как oh-my-zsh/flutter channels)
 **Проблема:** `install.sh` линкует **пофайлово** → новые файлы харнеса (роли/валидаторы/конфиги,
 напр. `vcs-providers.json`, `git-hand.md`) **не долетают** в уже-установленные проекты без
 переустановки. Симптом ловили вживую 18-07: `git-hand`/`vcs-providers` не пропали в песочницу.
-**Модель oh-my-zsh/flutter:** канонический git-клон бандла в известном месте (`~/.rationaldev`
-или `$XDG_DATA_HOME/rationaldev`); проекты ссылаются только на него.
-- [ ] **P1 Линковать КАТАЛОГИ, не файлы** (ключевой сдвиг): `.opencode/agent` → `harness/agents/opencode`,
-  `.opencode/skills` → `skills/lib`, `harness/` → бандл `harness/`, `.opencode/plugins` →
-  `harness/enforcement/opencode`. Тогда `git pull` в бандле = мгновенное обновление всех проектов,
-  **включая новые файлы**, ноль переустановок. Проекции ролей закоммичены → `pull` их приносит,
-  генератор гонять не надо (кроме локальной смены `models.config.json`).
-- [ ] **P1 Команда `rationaldev update`** (как `omz update`/`flutter upgrade`):
-  `git -C ~/.rationaldev pull --ff-only`. Опц. авто-апдейт: чек на старте izi (`git fetch` +
-  сравнить `HEAD` vs `origin/main`), аналог `UPDATE_ZSH_DAYS`.
-- [ ] **P2 Компромисс (решить):** dir-symlink на `.opencode/agent` → нельзя подкинуть проект-локальную
-  роль в тот же каталог. Варианты: (а) агенты тоже dir-link (проект-локальные роли редки);
-  (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
-- _Остаётся локальным (правильно):_ `opencode.jsonc` (ключ+прокси), `models.config.json`,
-  `.agent/` run-state, продукт-код.
+**Модель oh-my-zsh/flutter:** канонический git-клон бандла в известном месте (`$RATIONALDEV_HOME`,
+дефолт `~/.rationaldev`); проекты ссылаются только на него; клон **потребляется read-only**
+(вся кастомизация — в локальных override ВНЕ клона, иначе `pull --ff-only` конфликтует).
+
+- [ ] **T1 · P1 — bootstrap канонического клона.** Установщик (`curl … | sh`, как oh-my-zsh) клонит бандл
+  в `$RATIONALDEV_HOME`, ставит dir-symlinks (T2). Один источник правды вместо произвольного dev-пути.
+  Сейчас `install.sh` предполагает бандл уже локально по случайному пути — bootstrap этого нет.
+- [ ] **T2 · P1 — линковать КАТАЛОГИ, не файлы** (ключевой сдвиг раздачи): `.opencode/agent` →
+  `harness/agents/opencode`, `.opencode/skills` → `skills/lib`, `harness/` → бандл `harness/`,
+  `.opencode/plugins` → `harness/enforcement/opencode`. Тогда `git pull` в бандле = мгновенное
+  обновление всех проектов, **включая новые файлы**, ноль переустановок. Проекции ролей закоммичены →
+  `pull` их приносит, генератор не нужен (при read-only-клоне `_shared`/`models.config` локально не правят).
+- [ ] **T3 · P1 — команда `rationaldev update`** (ручная, как `omz update`/`flutter upgrade`):
+  `git -C $RATIONALDEV_HOME pull --ff-only`. Инвариант pristine-клона: dirty/diverged → **abort + warn**,
+  никогда не клоббрить/rebase (в клоне нет локальных коммитов). Показать «updated X→Y, N commits».
+- [ ] **T4 · P1 — ПЕРИОДИЧЕСКИЙ авто-апдейт** (главное требование — «main продвинулся → подтянуть», flutter/omz-стиль):
+  - **Триггер:** на старте сессии/izi, **throttled** по метке `last-update-check` (дефолт-интервал `1 день`,
+    как `UPDATE_ZSH_DAYS`) — не на каждый вызов.
+  - **Режим (config):** `RATIONALDEV_UPDATE=auto|notify|off` — `auto` тихо `pull --ff-only`; `notify`
+    сообщает «N коммитов позади, запусти `rationaldev update`»; `off`. + `RATIONALDEV_UPDATE_DAYS=<n>`.
+  - **Детект «main обновился»:** `git fetch` + сравнить локальный `HEAD` vs `origin/<channel>` (behind → действие по режиму).
+  - **Каналы/пин (flutter channels):** `RATIONALDEV_CHANNEL=main|stable|<tag>` — можно закрепиться на релиз-теге,
+    не на «кровоточащем» main. Дефолт — `main`.
+  - **Per-runner триггер** (у раннеров разные точки входа — часть плана, легко упустить):
+    `opencode` → в init guardrail-плагина (он и так грузится каждую сессию) добавить throttled-чек;
+    `claude` → `SessionStart`-хук; `codex` → плагина нет → только `rationaldev update` вручную / из shell-профиля.
+  - **Безопасность:** `--ff-only`; offline/`git fetch` fail → тихо пропустить (offline-tolerant); **НИКОГДА
+    не тянуть mid-session** (симлинкнутые скиллы/роли не должны меняться под работающим агентом).
+  - **Как закрыть mid-session по-настоящему (иначе «только на старте» не спасает при N сессий с одним клоном
+    + окно рваной записи у in-place `pull`):** атомарный **immutable version store** (модель Nix/flutter):
+    апдейт материализует НОВУЮ версию `store/<sha>/` (worktree/archive) и **атомарно** перещёлкивает
+    `current -> store/<sha>` (`rename` атомарен). Сессия на старте **резолвит** `current` → конкретный
+    `store/<sha>` и симлинки проекта смотрят на этот **неизменяемый путь**, не на `current` → перещёлк под
+    работающей сессией её файлы не трогает; новая сессия берёт новый `current`. Конкурентность решена
+    по построению (каждая сессия держит свою версию; лок только на сам flip). GC версии — по refcount
+    (удаляется, когда её не держит ни одна активная сессия). _Дешёвая альтернатива, если сузить поверхность:_
+    роли+плагин раннер грузит в память на старте (уже иммунны) → mid-session меняются ТОЛЬКО on-demand скиллы →
+    **preload скиллов на старте (#43)** закрывает и их без store. **Атомарность апдейта (материализация+flip,
+    не in-place `pull`) нужна в ОБОИХ случаях** — даже старт-только-сессия попадает в окно полу-записи при in-place.
+- [ ] **T5 · P1 — граница локального override (консистентность, чинит дыру ff-pull).** Клон pristine →
+  всё, что проект/раннер кастомизируют, живёт ВНЕ клона: `opencode.jsonc` (ключ+прокси) уже вне;
+  **`models.config.json` СЕЙЧАС в клоне** (его пишет `configure-models` при установке) → при ff-pull
+  конфликт. Вынести раскладку тиров в локальный override (клон-дефолт + локальный merge), либо
+  документировать «не править в клоне». Без этого T3/T4 ломаются на первой же кастомизации моделей.
+- [ ] **T6 · P2 — компромисс dir-link агентов (решить):** dir-symlink на `.opencode/agent` → нельзя
+  подкинуть проект-локальную роль в тот же каталог. Варианты: (а) агенты тоже dir-link (проект-локальные
+  роли редки); (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
+- _Остаётся локальным (правильно, ВНЕ клона):_ `opencode.jsonc` (ключ+прокси), локальный `models.config` override (T5),
+  `.agent/` run-state, продукт-код. _Порядок:_ T2 (раздача) → T1/T5 (клон+override) → T3 (ручной update) → T4 (авто) → T6.
 
 ### Детерминированный генератор тикетов по дизайну (ticketer)
 Причина: GLM-ticketer игнорирует прозу декомпозиции и схлопывает слайс в один монстр-тикет
