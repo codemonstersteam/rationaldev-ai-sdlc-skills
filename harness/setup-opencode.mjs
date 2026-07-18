@@ -128,8 +128,9 @@ function ensureGitignore(dir, patterns) {
   appendFileSync(gi, `${pre}\n# rationaldev harness — симлинки на клон; git-snapshot opencode их не трогает\n${missing.join("\n")}\n`)
   return true
 }
-if (ensureGitignore(projectDir, [".opencode/", "harness", "AGENTS.md", "AGENTS.harness.md"]))
-  notes.push("✓ .gitignore: harness-симлинки исключены (фикс висяка opencode-snapshot)")
+// .agent/ — реальный run-state каталог (decisions.log/gates/planner), не симлинк; тоже игнорим (не коммитить + snapshot не трекает).
+if (ensureGitignore(projectDir, [".opencode/", "harness", "AGENTS.md", "AGENTS.harness.md", ".agent/"]))
+  notes.push("✓ .gitignore: harness-симлинки + .agent/ run-state исключены (фикс висяка opencode-snapshot)")
 
 if (rl) rl.close()
 console.log(notes.map((n) => "  " + n).join("\n"))
