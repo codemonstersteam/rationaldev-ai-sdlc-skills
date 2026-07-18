@@ -153,6 +153,7 @@ returns `agent-ready` in one pass if truly measurable, but **you never skip the 
 | verdict token | You do |
 |---|---|
 | `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages |
+| `route=foreign` | **STOP. Tell the operator: "FOREIGN repo (built outside the harness). The foreign lane (survey → conform-tests → verification-command DoD) is being wired — backlog `route-foreign-lane`, T2–T8 — not yet drivable." + what the pipeline will do.** Launch nothing (mode marker is set, but the lane's stages/gate do not exist yet). |
 | `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) |
 | `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
 | `route=rework-refactor` | run the **REWORK path §refactor** (below) |
