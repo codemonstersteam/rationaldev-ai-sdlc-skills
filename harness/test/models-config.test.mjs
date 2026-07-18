@@ -4,7 +4,38 @@ import assert from "node:assert/strict"
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { mergeModelsConfig, loadModelsConfig } from "../lib/models-config.mjs"
+import { mergeModelsConfig, loadModelsConfig, deriveTiersFromProvider } from "../lib/models-config.mjs"
+
+const customProvider = (id, models) => ({ provider: { [id]: { options: { baseURL: "http://x" }, models } } })
+
+test("deriveTiersFromProvider: единственный кастомный провайдер → тиры по name-хинту", () => {
+  const g = customProvider("llm-platform", { frontier: { limit: {} }, flash: { limit: {} }, chat: { limit: {} } })
+  assert.deepEqual(deriveTiersFromProvider(g), { provider: "llm-platform", large: "llm-platform/frontier", small: "llm-platform/flash" })
+})
+
+test("deriveTiersFromProvider: нет large/small-хинтов → фолбэк первая/последняя", () => {
+  const g = customProvider("p", { modelA: { limit: {} }, modelB: { limit: {} } })
+  assert.deepEqual(deriveTiersFromProvider(g), { provider: "p", large: "p/modelA", small: "p/modelB" })
+})
+
+test("deriveTiersFromProvider: одна модель → large=small", () => {
+  const g = customProvider("p", { only: { limit: {} } })
+  assert.deepEqual(deriveTiersFromProvider(g), { provider: "p", large: "p/only", small: "p/only" })
+})
+
+test("deriveTiersFromProvider: >1 кастомных провайдеров → null (неоднозначно, не угадываем)", () => {
+  const g = { provider: { a: { options: { baseURL: "u" }, models: { m: {} } }, b: { options: { baseURL: "u" }, models: { m: {} } } } }
+  assert.equal(deriveTiersFromProvider(g), null)
+})
+
+test("deriveTiersFromProvider: registry-провайдер (без baseURL) не деривится → null", () => {
+  assert.equal(deriveTiersFromProvider({ provider: { openrouter: { options: { apiKey: "k" }, models: { x: {} } } } }), null)
+})
+
+test("deriveTiersFromProvider: провайдер без объявленных моделей → null", () => {
+  assert.equal(deriveTiersFromProvider({ provider: { p: { options: { baseURL: "u" } } } }), null)
+  assert.equal(deriveTiersFromProvider({}), null)
+})
 
 test("mergeModelsConfig: override выигрывает на листьях, объекты сливаются", () => {
   const base = { opencode: { tiers: { large: "GLM", medium: "Qwen", small: "Qwen" } }, watchdog: { chunkTimeout: 90000 } }

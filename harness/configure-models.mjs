@@ -13,7 +13,7 @@ import { createInterface } from "node:readline"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { homedir } from "node:os"
-import { loadModelsConfig } from "./lib/models-config.mjs"
+import { loadModelsConfig, deriveTiersFromProvider } from "./lib/models-config.mjs"
 import { validateModelBinding } from "./lib/validate-model-binding.mjs"
 
 // Global opencode-конфиг (провайдеры) — для валидации связки тир→модель→провайдер.
@@ -48,7 +48,28 @@ const cfg = loadModelsConfig(ROOT)
 if (!cfg[runner]) cfg[runner] = { tiers: {}, roles: {} }
 if (!cfg[runner].tiers) cfg[runner].tiers = {}
 
-// Не интерактивно (нет TTY) — молча выходим, конфиг как есть.
+// #2+#3 (оба режима, ДО TTY-выхода): не молчать при висячей связке. Если тиры/роли не резолвятся к
+// global-провайдеру И его можно однозначно вывести (единственный кастомный провайдер) — ДЕРИВИМ (клон-дефолт
+// openrouter/* не доедет до проекций при чужом провайдере). Неоднозначно — ГРОМКОЕ предупреждение, не молча.
+if (runner === "opencode") {
+  const g = loadGlobal()
+  const cur = { tiers: cfg.opencode.tiers, roles: cfg.opencode.roles || {} }
+  if (!validateModelBinding(cur, g.cfg).ok) {
+    const d = deriveTiersFromProvider(g.cfg)
+    if (d) {
+      cfg.opencode.tiers = { large: d.large, medium: d.small, small: d.small }
+      for (const r of Object.keys(cfg.opencode.roles || {})) cfg.opencode.roles[r] = d.large  // роль-оверрайды были на large-модели
+      mkdirSync(dirname(CONFIG), { recursive: true })
+      writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + "\n")
+      console.log(`  ✓ модели тиров выведены из провайдера '${d.provider}' (клон-дефолт не подходил): large=${d.large} · small=${d.small} → ${OVERRIDE ? "override" : "models.config.json"}`)
+    } else {
+      console.error(`  ⚠ модели тиров ссылаются на провайдера, которого НЕТ в global (~/.config/opencode) — opencode-агенты не запустятся.`)
+      console.error(`    Авто-вывод невозможен (0 или >1 кастомных провайдеров с моделями). Настрой провайдера (setup-opencode) или запусти configure-models интерактивно.`)
+    }
+  }
+}
+
+// Не интерактивно (нет TTY) — дерив/предупреждение выше уже сделаны; тихо выходим (без диалога).
 if (!process.stdin.isTTY) process.exit(0)
 
 const tiers = cfg[runner].tiers
@@ -100,6 +121,7 @@ for (;;) {
 rl.close()
 
 cfg[runner].tiers = { large, medium: small, small }   // medium = small (2-тира-модель)
+mkdirSync(dirname(CONFIG), { recursive: true })
 writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + "\n")
 
 const show = (v) => (v ? v : "(наследует модель пользователя)")
