@@ -63,9 +63,27 @@ autocheck() {
   esac
 }
 
+# --- install: подключить репо к каноническому клону (dir-symlinks через install.sh) --------
+# `rationaldev install <path-to-repo> [claude|opencode|codex]` — раннер авто-детектится по .claude/.opencode.
+install_repo() {
+  target="${1:-}"
+  [ -n "$target" ] || { echo "usage: rationaldev install <path-to-repo> [claude|opencode|codex]"; exit 1; }
+  [ -d "$target" ] || { echo "rationaldev: нет каталога '$target'"; exit 1; }
+  [ -f "$HOME_DIR/install.sh" ] || { echo "rationaldev: $HOME_DIR/install.sh не найден — сначала bootstrap (curl … | sh)"; exit 1; }
+  runner="${2:-}"
+  if [ -z "$runner" ]; then
+    if [ -d "$target/.claude" ]; then runner=claude
+    elif [ -d "$target/.opencode" ]; then runner=opencode
+    else runner=opencode; fi   # дефолт
+  fi
+  echo "rationaldev: подключаю $target ($runner) к клону $HOME_DIR"
+  sh "$HOME_DIR/install.sh" "$runner" "$target" --hard --no-input
+}
+
 case "${1:-help}" in
   update)              update ;;
   autocheck)           autocheck ;;
-  help|-h|--help|"")   echo "usage: rationaldev <update|autocheck>   # клон $HOME_DIR, канал $CHANNEL, режим ${RATIONALDEV_UPDATE:-notify}" ;;
-  *)                   echo "rationaldev: неизвестная команда '$1' (есть: update, autocheck)"; exit 1 ;;
+  install)             install_repo "${2:-}" "${3:-}" ;;
+  help|-h|--help|"")   echo "usage: rationaldev <install <path> [runner] | update | autocheck>   # клон $HOME_DIR, канал $CHANNEL" ;;
+  *)                   echo "rationaldev: неизвестная команда '$1' (есть: install, update, autocheck)"; exit 1 ;;
 esac
