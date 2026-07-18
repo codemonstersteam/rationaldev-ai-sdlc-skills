@@ -25,6 +25,7 @@
 | — | **template-agent-instrument** (шаблон = инструмент агента: команды тестов + карта структуры в корне) | 🟡 P1 | ⏳ тикет; шаблон-репо | [template-agent-instrument.md](./template-agent-instrument.md) |
 | — | **domain-context-adr-layout** (bounded-context: CONTEXT-MAP + per-slice CONTEXT.md/ADR; слайс=контекст) | 🟡 P1 | ✅ **реализован** — lib-скилл `domain-modeling` (Ф0) + intake/slicer/documentation wired (Ф1–3) + `validate-context-map.mjs` мягкий гейт (Ф4); co-location B, linger ADR lean; 79 тестов | [domain-context-adr-layout.md](./domain-context-adr-layout.md) |
 | — | **slice-aligned-code-layout** (раскладка кода по срезам `internal/<slug>/` — принцип, ВСЕГДА) | 🔴 P0 | ✅ **реализован** — канон `internal/<slug>/`; правки 7 скиллов (карта протечек закрыта) + `validate-layout.mjs` (paths+declarations, 14 тестов); shift-left в 3 рунга (slicer/moduledesigner/ticketer) + gate у mills | [slice-aligned-code-layout.md](./slice-aligned-code-layout.md) |
+| — | **route-foreign-lane** (4-й вес конвейера для ЧУЖИХ репо: provenance-ось, conform-не-impose, репо-локальная `docs/design/_harness/`) | 🔴 P0 | ⏳ эпик оформлен (T1–T8, по образцу chore-lane); критика `harnes-imp.md` учтена; ждёт реализации | [route-foreign-lane.md](./route-foreign-lane.md) |
 
 ## Что дальше (порядок)
 
