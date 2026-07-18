@@ -41,7 +41,28 @@ has **no target shape** (it is neither a new service nor a slice of one) and nee
 Rule of thumb: if the deliverable is a config/build/doc file and the program's black-box behaviour is unchanged,
 it is a chore. When genuinely ambiguous (a "config" that actually changes behaviour) → **not** a chore; use Axis 1.
 
-## Axis 1 — greenfield vs rework (only if Axis 0 said "code")
+## Axis 0.5 — provenance: harness-native vs FOREIGN (ask right after chore)
+The greenfield/rework/chore lanes all **assume the target was built by this harness** — it carries (or will
+carry) a harness design package (`docs/design/<slice>/` with `PLAN.md` + module-tree/contracts). Before splitting
+greenfield vs rework, ask: **was this repo built by the harness at all?**
+
+A target is **foreign** when BOTH hold (you may `glob`/`ls`):
+- an **existing implementation is present** — source plus a build/test manifest of some stack
+  (`build.gradle`/`pom.xml`/`package.json`/`pyproject.toml`/`Cargo.toml`/… + a `src`/`test` tree), AND
+- **no harness design package** exists (`docs/design/*/PLAN.md` + module-tree/contracts absent) — the repo's
+  test/build conventions are **its own**, not the harness's (this is exactly change-intake's out-of-scope STOP).
+
+- **foreign** → emit `route=foreign`, write `foreign` to the mode marker, and STOP classifying (do NOT pick
+  greenfield/rework/level). The foreign lane **discovers** the repo's paradigm (`@surveyor` →
+  `docs/design/_harness/`) instead of imposing the harness contract/Gherkin — see
+  [`docs/features/route-foreign-lane.md`](../../../docs/features/route-foreign-lane.md).
+- **harness-native** → fall through to Axis 1.
+
+Distinguish carefully: **existing foreign code + no harness package = foreign** (NOT greenfield — code already
+exists; NOT rework — no harness package). **Nothing exists yet = greenfield.** **Harness design package present
+= rework.**
+
+## Axis 1 — greenfield vs rework (only if Axis 0/0.5 fell through — harness-native code)
 Does the task **build new code** or **change existing code**? Look at the BRD *and* the repo (you may `glob`):
 a target with an **existing harness design package** (`docs/design/<slice>/` + code) that the task *modifies*
 = **rework**; building a service/CLI that does not yet exist = **greenfield**.
@@ -62,14 +83,17 @@ Unclear / no coherent requirement, or ambiguous whether the code already exists 
 
 ## Write the mode marker (MUST, before returning)
 You **MUST** write `.agent/planner/mode` with exactly one token (creates `.agent/planner/` if absent):
-`chore` · `greenfield` · `rework-refactor` · `rework-behavior` · `rework-api`. (For `unclear`, write nothing —
-izi returns to the operator.) The validators and the `--hard` guardrail read this marker to self-adjust (under
-`chore` the guardrail requires `CHORE-PLAN.md` instead of full plan-review); do it before your verdict line.
+`chore` · `foreign` · `greenfield` · `rework-refactor` · `rework-behavior` · `rework-api`. (For `unclear`, write
+nothing — izi returns to the operator.) The validators and the `--hard` guardrail read this marker to self-adjust
+(under `chore` the guardrail requires `CHORE-PLAN.md` instead of full plan-review; the `foreign` lane wiring —
+`isForeignMode` gate, `@surveyor`, `conform-tests` — lands in backlog `route-foreign-lane` T2–T8); do it before
+your verdict line.
 
 ## Return contract (izi routes ONLY by this line)
 You **MUST** return **one line**:
 ```
 wirth-triage → route=chore · <basis>
+wirth-triage → route=foreign · <basis: existing <stack> repo, no harness design package>
 wirth-triage → route=greenfield · level=modular · <basis>
 wirth-triage → route=greenfield · level=trivial · <basis>
 wirth-triage → route=rework-refactor · <basis>
