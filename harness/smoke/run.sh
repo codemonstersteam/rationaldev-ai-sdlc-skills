@@ -25,6 +25,7 @@ NROLES="$(ls "$REPO/harness/agents/_shared"/*.md 2>/dev/null | wc -l | tr -d ' '
 node "$REPO/harness/gen-skill-index.mjs" --check >/dev/null || fail "skill-index: устарел или битая ссылка роль→скилл"; ok
 
 # юнит-тесты чистых модулей харнеса (frontmatter, ядра валидаторов, resolveModel) — dogfood
+export RATIONALDEV_UPDATE=off   # смоук не должен дёргать self-update autocheck (сеть/реальный клон)
 node --test "$REPO"/harness/test/*.test.mjs >/dev/null 2>&1 || fail "harness unit-тесты (node --test) упали"; ok
 
 # --- Claude ---
@@ -114,4 +115,7 @@ grep -q "via=claude-hook" "$D/.agent/decisions.log" || fail "log-decision без
 # Раздача моделей по ролям (тир + оверрайд + наследование), самовосстановление конфига
 node "$REPO/component-tests/model-distribution/run.mjs" >/dev/null || fail "model-distribution: роли получили неверные модели"; ok
 
-echo "PASS $pass — harness smoke (установка + enforcement + модели)"
+# self-update: `rationaldev update` (T3 — ff-pull, up-to-date, pristine-abort)
+__ro="$(sh "$REPO/harness/smoke/rationaldev.smoke.sh" 2>&1)" || { printf '%s\n' "$__ro"; fail "rationaldev update smoke упал"; }; ok
+
+echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update)"

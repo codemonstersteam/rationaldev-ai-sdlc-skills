@@ -1,6 +1,7 @@
 // Исполняемый смоук OpenCode-плагина enforcement (--hard).
 // Запуск: node harness/enforcement/opencode/guardrail.smoke.ts  (Node >= 23)
 
+process.env.RATIONALDEV_UPDATE = "off"   // не дёргать self-update autocheck из плагина в тестах (сетевой side-effect)
 import assert from "node:assert/strict"
 import { mkdtemp, writeFile, mkdir, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"

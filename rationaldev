@@ -1,0 +1,71 @@
+#!/usr/bin/env sh
+# rationaldev — управление self-updating харнесом (как omz/flutter).
+#   rationaldev update    # git pull --ff-only канонического клона; проекты видят обновление через dir-symlinks (T2)
+#
+# Канонический клон — $RATIONALDEV_HOME (дефолт ~/.rationaldev); если скрипт лежит В клоне, берём его корень.
+# Канал — $RATIONALDEV_CHANNEL (дефолт main): можно закрепиться на релиз-теге/ветке (flutter channels).
+# ИНВАРИАНТ pristine-клона: клон потребляется read-only; локальные правки → апдейт отменяется (не клоббрим).
+set -eu
+
+SELF="$(cd "$(dirname "$0")" && pwd)"
+# Приоритет: явный $RATIONALDEV_HOME > клон, в котором лежит скрипт > дефолт ~/.rationaldev.
+if [ -n "${RATIONALDEV_HOME:-}" ]; then HOME_DIR="$RATIONALDEV_HOME"
+elif [ -d "$SELF/.git" ]; then HOME_DIR="$SELF"
+else HOME_DIR="$HOME/.rationaldev"; fi
+CHANNEL="${RATIONALDEV_CHANNEL:-main}"
+
+update() {
+  [ -d "$HOME_DIR/.git" ] || { echo "rationaldev: нет git-клона в $HOME_DIR (сначала bootstrap — см. backlog T1)"; exit 1; }
+  # pristine: любые локальные правки (в т.ч. незакоммиченный models.config) → abort, чтобы ff-pull не конфликтовал
+  if [ -n "$(git -C "$HOME_DIR" status --porcelain)" ]; then
+    echo "rationaldev: клон $HOME_DIR не чист — апдейт отменён (pristine-инвариант)."
+    echo "  верни клон в чистое состояние; кастомизацию держи в локальном override ВНЕ клона (models.config → T5)."
+    exit 1
+  fi
+  before="$(git -C "$HOME_DIR" rev-parse --short HEAD)"
+  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" || { echo "rationaldev: git fetch не удался (offline?) — пропуск."; exit 0; }
+  if ! git -C "$HOME_DIR" merge --ff-only "origin/$CHANNEL" >/dev/null 2>&1; then
+    echo "rationaldev: не fast-forward (клон разошёлся с origin/$CHANNEL) — апдейт отменён (pristine-инвариант)."; exit 1
+  fi
+  after="$(git -C "$HOME_DIR" rev-parse --short HEAD)"
+  if [ "$before" = "$after" ]; then
+    echo "rationaldev: уже актуально ($after, канал $CHANNEL)."
+  else
+    n="$(git -C "$HOME_DIR" rev-list --count "$before..$after" 2>/dev/null || echo '?')"
+    echo "rationaldev: обновлено $before → $after ($n коммитов, канал $CHANNEL). Проекты подхватят через dir-symlinks."
+  fi
+}
+
+# --- T4: периодический авто-апдейт (flutter/omz-стиль) ------------------------
+# Состояние (метка последней проверки) — ВНЕ клона (клон pristine): $RATIONALDEV_STATE.
+# Режим $RATIONALDEV_UPDATE=auto|notify|off (дефолт notify); интервал $RATIONALDEV_UPDATE_DAYS (дефолт 1).
+# Вызывается на СТАРТЕ сессии (opencode-плагин/claude-хук), throttled — не на каждый ход.
+state_dir() { echo "${RATIONALDEV_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/rationaldev}"; }
+# mtime файла. GNU `stat -c %Y` СНАЧАЛА (на macOS падает чисто → BSD `stat -f %m`).
+# Обратный порядок ломается на Linux: GNU `stat -f` = статус ФС (не формат!) и «успешно» печатает мусор.
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
+
+autocheck() {
+  mode="${RATIONALDEV_UPDATE:-notify}"; [ "$mode" = off ] && return 0
+  [ -d "$HOME_DIR/.git" ] || return 0
+  days="${RATIONALDEV_UPDATE_DAYS:-1}"; sd="$(state_dir)"; stamp="$sd/last-update-check"
+  if [ -f "$stamp" ]; then
+    age=$(( $(date +%s) - $(mtime "$stamp") ))
+    [ "$age" -lt $(( days * 86400 )) ] && return 0     # throttle: рано проверять
+  fi
+  mkdir -p "$sd"; : > "$stamp"                          # отметили проверку до fetch (offline не долбит)
+  git -C "$HOME_DIR" fetch --quiet origin "$CHANNEL" 2>/dev/null || return 0   # offline → тихо
+  behind="$(git -C "$HOME_DIR" rev-list --count "HEAD..origin/$CHANNEL" 2>/dev/null || echo 0)"
+  [ "${behind:-0}" -gt 0 ] || return 0
+  case "$mode" in
+    auto)   echo "rationaldev: auto-update ($behind коммит(ов))"; update ;;   # ff-pull, pristine-guard внутри
+    notify) echo "rationaldev: доступно обновление — $behind коммит(ов) в origin/$CHANNEL. Запусти: rationaldev update" ;;
+  esac
+}
+
+case "${1:-help}" in
+  update)              update ;;
+  autocheck)           autocheck ;;
+  help|-h|--help|"")   echo "usage: rationaldev <update|autocheck>   # клон $HOME_DIR, канал $CHANNEL, режим ${RATIONALDEV_UPDATE:-notify}" ;;
+  *)                   echo "rationaldev: неизвестная команда '$1' (есть: update, autocheck)"; exit 1 ;;
+esac

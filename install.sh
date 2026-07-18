@@ -42,21 +42,22 @@ else
 fi
 
 # --- хелперы ---
-link_dir_skills() {  # $1 = каталог назначения скиллов
-  dst="$1"; mkdir -p "$dst/reference"
-  for item in "$LIB"/*; do
-    name="$(basename "$item")"
-    if [ -d "$item" ] && [ -f "$item/SKILL.md" ]; then
-      ln -sfn "$item" "$dst/$name"
-    elif [ -f "$item" ]; then
-      ln -sfn "$item" "$dst/reference/$name"
-    fi
-  done
+# Линкуем КАТАЛОГИ, не файлы (self-update T2): dst = симлинк на каталог-источник в бандле.
+# Тогда `git pull` в бандле = мгновенное обновление проекта, ВКЛЮЧАЯ новые файлы (роли/валидаторы/
+# конфиги) — ноль переустановок. Старый пофайловый install оставлял реальный каталог → сносим его.
+link_dir() {  # $1 = каталог-источник (бандл), $2 = путь-назначения (симлинк)
+  src="$1"; dst="$2"
+  # ЗАЩИТА: install в сам бандл (src и dst — один физический путь) → НИЧЕГО не делаем (иначе rm -rf снёс бы
+  # реальный harness/ и создал висячий self-симлинк). Сравниваем по realpath; несуществующий dst → не равен.
+  rp="$(cd "$dst" 2>/dev/null && pwd -P || true)"
+  [ -n "$rp" ] && [ "$rp" = "$(cd "$src" 2>/dev/null && pwd -P || true)" ] && return 0
+  mkdir -p "$(dirname "$dst")"
+  [ -L "$dst" ] && rm -f "$dst"          # старый симлинк — переcreateем
+  [ -d "$dst" ] && rm -rf "$dst"         # старый РЕАЛЬНЫЙ каталог (пофайловый install) — сносим
+  ln -sfn "$src" "$dst"
 }
-link_agents() {  # $1 = каталог назначения, $2 = каталог-источник проекций
-  dst="$1"; src="$2"; mkdir -p "$dst"
-  for f in "$src"/*.md; do ln -sfn "$f" "$dst/$(basename "$f")"; done
-}
+link_dir_skills() { link_dir "$LIB" "$1"; }                 # $LIB=skills/lib (только <name>/SKILL.md, без flat)
+link_agents() { link_dir "$2" "$1"; }                       # $1=dst, $2=src каталог проекций (сигнатура сохранена)
 count() { ls "$1" 2>/dev/null | wc -l | tr -d ' '; }
 place_instruction() {  # $1 = источник, $2 = путь назначения; не затирает существующий
   src="$1"; dst="$2"; mkdir -p "$(dirname "$dst")"
@@ -101,18 +102,13 @@ case "$RUNNER" in
   *) echo "unknown runner: $RUNNER (claude|codex|opencode)"; exit 1 ;;
 esac
 
-# --- валидаторы харнеса в проект ---
-# Роли (wirth-slicer/moduledesigner) и mills зовут `node harness/validate-*.mjs` из cwd проекта
-# как antecedent-проверку/blocker. Симлинкуем в $PROJ/harness/; их ./lib и ./frontmatter
-# резолвятся Node по realpath из бандла (симлинков хватает). Только project-scope (нужен cwd проекта).
+# --- валидаторы/конфиги харнеса в проект (T2: dir-symlink на ВЕСЬ harness/) ---
+# Роли (wirth-slicer/moduledesigner) и mills зовут `node harness/validate-*.mjs` из cwd проекта; роли
+# читают harness/{target-profiles,vcs-providers}.json. Один dir-symlink `$PROJ/harness → $BUNDLE/harness`
+# отдаёт всё и — главное — НОВЫЕ файлы (валидаторы/конфиги) прилетают с `git pull` без переустановки
+# (баг 18-07 «vcs-providers не долетел» этим и закрыт). Только project-scope (нужен cwd проекта).
 if [ "$SCOPE" != global ]; then
-  mkdir -p "$PROJ/harness"
-  # ВСЕ validate-*.mjs (glob, не хардкод-список — иначе новые валидаторы не долетают в песочницу),
-  # + scaffold.sh. Их ./lib и ./frontmatter резолвятся Node по realpath из бандла (симлинков хватает).
-  # + role-читаемые конфиги (target-profiles.json — профили; vcs-providers.json — порт @git-hand, без него STOP).
-  for v in "$BUNDLE"/harness/validate-*.mjs "$BUNDLE"/harness/progress.mjs "$BUNDLE"/harness/scaffold.sh "$BUNDLE"/harness/target-profiles.json "$BUNDLE"/harness/vcs-providers.json; do
-    [ -e "$v" ] && ln -sfn "$v" "$PROJ/harness/$(basename "$v")"
-  done
+  link_dir "$BUNDLE/harness" "$PROJ/harness"
 fi
 
 place_instruction "$INSTR_SRC" "$INSTR_DST"
@@ -143,6 +139,8 @@ if [ "$HARD" = yes ]; then
       ln -sfn "$BUNDLE/harness/enforcement/shared.mjs" "$cbase/shared.mjs"
       # JSON-строки: кавычки вокруг пути ДОЛЖНЫ быть экранированы (\") — иначе settings.json битый
       gc="node \\\"$cbase/hooks/gate-check.mjs\\\""; gb="node \\\"$cbase/hooks/gate-bash.mjs\\\""; ga="node \\\"$cbase/hooks/gate-approve.mjs\\\""; ld="node \\\"$cbase/hooks/log-decision.mjs\\\""
+      # self-update T4: SessionStart → throttled autocheck канонического клона (best-effort; RATIONALDEV_UPDATE=off отключает)
+      au="sh \\\"$BUNDLE/rationaldev\\\" autocheck"
       # permissions: ПОЛНЫЙ доступ субагентам, пока работают (defaultMode bypassPermissions — без промптов
       # ни на bash, ни на правки: столл-на-промпте убивает автономный прогон). allow-лист оставлен как
       # безопасная деградация, если режим позже понизят. Хуки (PreToolUse) имеют ПРИОРИТЕТ и работают
@@ -165,7 +163,8 @@ if [ "$HARD" = yes ]; then
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
     ],
     "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
-    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ],
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "'"$au"'" } ] } ]
   }
 }'
       if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then
