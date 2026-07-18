@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { readdirSync } from "node:fs"
-import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR, isForeignMode, hasForeignPlan, FOREIGN_DIR } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -72,6 +72,17 @@ try {
     if (!hasChorePlan(choreDirsFn, existsFn) || !existsSync(gate1)) {
       block(
         "Gate #1 (chore) не пройден: нужны durable план docs/chores/<slug>/CHORE-PLAN.md и .agent/gates/gate1.approved " +
+        "перед делегированием реализации (" + normRole(role) + ").",
+      )
+    }
+    process.exit(0)
+  }
+  if (isForeignMode(mode)) {
+    const existsFn = (rel) => existsSync(join(root, rel))
+    const foreignDirsFn = () => { try { return readdirSync(join(root, FOREIGN_DIR)) } catch { return [] } }
+    if (!hasForeignPlan(foreignDirsFn, existsFn) || !existsSync(gate1)) {
+      block(
+        "Gate #1 (foreign) не пройден: нужны durable план docs/foreign/<slug>/FOREIGN-PLAN.md и .agent/gates/gate1.approved " +
         "перед делегированием реализации (" + normRole(role) + ").",
       )
     }

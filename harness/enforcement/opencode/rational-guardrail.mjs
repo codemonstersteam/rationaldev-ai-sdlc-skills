@@ -53,9 +53,17 @@ function hasChorePlan(choreDirsFn, existsFn) {
   for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
   return false
 }
-function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
+const FOREIGN_DIR = "docs/foreign"
+const FOREIGN_PLAN_FILE = "FOREIGN-PLAN.md"
+const isForeignMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "foreign"
+function hasForeignPlan(foreignDirsFn, existsFn) {
+  for (const c of foreignDirsFn() || []) if (existsFn(FOREIGN_DIR + "/" + c + "/" + FOREIGN_PLAN_FILE)) return true
+  return false
+}
+function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => [], foreignDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
   if (hasChorePlan(choreDirsFn, existsFn)) return true
+  if (hasForeignPlan(foreignDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }
@@ -262,13 +270,14 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
   const existsFn = (rel) => existsSync(join(root, rel))
   const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
   const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
+  const foreignDirsFn = () => { try { return readdirSync(join(root, FOREIGN_DIR)) } catch { return [] } }
 
   // Единый акцепт Gate #1 — из ДВУХ каналов: печатный токен в чате (chat.message) ИЛИ выбор пункта
   // нативного меню opencode (event question.replied). Одна идемпотентная запись маркера, одна защита
   // (план собран + маркер ещё не стоит). Оператор — только через плагин; izi маркер ставить НЕ может.
   const tryOperatorApproval = async (text, source) => {
     if (!isOperatorApproval(text)) return
-    if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) return
+    if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn, foreignDirsFn)) return
     if (await exists(gate1)) return
     await mkdir(join(agentDir, "gates"), { recursive: true })
     await writeFile(gate1, gateMarkerContent({
@@ -363,13 +372,22 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       }
 
       if (!isImplementer(role)) return
-      // Gate #1: под mode=chore — durable CHORE-PLAN.md; иначе plan-review.md. + апрув оператора.
+      // Gate #1: под mode=chore — durable CHORE-PLAN.md; под mode=foreign — durable FOREIGN-PLAN.md;
+      // иначе plan-review.md. + апрув оператора.
       let mode = ""
       try { mode = await readFile(join(agentDir, "planner", "mode"), "utf8") } catch { /* нет маркера */ }
       if (isChoreMode(mode)) {
         if (!hasChorePlan(choreDirsFn, existsFn) || !(await exists(gate1)))
           throw new Error(
             "[rational-guardrail] Gate #1 (chore) не пройден: требуется durable план docs/chores/<slug>/CHORE-PLAN.md " +
+            "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
+          )
+        return
+      }
+      if (isForeignMode(mode)) {
+        if (!hasForeignPlan(foreignDirsFn, existsFn) || !(await exists(gate1)))
+          throw new Error(
+            "[rational-guardrail] Gate #1 (foreign) не пройден: требуется durable план docs/foreign/<slug>/FOREIGN-PLAN.md " +
             "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
           )
         return

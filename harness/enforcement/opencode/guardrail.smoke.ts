@@ -74,6 +74,24 @@ async function run() {
   await chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
   await rm(cdir, { recursive: true, force: true })
 
+  // C3. mode=foreign (route-foreign-lane): implementer требует DURABLE docs/foreign/<slug>/FOREIGN-PLAN.md
+  // (не plan-review.md — чужой репо, mills-полного ревью нет). Параллель chore.
+  const fdir = await mkdtemp(join(tmpdir(), "rg-foreign-"))
+  const fhooks: any = await RationalGuardrail({ directory: fdir, worktree: fdir } as any)
+  await mkdir(join(fdir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(fdir, ".agent", "planner", "brd.md"), "# BRD\n")
+  await writeFile(join(fdir, ".agent", "planner", "mode"), "foreign")
+  await mkdir(join(fdir, ".agent", "gates"), { recursive: true })
+  await writeFile(join(fdir, ".agent", "gates", "gate1.approved"), "")
+  await assert.rejects(
+    () => fhooks["tool.execute.before"](task("hughes-rework"), { args: { subagent: "hughes-rework" } }),
+    /FOREIGN-PLAN/,
+  ); pass++
+  await mkdir(join(fdir, "docs", "foreign", "001-extend-2027"), { recursive: true })
+  await writeFile(join(fdir, "docs", "foreign", "001-extend-2027", "FOREIGN-PLAN.md"), "# plan\n")
+  await fhooks["tool.execute.before"](task("hughes-rework"), { args: { subagent: "hughes-rework" } }); pass++
+  await rm(fdir, { recursive: true, force: true })
+
   // D. decisions.log пишется на делегирование
   await hooks["tool.execute.after"](task("wirth-planner"), { title: "design slice 01" })
   const log = await readFile(join(dir, ".agent", "decisions.log"), "utf8")
@@ -246,7 +264,7 @@ async function run() {
   await rm(chatdir, { recursive: true, force: true })
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/40 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/42 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })
