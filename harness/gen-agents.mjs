@@ -31,7 +31,7 @@ const resolveModel = (runner, role, tier) => resolveModelCore(MODELS, runner, ro
 const resolveTemp = (runner, role, tier) => resolveTempCore(MODELS, runner, role, tier)
 
 // Порядок ролей: точка входа (orchestrator) → пайплайн. Он же — порядок блоков в AGENTS.codex.md.
-const ORDER = ["izi", "gilb", "wirth-triage", "change-intake", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner", "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills", "scaffolder", "hughes", "hughes-rework", "wirth-tester", "linger", "fagan", "git-hand", "michtom"]
+const ORDER = ["izi", "gilb", "wirth-triage", "surveyor", "change-intake", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner", "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills", "scaffolder", "hughes", "hughes-rework", "wirth-tester", "linger", "fagan", "git-hand", "michtom"]
 
 function loadRole(role) {
   const text = readFileSync(join(SHARED, `${role}.md`), "utf8")

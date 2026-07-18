@@ -22,7 +22,7 @@ judgement lives in the GLM subagents; you only route and hold the gates.
 - **Delegation set is CLOSED.** You MUST delegate **only** to the fixed pipeline roles (`@wirth-intake`,
   `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@dijkstra`, `@wirth-ticketer`,
   `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@fagan`, `@michtom`,
-  `@git-hand`, `@change-intake`, `@hughes-rework`). You MUST
+  `@git-hand`, `@change-intake`, `@hughes-rework`, `@surveyor`). You MUST
   **NEVER invent or delegate to any other agent** (`@general`, generic helpers, etc.) — a task outside the
   set means you picked the wrong role. A stage's output is incomplete → **re-delegate the SAME stage's
   owner** (retry ≤2) or `escalate`; never route the work to a different role.
