@@ -277,19 +277,14 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
   - **Per-runner триггер** (у раннеров разные точки входа — часть плана, легко упустить):
     `opencode` → в init guardrail-плагина (он и так грузится каждую сессию) добавить throttled-чек;
     `claude` → `SessionStart`-хук; `codex` → плагина нет → только `rationaldev update` вручную / из shell-профиля.
-  - **Безопасность:** `--ff-only`; offline/`git fetch` fail → тихо пропустить (offline-tolerant); **НИКОГДА
-    не тянуть mid-session** (симлинкнутые скиллы/роли не должны меняться под работающим агентом).
-  - **Как закрыть mid-session по-настоящему (иначе «только на старте» не спасает при N сессий с одним клоном
-    + окно рваной записи у in-place `pull`):** атомарный **immutable version store** (модель Nix/flutter):
-    апдейт материализует НОВУЮ версию `store/<sha>/` (worktree/archive) и **атомарно** перещёлкивает
-    `current -> store/<sha>` (`rename` атомарен). Сессия на старте **резолвит** `current` → конкретный
-    `store/<sha>` и симлинки проекта смотрят на этот **неизменяемый путь**, не на `current` → перещёлк под
-    работающей сессией её файлы не трогает; новая сессия берёт новый `current`. Конкурентность решена
-    по построению (каждая сессия держит свою версию; лок только на сам flip). GC версии — по refcount
-    (удаляется, когда её не держит ни одна активная сессия). _Дешёвая альтернатива, если сузить поверхность:_
-    роли+плагин раннер грузит в память на старте (уже иммунны) → mid-session меняются ТОЛЬКО on-demand скиллы →
-    **preload скиллов на старте (#43)** закрывает и их без store. **Атомарность апдейта (материализация+flip,
-    не in-place `pull`) нужна в ОБОИХ случаях** — даже старт-только-сессия попадает в окно полу-записи при in-place.
+  - **Безопасность:** `--ff-only`; offline/`git fetch` fail → тихо пропустить (offline-tolerant); апдейт
+    только **на старте сессии**, не mid-run.
+  - **Mid-session — НЕ проблема (модель oh-my-zsh/Claude Code, без store):** работающая сессия уже загрузила
+    роли+плагин в память → pull их не меняет; новую версию берёт СЛЕДУЮЩАЯ сессия (как `omz`/flutter/сам Claude
+    Code — обновление применяется на следующем запуске). Меняются только on-demand скиллы, а pull throttled
+    (1/день, на старте) → окно ничтожно и само-заживает. **Immutable-store/refcount отвергнуты сознательно:**
+    краш/`kill` терминала завесил бы refcount (версию некому «отпустить») → GC ломается — это баг подсчёта ссылок,
+    а не решение. Нечего пинить — нечему течь.
 - [x] **T5 · P1 — граница локального override (консистентность, чинит дыру ff-pull).** Клон pristine →
   всё, что проект/раннер кастомизируют, живёт ВНЕ клона: `opencode.jsonc` (ключ+прокси) уже вне;
   **`models.config.json` СЕЙЧАС в клоне** (его пишет `configure-models` при установке) → при ff-pull
@@ -300,13 +295,11 @@ _Статус:_ ✅ **все T1–T8 реализованы** (branch `feat/work
   роли редки); (б) overlay `.opencode/agent-local/`. Skills/validators/plugins — dir-link **без оговорок**.
 - _Остаётся локальным (правильно, ВНЕ клона):_ `opencode.jsonc` (ключ+прокси), локальный `models.config` override (T5),
   `.agent/` run-state, продукт-код. _Порядок:_ T2 (раздача) → T1/T5 (клон+override) → T3 (ручной update) → T4 (авто) → T6.
-- _Статус:_ ✅ **T1–T6 реализованы** (ветка `feat/self-updating-harness`): `bootstrap.sh` (T1), dir-symlinks в
+- _Статус:_ ✅ **T1–T6 done** (ветка `feat/self-updating-harness`, PR #63): `bootstrap.sh` (T1), dir-symlinks в
   `install.sh` (T2), `rationaldev update` (T3), `rationaldev autocheck` + триггеры opencode-плагин/claude
-  SessionStart (T4), `lib/models-config.mjs` merge-override (T5), агенты dir-link = вариант (а) (T6). Тесты:
-  `rationaldev` smoke 8/8 + `models-config` 6 unit + smoke 31 + guardrail 37/37. **Остаток (follow-up внутри T4):**
-  полный immutable-store + refcount-GC для строгой mid-session-гарантии при N параллельных сессий (сейчас v1 —
-  триггер только на старте, throttled, дефолт `notify`; store описан выше как «как закрыть mid-session»); codex —
-  без хук-системы, только ручной `rationaldev update`.
+  SessionStart (T4, модель oh-my-zsh — старт→pull, без store), `lib/models-config.mjs` merge-override (T5),
+  агенты dir-link = вариант (а) (T6). codex — без хук-системы, только ручной `rationaldev update`. Тесты:
+  `rationaldev` smoke 8/8 + `models-config` 6 unit + smoke 31 + guardrail 37/37.
 
 ### Детерминированный генератор тикетов по дизайну (ticketer)
 Причина: GLM-ticketer игнорирует прозу декомпозиции и схлопывает слайс в один монстр-тикет
