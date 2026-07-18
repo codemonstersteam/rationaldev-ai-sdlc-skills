@@ -18,8 +18,12 @@ rebuild the repo's *theory* (Naur — *Programming as Theory Building*) as a dur
 
 - **In:** the repo (existing source + tests + build files) and `.agent/planner/mode` = `foreign`.
 - **Out:** `docs/design/_harness/test-harness.md` — repo-level (NOT per-slice — one map serves every change) +
-  one status line to izi. **STATIC reconnaissance only:** you read/grep/list; you **MUST NOT** edit source or
-  tests, and **MUST NOT** run a build/test command (you *document* the commands, you do not execute them).
+  one status line to izi. **STATIC** = you never edit the repo's **source/tests** and never run its build; it
+  is **NOT read-only** — writing the map IS your deliverable.
+
+**You write the map YOURSELF** — your own `edit` (or `tee`) into `docs/design/_harness/test-harness.md`
+(`mkdir -p` first), verify with `ls`. You have **no `task` tool**: the write is never delegable — a
+ready-but-unwritten map is a FAILED survey.
 
 ## Idempotency — once per repo, refresh on drift (MUST)
 This map is **repo-level and durable** — it is not rebuilt per change. Before surveying:
