@@ -181,16 +181,27 @@ if [ "$HARD" = yes ]; then
   esac
 fi
 
+# --- opencode runner-конфиг: global провайдер/omo-преflight + минимальный проектный opencode.jsonc ---
+# Провайдер+auth → global (~/.config/opencode, шарится); проект → permission+plugin (rational-guardrail,
+# относительным путём), omo вычищается. Модели — во frontmatter (models.config), сюда НЕ пишутся.
+OPENCODE_MSG=""
+if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/null 2>&1; then
+  [ "$NOINPUT" = yes ] && export RATIONALDEV_NOINPUT=1
+  node "$BUNDLE/harness/setup-opencode.mjs" "$PROJ" "$BUNDLE" || true
+  OPENCODE_MSG="$PROJ/opencode.jsonc (permission+plugin) · провайдер в ~/.config/opencode"
+fi
+
 MODELS_MSG="(node не найден)"
 if command -v node >/dev/null 2>&1; then
-  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} medium=${f(t.medium)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
+  MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
 fi
 
 echo "rationaldev harness → $RUNNER ($SCOPE)"
 echo "  agents/roles: $AGENTS_DST ($(count "$AGENTS_DST"))"
 echo "  skills:       $SKILLS_DST ($(count "$SKILLS_DST"))"
-echo "  models:       $MODELS_MSG"
+echo "  models:       $MODELS_MSG (2 тира: large=суждение · small=исполнение)"
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
+[ -n "$OPENCODE_MSG" ] && echo "  opencode cfg: $OPENCODE_MSG"
 echo
 echo "Точка входа — роль 'izi' (запусти: $RUNNER --agent izi)."

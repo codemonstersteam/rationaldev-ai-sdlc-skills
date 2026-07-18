@@ -43,17 +43,18 @@ const ask = (label, def) =>
     rl.question(`  ${label}${def ? ` [${def}]` : " (Enter — наследовать)"}: `, (a) => res(a.trim() || def || "")),
   )
 
-console.log(`\nНазначение моделей для раннера '${runner}' (harness/models.config.json).`)
-console.log("Имена произвольны — модель твоего провайдера. Enter оставляет текущее значение.\n")
+console.log(`\nНазначение моделей для раннера '${runner}' — ДВА тира (harness/models.config.json).`)
+console.log("Имена произвольны — модель твоего провайдера. Enter оставляет текущее значение.")
+console.log("large = суждение (планирование/ревью/приёмка) · small = исполнение (реализация/тесты/git).\n")
 
-const large = await ask("Большая модель (large)", tiers.large)
-const medium = await ask("Средняя модель (medium)", tiers.medium)
-const small = await ask("Малая модель (small)", tiers.small)
+// Два тира: large (суждение) + small (исполнение); medium схлопывается в small.
+const large = await ask("large — суждение", tiers.large)
+const small = await ask("small — исполнение", tiers.small || tiers.medium)
 rl.close()
 
-cfg[runner].tiers = { large, medium, small }
+cfg[runner].tiers = { large, medium: small, small }   // medium = small (2-тира-модель)
 writeFileSync(CONFIG, JSON.stringify(cfg, null, 2) + "\n")
 
 const show = (v) => (v ? v : "(наследует модель пользователя)")
-console.log(`\nmodels.config.json обновлён для '${runner}':`)
-console.log(`  large=${show(large)}  medium=${show(medium)}  small=${show(small)}`)
+console.log(`\n${OVERRIDE ? "override" : "models.config.json"} обновлён для '${runner}' (2 тира):`)
+console.log(`  large=${show(large)}  small=${show(small)}  (medium=small)`)
