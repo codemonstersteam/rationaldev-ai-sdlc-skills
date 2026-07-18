@@ -331,6 +331,11 @@ author or the fixer — separation of duties). Input = slice path + slug. `@faga
 (README faithfulness, no-hardcode), and on both-green **strips `@wip`** (its only write — the acceptance
 signature the implementer was forbidden to touch). It produces nothing else and never repairs.
 
+- **Under `mode=foreign`:** the trigger's `validate-layout` check does NOT apply (a non-harness repo has no
+  `internal/<slug>/` layout) — the trigger is just every foreign ticket `green` in `done.log`. `@fagan`
+  self-adjusts: it runs the repo's **own verification command** from the `@surveyor` map
+  (`docs/design/_harness/`) — the native suite green — **not** `validate-dod`, and there is **no `@wip`** to
+  strip. Everything else (separation of duties, `FAIL → @linger`, then Gate #2) is identical.
 - `accepted` → proceed to `## TERMINAL git step` below (commit/push/CI), **then** present Gate #2. `@fagan
   accepted` = "done AND locally validated" — the state is now safe to commit.
 - `FAIL: <item>` → route the defect to `@linger` (the fixer, K=2 fuse); on `@linger` green, call
@@ -1643,13 +1648,13 @@ izi may restart this stage. Acceptance is idempotent by its own result: if the b
 already carry **no** `@wip` AND `node harness/validate-dod.mjs .` is green, the slice is **already
 accepted** — return immediately `fagan → <slice> accepted (idempotent)`; strip nothing, re-verify nothing.
 
-**Exception — rework mode (MUST):** when `.agent/planner/mode` starts with `rework`, "no `@wip`" does **NOT**
-imply "already accepted": a `rework-refactor` legitimately has **zero** `@wip` scenarios on its **first** pass
-(behaviour unchanged → the existing suite is the invariant, no new scenario). So in rework mode you treat the
-slice as already-accepted **only if** a prior `role=fagan … accepted` line exists in `.agent/decisions.log`;
-otherwise you **MUST** run the full gate below (Move 1: in rework mode `validate-component-tests` does not
-require every scenario `@wip` — reads the marker; Move 2 `validate-dod --run` = whole-suite green = regression
-gate). Never shortcut a refactor's first acceptance — its README/semantic verdict is exactly what you add.
+**Exception — rework AND foreign modes (MUST):** when `.agent/planner/mode` starts with `rework` **or** is
+`foreign`, "no `@wip`" does **NOT** imply "already accepted": a `rework-refactor` legitimately has **zero**
+`@wip` scenarios on its **first** pass, and a `foreign` change has **no** `@wip` at all (native runner, no
+Gherkin tag). So in these modes you treat the slice as already-accepted **only if** a prior `role=fagan …
+accepted` line exists in `.agent/decisions.log`; otherwise you **MUST** run the full gate below (for `foreign`
+that gate is the **Foreign mode** section — the repo's native verification command, not `validate-dod`). Never
+shortcut a first acceptance — its semantic verdict is exactly what you add.
 
 ## Move 1 — the deterministic gate (mechanical DoD)
 Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; return the failed item):
@@ -1688,6 +1693,23 @@ What no exit code can assert — read and judge (`doc-quality-review` for the RE
   tech-debt (`TODO: caching later` · «pagination — out of scope» → ok)? A green build carrying "not
   done" prose is a reject — grep found the word, you decide if it lies.
 Any doubt → reject with the specific gap; never sign on "probably fine".
+
+## Foreign mode (route-foreign-lane) — native verification REPLACES Move 1
+When `.agent/planner/mode` = `foreign`, the target is a repo built OUTSIDE the harness: **Move 1's Go/Gherkin
+gate does NOT apply** (no `go.mod`/`.feature`/openapi/Dockerized godog). It is replaced by:
+- **Run the repo's OWN verification command** — read it from the `@surveyor` map
+  `docs/design/_harness/test-harness.md` (and `docs/foreign/<slug>/FOREIGN-PLAN.md`): the full native suite
+  (JUnit/pytest/…) must be **green**, including the previously-RED discriminating tests `@wirth-tester` authored.
+  **Do NOT** run `validate-component-tests` / `validate-dod` / `validate-readme` (Gherkin/Go-specific). Reject
+  by the **failing native test**. A native BUILD/ENV fault (toolchain, network) → surface to the operator and
+  STOP (same non-diagnosis rule — you inspect, you do not repair).
+- **Move 2 (semantic verdict) STILL applies** — the change does what the BRD says, no hardcoded constant. README
+  faithfulness is **best-effort** here (a foreign repo need not follow the harness README structure) — judge
+  only what the change actually touched; `doc-quality-review` guides, it does not gate.
+- **Sign (foreign) — there is NO `@wip` to strip** (native runners have no Gherkin tag). Acceptance is the
+  verdict itself: append `role=fagan · <slug> · foreign-DoD (verification: <cmd> green) · rationale` to
+  `.agent/decisions.log` and return `fagan → <slug> accepted (foreign)` → **Gate #2**. You write nothing but
+  the log line. Reject exactly as always (`FAIL: <item>` → izi → `@linger`); you never repair or weaken a test.
 
 ## Sign or reject
 - **Both moves green → SIGN:** strip `@wip` from the business scenarios (your only write); append the
