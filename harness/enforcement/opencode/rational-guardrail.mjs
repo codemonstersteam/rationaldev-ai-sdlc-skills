@@ -6,7 +6,7 @@
 //   плагин был лёгким self-contained. Профиль-рецепт: plain .mjs, ноль внешних импортов, ноль crypto →
 //   opencode грузит как есть, без бандла/фетча.
 // SYNC: константы+чистые функции ниже — ИНЛАЙН-КОПИЯ из ../shared.mjs (единый источник для claude-хуков).
-//   ДЕРЖАТЬ ИДЕНТИЧНО. Дрейф ловит harness/enforcement/opencode/guardrail.sync.smoke.mjs (сравнивает с shared.mjs).
+//   ДЕРЖАТЬ ИДЕНТИЧНО. Дрейф ловит harness/test/guardrail-sync.test.mjs (loader-check + drift) (сравнивает с shared.mjs).
 import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
 import { existsSync, readdirSync } from "node:fs"
 import { join } from "node:path"
@@ -23,75 +23,81 @@ const cyrb = (str, seed = 0) => {
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)) >>> 0
 }
-export const lightHash = (str, len = 16) =>
+const lightHash = (str, len = 16) =>
   (cyrb(str, 0).toString(16).padStart(8, "0") + cyrb(str, 0x9e3779b9).toString(16).padStart(8, "0") +
    cyrb(str, 0x85ebca6b).toString(16).padStart(8, "0")).slice(0, len)
 
 // ── ИНЛАЙН из shared.mjs (SYNC — держать идентично) ─────────────────────────────
-export const GATE_MARK = ".agent/gates/gate1.approved"
-export const PIPELINE = new Set([
+const GATE_MARK = ".agent/gates/gate1.approved"
+const PIPELINE = new Set([
   "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
   "git-hand",
   "change-intake", "hughes-rework",
 ])
-export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
-export const requiresFrontDoor = (role) => normRole(role) !== "gilb"
-export const TRUNK_BRANCHES = new Set(["main", "master", "trunk"])
-export function branchFromHead(headContent) {
+const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
+const requiresFrontDoor = (role) => normRole(role) !== "gilb"
+const TRUNK_BRANCHES = new Set(["main", "master", "trunk"])
+function branchFromHead(headContent) {
   const m = /^ref:\s*refs\/heads\/(.+?)\s*$/m.exec(String(headContent || ""))
   return m ? m[1] : null
 }
-export const isTrunkBranch = (branch) => TRUNK_BRANCHES.has(String(branch || "").trim())
-export const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
-export const DESIGN_DIR = "docs/design"
-export const CHORES_DIR = "docs/chores"
-export const CHORE_PLAN_FILE = "CHORE-PLAN.md"
-export const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
-export function hasChorePlan(choreDirsFn, existsFn) {
+const isTrunkBranch = (branch) => TRUNK_BRANCHES.has(String(branch || "").trim())
+const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
+const DESIGN_DIR = "docs/design"
+const CHORES_DIR = "docs/chores"
+const CHORE_PLAN_FILE = "CHORE-PLAN.md"
+const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
+function hasChorePlan(choreDirsFn, existsFn) {
   for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
   return false
 }
-export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
+function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
   if (hasChorePlan(choreDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }
-export const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
-export function pickRole(args) {
+const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
+function pickRole(args) {
   if (!args || typeof args !== "object") return "unknown"
   for (const k of ROLE_KEYS) if (typeof args[k] === "string") return args[k]
   return "unknown"
 }
-export const normRole = (role) => String(role).toLowerCase().replace(/^@/, "").trim()
-export const isImplementer = (role) => IMPLEMENTERS.has(normRole(role))
-export const inPipeline = (role) => PIPELINE.has(normRole(role))
-export function writesGateMarker(cmd) {
+const normRole = (role) => String(role).toLowerCase().replace(/^@/, "").trim()
+const isImplementer = (role) => IMPLEMENTERS.has(normRole(role))
+const inPipeline = (role) => PIPELINE.has(normRole(role))
+function writesGateMarker(cmd) {
   const gm = GATE_MARK.replace(/[.]/g, "\\.")
   return new RegExp(`>>?\\s*['"]?[^\\s;|&'"]*${gm}`).test(cmd) ||
          new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)
 }
-export function doneGreenTicketId(cmd) {
+function doneGreenTicketId(cmd) {
   const doneWrite = />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd)
   if (!doneWrite) return null
   const mk = /\bticket-0*(\d+)\b[^\n]*\bgreen\b/.exec(cmd)
   return mk ? mk[1] : null
 }
-export function parseTicketOutputs(text) {
+function parseTicketOutputs(text) {
   const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
   if (!m) return []
   return m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
 }
-export function isOperatorApproval(text) {
+function isOperatorApproval(text) {
   return /\bgate1\s+approve\b/i.test(String(text))
 }
-export function gateMarkerContent({ timestamp, source, prompt, planHash }) {
+function gateMarkerContent({ timestamp, source, prompt, planHash }) {
   const one = (s) => String(s ?? "").replace(/[\t\r\n]+/g, " ").trim().slice(0, 500)
-  return [`approved_at\t${timestamp}`, `source\t${source}`, `plan_hash\t${planHash ?? "na"}`, `prompt\t${one(prompt)}`, ""].join("\n")
+  return [
+    `approved_at\t${timestamp}`,
+    `source\t${source}`,
+    `plan_hash\t${planHash ?? "na"}`,
+    `prompt\t${one(prompt)}`,
+    "",
+  ].join("\n")
 }
-export function toolCallSignature(tool, args) {
+function toolCallSignature(tool, args) {
   const norm = (v) => {
     if (Array.isArray(v)) return v.map(norm)
     if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm(v[k])]))
@@ -101,7 +107,7 @@ export function toolCallSignature(tool, args) {
   try { a = JSON.stringify(norm(args ?? {})) } catch { a = String(args) }
   return `${tool} ${a}`
 }
-export function detectLoop(sigs, { runThreshold = 5, cycleRepeats = 3, maxPeriod = 3 } = {}) {
+function detectLoop(sigs, { runThreshold = 5, cycleRepeats = 3, maxPeriod = 3 } = {}) {
   const n = sigs.length
   if (n >= runThreshold && sigs.slice(n - runThreshold).every((s) => s === sigs[n - 1])) return sigs[n - 1]
   for (let p = 2; p <= maxPeriod; p++) {
