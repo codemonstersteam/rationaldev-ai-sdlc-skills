@@ -11,7 +11,7 @@
 
 ## Мотивация — кейс и критика `harnes-imp.md`
 
-Пост-мортем [`harnes-imp.md`](../../harnes-imp.md): rework Java/Spark library (`ThriceInPlus`), `@wirth-tester`
+Пост-мортем [`harnes-imp.md`](./harnes-imp.md): rework Java/Spark library (`ThriceInPlus`), `@wirth-tester`
 сжёг 25 шагов на research чужой парадигмы (JUnit+CSV вместо godog/`.feature`), словил DROPOUT, retry с ручным
 `research-prefilled`. Его лекарства — точечные заплатки, которые **не открывают гейт и текут в ядро**:
 
