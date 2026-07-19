@@ -127,6 +127,10 @@ T8 (izi FOREIGN path + @mills light + impl-routing foreign→@hughes-rework + ta
 → @mills light → Gate #1 → git-hand → @wirth-tester(conform)/@hughes-rework → @fagan(verification-cmd) →
 terminal → Gate #2 → canary. Строгие лейны нетронуты. **Хвост:** live-прогон на реальном чужом репо.
 
+**Расширение:** [`foreign-designer-lane`](./foreign-designer-lane.md) добавил стадию **дизайна модулей ченджа**
+(`@foreign-designer`/Parnas, izi 2.5, по `design=needed`) между change-intake и ticketer — чтобы фичу
+проектировать качественно (module-tree/contracts/C4/ADR в conform), не только зеркалить соседа.
+
 ## Риски
 
 | # | Риск | Митигация |
