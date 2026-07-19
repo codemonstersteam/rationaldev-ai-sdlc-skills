@@ -13,6 +13,7 @@ export const PIPELINE = new Set([
   "git-hand", // VCS-порт: start (ветка от транка) + terminal (commit/push/PR/CI)
   "change-intake", "hughes-rework", // rework pipeline (доработка существующего кода)
   "surveyor", // foreign lane: разведка чужого репо → docs/design/_harness/ (route-foreign-lane T3)
+  "foreign-designer", // foreign lane: дизайн модулей ченджа (foreign-designer-lane F1)
 ])
 
 // Реализаторы, заблокированные до Gate #1 (нужны plan-review.md + gate1.approved).

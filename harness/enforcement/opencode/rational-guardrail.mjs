@@ -36,6 +36,7 @@ const PIPELINE = new Set([
   "git-hand",
   "change-intake", "hughes-rework",
   "surveyor",
+  "foreign-designer",
 ])
 const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
 const requiresFrontDoor = (role) => normRole(role) !== "gilb"
