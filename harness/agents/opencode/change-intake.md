@@ -94,6 +94,12 @@ harness design package, spec, or `.feature` suite:
   the invariant to keep green.
 - **No spec-delta** — a foreign repo carries no harness-frozen contract to evolve. If the change needs an
   external API change, that is the repo's own concern, out of this lane's scope → note it, do not author it.
+- **Design signal (`design=needed|skip`) — you emit it; izi routes `@foreign-designer` on it.** `needed` when
+  the change introduces **new modules or non-trivial new logic** whose decomposition/interconnection is NOT
+  already given — a new component, several interacting new units, an algorithm to structure. `skip` when the
+  delta is **self-evident**: a sibling-clone (mirror an existing module for a new variant — structure known) or
+  a **scoped edit** of existing code (a few methods the delta already pins). This is a **design-necessity**
+  judgement (does the new code need a tree/contracts/C4?), not an executor-capability one.
 
 ## The CHANGE FOLDER — work-scoped, never on top of greenfield (MUST)
 A rework is its **own** unit of work: its delta/plan/tickets live in a **durable change folder**, they do
@@ -131,5 +137,6 @@ Write exactly (into the change folder, NOT `.agent/`):
 - Change is really a **new service/slice**, not a delta of existing → `STOP: greenfield task, not rework`.
 
 Return izi **one line**: `change-intake → change-delta.md ready (dir=<change-dir>, mode=<…>, N modules)` **or**
-`STOP: <reason>`. You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree;
+`STOP: <reason>`. **Under `mode=foreign` append the design signal:** `… N modules · design=needed|skip`
+(per **Design signal** above — izi runs `@foreign-designer` only on `needed`). You **MUST NOT** write code, tickets, or the spec; you **MUST NOT** redesign the module tree;
 you **MUST NOT** write into the slice's greenfield `tickets/`. izi passes a STOP line to the operator.

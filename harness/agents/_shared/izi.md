@@ -252,11 +252,12 @@ The lane **conforms** to the repo — discovers its conventions, never imposes G
    repo; its line may be `map fresh … reused`. `STOP` (harness-native / empty / unreadable stack) → operator.
 2. **`@change-intake`** (input: `.agent/planner/brd.md` + repo + the map) → **`docs/foreign/<NNN-slug>/change-delta.md`**
    + pointer `.agent/planner/change-dir`: affected native modules + **discriminating** scenarios in native terms.
-   No harness design package needed (that STOP is lifted under `mode=foreign`). `STOP` → operator.
-2.5. **`@foreign-designer`** (input: the map + `change-delta` + affected code) — **when the change introduces new
-   modules/logic** (not a pure sibling-clone) → `<change-dir>/{module-tree,contracts,c4}.md` + `adr/`: designs the
-   change's modules in the repo's conventions (one secret/node, native io, C4 edges to existing). Returns `no
-   design needed (delta suffices)` on a trivial delta → skip to step 3. `STOP` (no map) → operator.
+   No harness design package needed (that STOP is lifted under `mode=foreign`). `STOP` → operator. Its line
+   carries **`design=needed|skip`** — route step 2.5 by it (mechanics, not judgement).
+2.5. **`@foreign-designer`** — **only if `@change-intake` returned `design=needed`** (new modules/non-trivial
+   logic). Input: the map + `change-delta` + affected code → `<change-dir>/{module-tree,contracts,c4}.md` +
+   `adr/`: designs the change's modules in the repo's conventions (one secret/node, native io, C4 edges to
+   existing). **`design=skip`** (sibling-clone / scoped edit) → **skip straight to step 3.** `STOP` (no map) → operator.
 3. **`@wirth-ticketer`** (input: `change-delta` + the map + **the design if present**) → `<change-dir>/tickets/`: **module** tickets
    (native paths), **one `component`** ticket (native discriminating scenarios, **no `@wip`**); each ticket
    carries a **`### Repo cheat-sheet`** distilled from the map. **NO** scaffold/README. `PARTIAL:` → re-delegate.
