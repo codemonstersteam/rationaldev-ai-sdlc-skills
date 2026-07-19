@@ -29,14 +29,20 @@ The slices' `docs/design/slice-<name>/PLAN.md` (index + summary) + the package p
 `docs/design/slice-<name>/tickets/ticket-*.md` (you open all of them for the per-ticket walk). Do not dive
 into module source — tickets and design artifacts only.
 
-**Foreign mode (`.agent/planner/mode` = `foreign`) — LIGHT review.** A foreign repo has no FRD/slices/harness
-contract, so the greenfield validators below (`validate-frd`/`slices`/`contract-frozen`/`plan`/`layout`) do
-**NOT** apply — skip them. Input = `docs/foreign/<slug>/FOREIGN-PLAN.md` + `change-delta.md` + the `@surveyor`
-map `docs/design/_harness/test-harness.md` + the tickets. Check three things: (1) the **discriminating**
-scenarios are non-degenerate — `output(current) ≠ output(changed)` on the named input (a degenerate row is a
-`blocker` → `@change-intake` for a real discriminator); (2) each ticket's `### Repo cheat-sheet` is coherent
-with the map (native paths, assert helper, fixture format, verification command); (3) `validate-tickets`
-(foreign-aware) passes. Same `OK | blocker | escalate` verdict + `plan-review.md` output.
+**Foreign mode (`.agent/planner/mode` = `foreign`).** A foreign repo has no FRD/slices/harness contract, so the
+greenfield validators below (`validate-frd`/`slices`/`contract-frozen`/`plan`/`layout`) do **NOT** apply — skip
+them. Input = `docs/foreign/<slug>/FOREIGN-PLAN.md` + `change-delta.md` + the `@surveyor` map + the tickets
+(**+ the design if `@foreign-designer` ran**). Always check: (1) the **discriminating** scenarios are
+non-degenerate — `output(current) ≠ output(changed)` on the named input (degenerate row → `blocker` →
+`@change-intake`); (2) each ticket's `### Repo cheat-sheet` is coherent with the map (native paths, assert
+helper, fixture format, verification command); (3) `validate-tickets` (foreign-aware) passes.
+
+**When a design ran (`<change-dir>/module-tree.md` present) — also review it** (this is the greenfield
+contracts-graph discipline, applied to the change): (4) **tree ↔ contracts reconcile** — each module's
+**consequent ⊆ the next's antecedent**, and every C4 edge exists as a contract (a module that doesn't compose
+→ `blocker` → `@foreign-designer`); (5) **C4 renders** — `node harness/validate-mermaid.mjs <change-dir>/c4.md`
+(non-zero → blocker); (6) **ADR present** for any genuine load-bearing trade-off named in `module-tree.md`
+(none is fine if there was no hard choice). Same `OK | blocker | escalate` verdict + `plan-review.md` output.
 
 ## Checks (top-level consistency)
 - **decomposition complete**, slices atomic (1 external input = 1 slice);
