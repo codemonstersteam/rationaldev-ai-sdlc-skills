@@ -76,12 +76,14 @@ you are on the **rework** path — cut tickets from the **change-delta's affecte
 **FOREIGN mode (`.agent/planner/mode` = `foreign` — `change-dir` points to `docs/foreign/<slug>/`).** Like
 rework (cut tickets from the delta's affected-modules + one component ticket, **NO** scaffold/README, write into
 `<change-dir>/tickets/`), with three foreign specifics:
-- **ONE `module` ticket per affected module — `outputs` = exactly ONE native module (foreign equivalent of
-  greenfield's "one ticket per module-tree node").** Never bundle: the adapter/wrapper and the logic `util` are
-  two modules → **two tickets**, not one with two `outputs`. Cite the native path from `change-delta.md`'s
-  one-row-per-module table; **`io:` = that module's native I/O touchpoints from the delta** (spark sources /
-  cache / store + FM failure modes — for `conform-tests` adapter-branch coverage), `io: n/a` only for pure glue
-  (a delegating `@Service` wrapper). The `component` ticket's scenarios are the delta's native
+- **Module tickets — SOURCE: the design tree if it ran, else the delta.** When `@foreign-designer` produced
+  **`<change-dir>/module-tree.md`** (`design=needed`), cut **ONE `module` ticket per TREE NODE** — `outputs` =
+  that node's module (repo path from the tree), **`io:` from its `contracts.md` entry** (native touchpoints),
+  and reference the node's contract in the ticket. When there was **no design** (`design=skip` — sibling-clone /
+  scoped edit), cut **one per affected native module** from `change-delta.md`'s one-row-per-module table.
+  **Either way: one module = one ticket, `outputs` = exactly ONE** — never bundle the adapter/wrapper and the
+  logic `util` (two modules → two tickets). `io: n/a` only for pure glue (a delegating `@Service` wrapper). The
+  `component` ticket's scenarios are the delta's native
   `test-class::method` set (**no `@wip`** — native runner). Implementer = `@hughes-rework`, tester =
   `@wirth-tester` (loads `conform-tests`). **Skip the `validate-layout` self-check** (a non-harness repo has no
   `internal/<slug>/` layout); `validate-tickets` already treats `foreign` as scaffold-less.
@@ -90,8 +92,10 @@ rework (cut tickets from the delta's affected-modules + one component ticket, **
   not the whole map or the whole test-tree (the failure this lane fixes: research burned every ticket). For a
   `component` ticket: the target test-class/file, the assert helper (with the map's sibling `file:line`), the
   fixture format, and the 1–2 neighbours to mimic. For a `module` ticket: the native source path(s), the
-  build/single-test command, and any **known gap** that bites. **Cite the map — invent nothing;** if the map is
-  absent, `STOP: run @surveyor first`.
+  build/single-test command, any **known gap** that bites, **and — if a design ran — the node's contract
+  (antecedent/consequent) + its head-pipe from `<change-dir>/{contracts,module-tree}.md`** (so the implementer
+  builds to the designed secret, not by guessing). **Cite the map/design — invent nothing;** map absent →
+  `STOP: run @surveyor first`.
 - **The verification command** (from the map) is named in the `component` ticket's DoD — that is the foreign
   lane's acceptance, not `.feature`/Docker. The tester runs it instead of `validate-component-tests` (Gherkin-only).
 
