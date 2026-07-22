@@ -7,7 +7,7 @@
 // Вход: JSON на stdin (tool_input{command}). Выход: exit 2 → Claude блокирует. Fail-open на инфра-сбое.
 import { existsSync, readFileSync, statSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { writesGateMarker, doneGreenTicketId, parseTicketOutputs } from "../shared.mjs"
+import { writtenGateMarker, doneGreenTicketId, parseTicketOutputs } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -47,11 +47,13 @@ try {
   if (!cmd) process.exit(0)
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
 
-  // (1) само-запись маркера Gate #1
-  if (writesGateMarker(cmd)) {
+  // (1) само-запись маркера человеческого гейта (#1 план / #2 мерж)
+  const mark = writtenGateMarker(cmd)
+  if (mark) {
+    const n = mark.includes("gate2") ? "#2" : "#1"
     block(
-      "Маркер Gate #1 (.agent/gates/gate1.approved) ставит ТОЛЬКО оператор вне сессии. Создавать/писать " +
-      "его агенту запрещено — на Gate #1 задай question и жди. (Чтение `ls`/`test -f` разрешено.)",
+      "Маркер Gate " + n + " (" + mark + ") ставит ТОЛЬКО оператор вне сессии. Создавать/писать " +
+      "его агенту запрещено — на гейте задай question и жди. (Чтение `ls`/`test -f` разрешено.)",
     )
   }
 

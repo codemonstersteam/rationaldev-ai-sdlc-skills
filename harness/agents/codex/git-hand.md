@@ -37,7 +37,8 @@ cli`); `mcp-github` / `mcp-bitbucket` are registry stubs — if selected and unw
 
 ## mode=start — pull fresh trunk, cut the work branch
 
-Inputs izi passes: `task-type` (feat|fix|docs|refactor|chore) and `slug`. Steps:
+Inputs izi passes: `task-type` (feat|fix|docs|refactor|chore — derived from the weight: `patch → fix`,
+`minor`/`major`/`greenfield` → `feat`, `chore → chore`) and `slug`. Steps:
 
 1. `cut_branch`:
    - `git fetch origin` then fast-forward trunk: `git checkout <trunk> && git pull --ff-only origin <trunk>`
@@ -60,8 +61,22 @@ Inputs: `task-type`, `slug`, and a one-line `summary` for the commit/PR title. S
 
 1. `commit_push`: `git add -A` → commit with a **git-conventions** message (`<key> (<type>): <текст>`, text
    per the skill's policy) → push the branch to the provider.
-2. `open_pr`: open or update the PR against trunk (title = summary; body = what changed + the verification
-   command). Idempotent — if a PR for this branch exists, update it.
+2. `open_pr`: open or update the PR against trunk. **The title MUST carry the weight in Conventional
+   Commits** — the tag automation reads the weight from there after the merge, so a mistyped prefix
+   mis-versions the trunk. Derive the prefix **mechanically** from `.agent/planner/mode` (you do not judge
+   the weight — `@wirth-triage` already decided it):
+
+   | `.agent/planner/mode` | PR title | body must also carry |
+   |---|---|---|
+   | `patch` | `fix: <summary>` | — |
+   | `minor` | `feat: <summary>` | — |
+   | `major` | `feat!: <summary>` | a `BREAKING CHANGE:` section + the migration path |
+   | `greenfield` | `feat: <summary>` | — |
+   | `chore` | `chore: <summary>` | — |
+
+   Body = what changed + the verification command (+ any manual action the operator must take at Gate #2 —
+   a documented manual step is not an artifact, it belongs in the PR body). Idempotent — if a PR for this
+   branch exists, update it. **You never bump a version and never tag** — that is `@ledger`, after Gate #2.
 3. `ci_status`: read the CI verdict for the pushed change (`green` / `red:<reason>` / `pending`); if
    `pending`, poll until terminal.
 4. **Return exactly one line:**

@@ -123,28 +123,12 @@ export function validateTicketHeaders(tickets, opts = {}) {
     }
   }
   const scaffold = tickets.filter((t) => t.data && t.data.type === "scaffold")
-  if (opts.rework) {
-    // rework: проект уже отскаффолжен — scaffold-тикет в наборе = ошибка (правим существующее на месте)
-    if (scaffold.length !== 0) errors.push(`rework: scaffold-тикет недопустим (проект уже существует), найдено ${scaffold.length}`)
+  if (opts.existingProject) {
+    // SemVer-полоса (patch|minor|major): проект уже отскаффолжен — scaffold-тикет в наборе = ошибка
+    // (правим существующее на месте).
+    if (scaffold.length !== 0) errors.push(`scaffold-тикет недопустим при patch|minor|major (проект уже существует), найдено ${scaffold.length}`)
   } else if (scaffold.length !== 1) errors.push(`ожидался ровно ОДИН scaffold-тикет, найдено ${scaffold.length}`)
   return errors
-}
-
-// foreign-лейн: module-тикет = ОДИН нативный модуль (foreign не имеет module-tree для сверки, поэтому
-// декомпозицию бэкстопит здесь). >1 КОДОВОГО output → адаптер+логика слиплись в один тикет (модульность/
-// малый контекст слетели). WARNING, не blocker: изредка нативный модуль = 2 файла (класс+компаньон); docs
-// (.md) и ресурсы/фикстуры (.csv/.json/resources) не считаются кодом. io: none — только чистое ядро.
-const CODE_EXT = /\.(java|kt|scala|py|go|ts|js|rb|cs|cpp|cc|c|rs|php|swift|clj|ex)$/i
-export function foreignModuleOutputWarnings(tickets) {
-  const warns = []
-  for (const t of tickets || []) {
-    if (!t.data || t.data.type !== "module") continue
-    const outs = Array.isArray(t.data.outputs) ? t.data.outputs : []
-    const code = outs.filter((o) => CODE_EXT.test(String(o)))
-    if (code.length > 1)
-      warns.push(`${t.name}: foreign module-тикет с ${code.length} кодовыми outputs — один тикет = один модуль (раздели адаптер и логику): ${code.join(", ")}`)
-  }
-  return warns
 }
 
 // --- T06 feasibility: тикет-контракт выполним конкретной ролью (ловит постановочные ошибки на Gate #1) ---
@@ -549,9 +533,10 @@ export function validateComponentTests(feature, declaredN = null, opts = {}) {
 
   if (!biz.length) errors.push("нет бизнес-сценариев (.feature пуст кроме smoke) — покрытие не реализовано")
   if (smoke < 1) errors.push("нет smoke-сценария — обвязка компонентных тестов не доказана")
-  if (!opts.rework && wip < biz.length)
+  if (!opts.existingProject && wip < biz.length)
     errors.push(`не все сценарии @wip (${wip}/${biz.length}) — риск преждевременного green/гейминга (снятие @wip = акт фиксера, не автора)`)
-  // rework: baseline-сценарии легитимно НЕ @wip (зелёные, инвариант); @wip лишь у новых/изменённых behavior-сценариев
+  // existingProject (patch|minor|major): baseline-сценарии легитимно НЕ @wip (зелёные, инвариант);
+  // @wip лишь у новой/изменённой поверхности (patch — дискриминирующий, minor — новый, major — переработанный)
 
   // дубль заголовков
   const seen = new Set(), dup = new Set()

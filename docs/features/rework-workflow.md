@@ -1,4 +1,10 @@
-# rework-workflow — отдельный конвейер доработки существующего кода 🔴
+# rework-workflow — отдельный конвейер доработки существующего кода 🔴 УСТАРЕЛО
+
+> ⛔ **Документ исторический — не источник правды.** Маршрута `KIND=rework` в харнесе нет. Доработка
+> существующего кода идёт **весом SemVer** (`patch|minor|major`) по общему хребту вертикалей:
+> [`docs/flows/`](../flows/), [`requirements/semver-verticals.md`](../../requirements/semver-verticals.md),
+> `harness/agents/_shared/{wirth-triage,change-intake,izi}.md`. Из описанного ниже реализованы
+> `@change-intake` и `@hughes-rework`; `impact-map`, `pipelines.json`, `validate-rework-baseline` — нет.
 
 > **Принцип:** доработка существующего сервиса/CLI — это **другой конвейер** (`KIND=rework`), а не режим-с-условиями
 > в greenfield-ролях. Конвейер декларативен (`pipelines.json`: `KIND → список ролей`), поэтому rework — просто

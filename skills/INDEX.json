@@ -58,13 +58,6 @@
       "description": "Design AND realize a program's component tests — a network service (OpenAPI/AsyncAPI) or a CLI tool — as a black box. Two halves — DESIGN (a planner derives the scenario set by formula, Cockburn 1:1, tags @wip) and REALIZE (an implementer drops the designed .feature into the scaffolded skeleton, wires this slice's compose deps/stubs, adds any missing step-definition, proves every scenario RED by business reason). Use when you need new .feature files, more fixtures, a coverage assessment, or to make designed scenarios RED-ready. Do NOT use for unit tests or cross-service contract tests; cloning the skeleton is service-scaffold. Tier-agnostic, written for reliability on weaker tiers: coverage formula (1 + Σ adapter branches; boundaries are unit-level), WIP marker + fixer slice-acceptance, RED-reason decision table, checklists, STOP rules."
     },
     {
-      "name": "conform-tests",
-      "path": "skills/lib/conform-tests/SKILL.md",
-      "version": "1.0",
-      "status": "stable",
-      "description": "Realize component tests for a change on a FOREIGN repo (built outside the harness) — in the repo's OWN test paradigm (JUnit, pytest, go test, Cargo, …), NOT the harness's Gherkin/Docker/godog. Same semantic core as component-tests (coverage formula 1 + Σ adapter branches, discriminating RED-first, boundaries are unit-level) but the runner, file layout, fixture format and assert helpers are READ from the @surveyor map docs/design/_harness/test-harness.md instead of imposed. Use on the route=foreign lane (mode=foreign) when a change ships discriminating scenarios that must be proven RED in the repo's native suite. Do NOT use for harness-native services/CLI — that is component-tests (Docker Compose + .feature). Do NOT rewrite the repo's test framework or add boundary scenarios (unit-level). Tier-agnostic: formula, conform-not-impose rule, RED-reason table, STOP rules."
-    },
-    {
       "name": "contract-tests",
       "path": "skills/lib/contract-tests/SKILL.md",
       "version": "0.1",
@@ -274,7 +267,6 @@
       ],
       "outputs": [
         "docs/design/<slice>/changes/<slug>/change-delta.md",
-        "docs/foreign/<slug>/change-delta.md",
         ".agent/planner/change-dir",
         ".agent/decisions.log"
       ]
@@ -481,8 +473,7 @@
     {
       "role": "wirth-tester",
       "skills": [
-        "component-tests",
-        "conform-tests"
+        "component-tests"
       ],
       "inputs": [
         "api-specification",

@@ -64,24 +64,25 @@ await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "
 assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с docs/chores/<slug>/CHORE-PLAN.md + gate1 → пропуск"); pass++
 await rm(cdir, { recursive: true, force: true })
 
-// gate-check (foreign, route-foreign-lane): mode=foreign — implementer требует FOREIGN-PLAN.md вместо plan-review.md
-const fdir = await mkdtemp(join(tmpdir(), "claude-foreign-"))
-await mkdir(join(fdir, ".agent", "planner"), { recursive: true })
-await writeFile(join(fdir, ".agent", "planner", "brd.md"), "# BRD\n")
-await writeFile(join(fdir, ".agent", "planner", "mode"), "foreign")
-await mkdir(join(fdir, ".agent", "gates"), { recursive: true })
-await writeFile(join(fdir, ".agent", "gates", "gate1.approved"), "ok\n")
-assert.equal(runHook("gate-check.mjs", task("hughes-rework"), { CLAUDE_PROJECT_DIR: fdir }), 2, "foreign: @hughes-rework без durable FOREIGN-PLAN.md → блок"); pass++
-await mkdir(join(fdir, "docs", "foreign", "001-extend-2027"), { recursive: true })
-await writeFile(join(fdir, "docs", "foreign", "001-extend-2027", "FOREIGN-PLAN.md"), "# plan\n")
-assert.equal(runHook("gate-check.mjs", task("hughes-rework"), { CLAUDE_PROJECT_DIR: fdir }), 0, "foreign: @hughes-rework с docs/foreign/<slug>/FOREIGN-PLAN.md + gate1 → пропуск"); pass++
-await rm(fdir, { recursive: true, force: true })
 await rm(gdir, { recursive: true, force: true })
 
-// gate-bash: само-запись маркера
+// gate-check (1.8): Gate #2 — @ledger (закрытие прогона) заблокирован до акцепта мержа оператором
+const ldir = await mkdtemp(join(tmpdir(), "claude-ledger-"))
+await mkdir(join(ldir, ".agent", "planner"), { recursive: true })
+await writeFile(join(ldir, ".agent", "planner", "brd.md"), "# BRD\n")
+assert.equal(runHook("gate-check.mjs", task("ledger"), { CLAUDE_PROJECT_DIR: ldir }), 2, "@ledger без gate2 → блок"); pass++
+await mkdir(join(ldir, ".agent", "gates"), { recursive: true })
+await writeFile(join(ldir, ".agent", "gates", "gate2.approved"), "ok\n")
+assert.equal(runHook("gate-check.mjs", task("ledger"), { CLAUDE_PROJECT_DIR: ldir }), 0, "@ledger с gate2 → пропуск"); pass++
+await rm(ldir, { recursive: true, force: true })
+
+// gate-bash: само-запись маркера (оба человеческих гейта)
 assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate1.approved")), 2, "touch gate1 → блок"); pass++
 assert.equal(runHook("gate-bash.mjs", bash("echo x > .agent/gates/gate1.approved")), 2, "> gate1 → блок"); pass++
 assert.equal(runHook("gate-bash.mjs", bash("ls .agent/gates/gate1.approved")), 0, "ls gate1 (чтение) → пропуск"); pass++
+assert.equal(runHook("gate-bash.mjs", bash("touch .agent/gates/gate2.approved")), 2, "touch gate2 → блок (самоакцепт мержа)"); pass++
+assert.equal(runHook("gate-bash.mjs", bash("echo x >> .agent/gates/gate2.approved")), 2, ">> gate2 → блок"); pass++
+assert.equal(runHook("gate-bash.mjs", bash("test -f .agent/gates/gate2.approved")), 0, "test -f gate2 (чтение) → пропуск"); pass++
 
 // gate-bash: poka-yoke green-маркер
 await mkdir(join(dir, "docs", "design", "slice-x", "tickets"), { recursive: true })
@@ -123,5 +124,26 @@ runHook("gate-approve.mjs", { prompt: "gate1 approve" }, { CLAUDE_PROJECT_DIR: a
 assert.equal(readFileSync(marker, "utf8"), first, "повтор не клобберит первый акцепт"); pass++
 await rm(adir, { recursive: true, force: true })
 
+// gate-approve (Gate #2): маркер мержа ставит ТОЛЬКО токен «GATE2 APPROVE» и только когда работа дошла
+// до мержа (gate1.approved + .agent/vcs/branch). Свободные «ок, мержим» — не акцепт.
+const g2dir = await mkdtemp(join(tmpdir(), "claude-gate2-"))
+const m2 = join(g2dir, ".agent", "gates", "gate2.approved")
+runHook("gate-approve.mjs", { prompt: "GATE2 APPROVE #42" }, { CLAUDE_PROJECT_DIR: g2dir })
+assert.ok(!existsSync(m2), "токен без gate1/ветки → маркера нет (мержить нечего)"); pass++
+await mkdir(join(g2dir, ".agent", "gates"), { recursive: true })
+await writeFile(join(g2dir, ".agent", "gates", "gate1.approved"), "ok\n")
+await mkdir(join(g2dir, ".agent", "vcs"), { recursive: true })
+await writeFile(join(g2dir, ".agent", "vcs", "branch"), "feat/x\n")
+runHook("gate-approve.mjs", { prompt: "ок, мержим — approve" }, { CLAUDE_PROJECT_DIR: g2dir })
+assert.ok(!existsSync(m2), "свободные слова → маркера НЕТ (нужен явный токен)"); pass++
+runHook("gate-approve.mjs", { prompt: "GATE2 APPROVE https://github.com/o/r/pull/42" }, { CLAUDE_PROJECT_DIR: g2dir })
+assert.ok(existsSync(m2), "GATE2 APPROVE + gate1 + ветка → маркер создан"); pass++
+const g2first = readFileSync(m2, "utf8")
+assert.match(g2first, /ref\tpr-42/, "маркер несёт PR-референс (provenance мержа)"); pass++
+assert.ok(!/plan_hash/.test(g2first), "в маркере мержа нет plan_hash (провенанс — PR, не план)"); pass++
+runHook("gate-approve.mjs", { prompt: "gate2 approve" }, { CLAUDE_PROJECT_DIR: g2dir })
+assert.equal(readFileSync(m2, "utf8"), g2first, "повтор не клобберит первый акцепт мержа"); pass++
+await rm(g2dir, { recursive: true, force: true })
+
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/27 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + foreign + poka-yoke + gate-write + GATE1-APPROVE-token + provenance)`)
+console.log(`PASS ${pass}/36 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + poka-yoke + gate-write + GATE1/GATE2-APPROVE-токены + provenance + @ledger/Gate #2)`)

@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { readdirSync } from "node:fs"
-import { pickRole, inPipeline, isImplementer, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR, isForeignMode, hasForeignPlan, FOREIGN_DIR } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, isRunCloser, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR, GATE2_MARK } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -60,6 +60,15 @@ try {
     } catch { /* нет .git/HEAD или detached → не блокируем (fail-open) */ }
   }
 
+  // (1.8) Gate #2 — закрывающие прогон роли (@ledger) заблокированы до акцепта мержа оператором.
+  // Зеркало Gate #1: тег на транке + вайп .agent/ до мержа — необратимая порча состояния прогона.
+  if (isRunCloser(role) && !existsSync(join(root, GATE2_MARK))) {
+    block(
+      "Gate #2 не пройден: нужен .agent/gates/gate2.approved (оператор акцептует мерж токеном «GATE2 APPROVE») " +
+      "перед делегированием закрытия прогона (" + normRole(role) + "). Маркер ставит хук, НЕ ты — покажи PR и жди.",
+    )
+  }
+
   // (2) Gate #1 — реализаторы заблокированы до апрува плана. Под mode=chore план — одностраничный
   // CHORE-PLAN.md (полного plan-review.md нет), поэтому требуем его вместо ревью (gate1.approved — всегда).
   if (!isImplementer(role)) process.exit(0)
@@ -72,17 +81,6 @@ try {
     if (!hasChorePlan(choreDirsFn, existsFn) || !existsSync(gate1)) {
       block(
         "Gate #1 (chore) не пройден: нужны durable план docs/chores/<slug>/CHORE-PLAN.md и .agent/gates/gate1.approved " +
-        "перед делегированием реализации (" + normRole(role) + ").",
-      )
-    }
-    process.exit(0)
-  }
-  if (isForeignMode(mode)) {
-    const existsFn = (rel) => existsSync(join(root, rel))
-    const foreignDirsFn = () => { try { return readdirSync(join(root, FOREIGN_DIR)) } catch { return [] } }
-    if (!hasForeignPlan(foreignDirsFn, existsFn) || !existsSync(gate1)) {
-      block(
-        "Gate #1 (foreign) не пройден: нужны durable план docs/foreign/<slug>/FOREIGN-PLAN.md и .agent/gates/gate1.approved " +
         "перед делегированием реализации (" + normRole(role) + ").",
       )
     }

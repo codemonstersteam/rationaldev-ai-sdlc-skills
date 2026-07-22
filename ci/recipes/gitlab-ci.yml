@@ -1,0 +1,52 @@
+# E6 — тег-автоматика транка для GitLab CI. Тот же инструмент ci/semver-bump.mjs, другой форж.
+# Подключение: include этот файл в .gitlab-ci.yml целевого репозитория.
+#
+# Нужен PROJECT_TOKEN (scope: write_repository) в CI/CD variables — токен по умолчанию пушить теги не может.
+
+tag-on-merge:
+  stage: .post
+  image: node:20-alpine
+  # Только реальный мерж в транк: пайплайн ветки по умолчанию, событие push после MR.
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
+  variables:
+    GIT_DEPTH: 0        # полная история + теги: база версии = последний релизный тег
+  before_script:
+    - apk add --no-cache git curl jq
+  script:
+    - set -eu
+    - git fetch --tags --quiet
+    # Описание и лейблы смерженного MR — из API (аналог gh pr view). Список файлов оттуда же:
+    # при squash git diff HEAD~1 HEAD верен, при merge-commit — нет, стратегия влиять не должна.
+    - |
+      MR=$(curl -sf --header "PRIVATE-TOKEN: $PROJECT_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/commits/$CI_COMMIT_SHA/merge_requests")
+      echo "$MR" | jq -r '.[0].title // ""'       > /tmp/mr-title.txt
+      echo "$MR" | jq -r '.[0].description // ""' > /tmp/mr-body.txt
+      IID=$(echo "$MR" | jq -r '.[0].iid // empty')
+      if [ -n "$IID" ]; then
+        curl -sf --header "PRIVATE-TOKEN: $PROJECT_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$IID/changes" \
+          | jq -r '.changes[].new_path' > /tmp/mr-files.txt
+      else
+        git diff --name-only HEAD~1 HEAD > /tmp/mr-files.txt   # запасной путь: MR не найден
+      fi
+      git tag --list > /tmp/tags.txt
+    - |
+      node ci/semver-bump.mjs \
+        --pr-title /tmp/mr-title.txt --pr-body /tmp/mr-body.txt \
+        --files-from /tmp/mr-files.txt --tags-from /tmp/tags.txt --json > /tmp/bump.json
+      cat /tmp/bump.json
+      TAG=$(jq -r '.tag // empty' /tmp/bump.json)
+      REASON=$(jq -r '.reason' /tmp/bump.json)
+      if [ -z "$TAG" ]; then
+        echo "Тег НЕ поставлен — $REASON (штатный исход, не сбой)"; exit 0
+      fi
+      if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+        echo "тег $TAG уже существует — не перетираю (идемпотентность)"; exit 0
+      fi
+      git config user.name  "rationaldev-bot"
+      git config user.email "rationaldev-bot@example.invalid"
+      git tag -a "$TAG" -m "$TAG — $REASON"
+      git push "https://oauth2:${PROJECT_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "$TAG"
+      echo "Транк затегирован $TAG ($REASON)"

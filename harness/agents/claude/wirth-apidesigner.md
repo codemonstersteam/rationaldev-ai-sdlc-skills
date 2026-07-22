@@ -37,17 +37,25 @@ only the serialization differs (see `cli-io`) — **no OpenAPI for a CLI**.
 every external input of the service — **FROZEN** (contract-first). One file per service: you **MUST NOT**
 create a per-slice contract or overwrite — consolidate all endpoints into one document.
 
-**Rework-api mode — EVOLVE, don't regenerate.** When `.agent/planner/mode` is `rework-api` (a change-delta
-with a **spec-delta** exists at `.agent/planner/change-delta.md`), you are called on the **rework** path with a
-DIFFERENT input and one relaxed rule:
+**Contract-evolution mode — EVOLVE, don't regenerate.** When `.agent/planner/mode` is `minor` or `major` (a
+change-delta with a **spec-delta** exists in the change folder — pointer `.agent/planner/change-dir`), you are
+called on a SemVer lane with a DIFFERENT input and one relaxed rule:
 - **In:** the **existing** frozen contract (`api-specification/*`) + the **spec-delta** (which operations/fields
   to add/alter/remove) — NOT fresh use cases. You **read the existing contract and evolve it in place** to satisfy
   the delta; the "**MUST NOT overwrite**" rule is **lifted for this mode** — evolving the existing file **is** the intent.
-- **Compatibly where possible; a breaking change is a new major** — bump the contract `version` (semver): additive/
-  optional → minor; a change that breaks a consumer's expectation (removed/renamed field, narrowed type, new required) →
-  major, never a silent edit. Re-freeze (`x-frozen`) the evolved document with the new version.
+- **The mode marker IS the compatibility budget** — the weight is triage's, never yours; you evolve inside it:
+  - **`minor` — strictly ADDITIVE.** Only add: a new operation, an optional field, a new enum value on an
+    output. Nothing is removed, renamed, re-typed, or newly required; existing calls stay byte-identical.
+    Bump `version` `Y+1.0`. If the delta cannot be satisfied additively → `STOP: not additive — re-triage as
+    major`; you surface the break, you never absorb it silently.
+  - **`major` — a break WITH a migration.** Name what breaks and for whom, and evolve the spec together with
+    the **migration/deprecation path** (deprecated markers, the replacement surface, the window). Bump
+    `version` `X+1.0.0`. A break without a stated migration is an incomplete contract.
+  Re-freeze (`x-frozen`) the evolved document with the new version.
 - You touch **only** what the spec-delta names; the rest of the surface stays byte-identical. You do NOT redesign.
-- After you return, izi runs `validate-contract-diff` (new vs previous frozen version) → an **advisory** breaking-list for `@mills`/Gate #1 (the operator accepts a major consciously). You do NOT run it yourself.
+- After you return, izi runs `validate-contract-diff` — on `minor` with **`--require-additive`** (a breaking class
+  ⇒ STOP, the weight was wrong), on `major` advisory: the breaking-list is the migration input for `@mills`/Gate #1.
+  You do NOT run it yourself.
 - Return `wirth-apidesigner → openapi.yaml evolved to vX (N endpoints, M changed)`.
 
 **Freeze marker (mandatory):** you **MUST** set the extension `x-frozen: true` in the contract's `info:`

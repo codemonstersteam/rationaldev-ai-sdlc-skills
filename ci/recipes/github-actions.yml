@@ -1,0 +1,82 @@
+# E6 — тег-автоматика транка. Мерж PR в транк → бамп по weight из PR → голый SemVer-тег X.Y.Z.
+#
+# ПОЧЕМУ тригер pull_request:closed, а не push:<trunk>: здесь PR-контекст (тело, лейблы, список файлов)
+# доступен НАПРЯМУЮ. На push пришлось бы искать PR по merge-SHA — лишний вызов и гонка при squash.
+#
+# Человек акцептует МЕРЖ (Gate #2) — тег ставит автоматика. @git-hand протаскивает weight в PR и НЕ бампает.
+name: tag-on-merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write      # нужно для push тега
+
+jobs:
+  tag:
+    # Только реально смерженные PR в транк. Закрытые без мержа — не наш случай.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # нужна полная история...
+          fetch-tags: true      # ...и ВСЕ теги: база версии = последний релизный тег
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Собрать вход для бампа (weight + файлы PR)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Вес читаем из ЗАГОЛОВКА PR (Conventional Commits) — единственный источник.
+          printf '%s' "$PR_TITLE" > /tmp/pr-title.txt
+          printf '%s' "$PR_BODY"  > /tmp/pr-body.txt
+          # Файлы именно PR'а, а не HEAD~1..HEAD: при squash-мерже второе даст верный ответ, при
+          # merge-commit — нет. Берём у API, чтобы стратегия мержа не влияла на no-bump-решение.
+          gh pr view "$PR_NUM" --json files --jq '.files[].path' > /tmp/pr-files.txt
+          git tag --list > /tmp/tags.txt
+          echo "── заголовок PR (несёт вес) ──"; cat /tmp/pr-title.txt; echo
+          echo "── файлов в PR: $(wc -l < /tmp/pr-files.txt) ──"
+
+      - name: Посчитать следующий тег
+        id: bump
+        run: |
+          set -euo pipefail
+          node ci/semver-bump.mjs \
+            --pr-title /tmp/pr-title.txt --pr-body /tmp/pr-body.txt \
+            --files-from /tmp/pr-files.txt --tags-from /tmp/tags.txt --json > /tmp/bump.json
+          cat /tmp/bump.json
+          echo "tag=$(node -e 'console.log(require("/tmp/bump.json").tag ?? "")')" >> "$GITHUB_OUTPUT"
+          echo "reason=$(node -e 'console.log(require("/tmp/bump.json").reason)')" >> "$GITHUB_OUTPUT"
+
+      - name: Поставить тег
+        if: steps.bump.outputs.tag != ''
+        env:
+          TAG: ${{ steps.bump.outputs.tag }}
+          REASON: ${{ steps.bump.outputs.reason }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::warning::тег $TAG уже существует — не перетираю (идемпотентность)"; exit 0
+          fi
+          git config user.name  "rationaldev[bot]"
+          git config user.email "rationaldev@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG — $REASON (PR #${{ github.event.pull_request.number }})" "$SHA"
+          git push origin "$TAG"
+          echo "### Транк затегирован \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- основание: $REASON" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Объяснить, почему тега нет
+        if: steps.bump.outputs.tag == ''
+        run: |
+          echo "### Тег НЕ поставлен" >> "$GITHUB_STEP_SUMMARY"
+          echo "- причина: ${{ steps.bump.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Версия не двигается — это штатный исход, не сбой." >> "$GITHUB_STEP_SUMMARY"

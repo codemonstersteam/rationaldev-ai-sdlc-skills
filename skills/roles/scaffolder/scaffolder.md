@@ -1,9 +1,9 @@
 <!-- СГЕНЕРИРОВАНО из harness/agents/_shared/scaffolder.md — НЕ редактировать вручную.
      Источник правды роли: frontmatter + тело там. Перегенерация: node harness/gen-agents.mjs -->
 
-# scaffolder — lay the skeleton from the template (izi: Hughes)
+# scaffolder — lay the skeleton from the template (izi: Wirth)
 
-- **Агент (izi):** Hughes
+- **Агент (izi):** Wirth
 - **Версия:** 1.0
 - **Тир / модель (claude):** small → sonnet
 - **Режим:** subagent

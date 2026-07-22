@@ -41,13 +41,26 @@ izi may restart this stage. Acceptance is idempotent by its own result: if the b
 already carry **no** `@wip` AND `node harness/validate-dod.mjs .` is green, the slice is **already
 accepted** — return immediately `fagan → <slice> accepted (idempotent)`; strip nothing, re-verify nothing.
 
-**Exception — rework AND foreign modes (MUST):** when `.agent/planner/mode` starts with `rework` **or** is
-`foreign`, "no `@wip`" does **NOT** imply "already accepted": a `rework-refactor` legitimately has **zero**
-`@wip` scenarios on its **first** pass, and a `foreign` change has **no** `@wip` at all (native runner, no
-Gherkin tag). So in these modes you treat the slice as already-accepted **only if** a prior `role=fagan …
-accepted` line exists in `.agent/decisions.log`; otherwise you **MUST** run the full gate below (for `foreign`
-that gate is the **Foreign mode** section — the repo's native verification command, not `validate-dod`). Never
-shortcut a first acceptance — its semantic verdict is exactly what you add.
+**Exception — SemVer lanes (MUST):** when `.agent/planner/mode` is `patch`, `minor` or `major`, "no `@wip`" does
+**NOT** imply "already accepted": a compatible restructure legitimately has **zero** `@wip` scenarios on its
+**first** pass (the existing suite is the invariant). So on these lanes you treat the slice as already-accepted
+**only if** a prior `role=fagan … accepted` line exists in `.agent/decisions.log`; otherwise you **MUST** run the
+full gate below. Never shortcut a first acceptance — its semantic verdict is exactly what you add.
+
+## Move 0 — on a SemVer lane, prove the WEIGHT held (before Moves 1–2)
+The weight is a promise to the consumer; acceptance is where it is **proven**, not asserted. Read
+`.agent/planner/mode` and add the matching evidence — mechanical first, judgement only where no exit code exists:
+- **`patch`** — the **whole** suite green (the compatible-fix invariant: nothing regressed) **and** the
+  difference proven **old → new** on the discriminating scenario (RED before, GREEN after). No deterministic
+  pin exists → the DoD must **state why**; a silent absence is a reject.
+- **`minor`** — the component test on the **NEW** surface green · `node harness/validate-contract-diff.mjs
+  --require-additive` at **0 breaking** (non-zero ⇒ the weight was wrong → `FAIL`, re-triage as `major`) · **no
+  existing contract test changed** (`git diff` on the existing test files is empty — an edit there signals a
+  break) · the capability's **toggle defaults OFF**.
+- **`major`** — the reworked components green · the **breaking-list** and the **migration/deprecation path**
+  present in the change folder and carried into the PR body (`BREAKING CHANGE`).
+Where the contract is not machine-readable, `validate-contract-diff` cannot prove additivity — then **you** are
+the proof: existing tests untouched + the whole suite green. Any missing item → `FAIL: <item>`, never a soft pass.
 
 ## Move 1 — the deterministic gate (mechanical DoD)
 Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; return the failed item):
@@ -68,7 +81,7 @@ Run in order; the first non-zero **stops acceptance** (do NOT strip `@wip`; retu
    table carrying **every** `error.code`, run + `component-tests/` link, the retrievability ladder to
    `docs/design/<slice>/`. `validate-dod` (step 2) checks only section **names**; this checks the skill's
    real **structure**. Non-zero → README form incomplete → reject (the content skill was loaded, but the
-   OUTPUT must CONFORM, not just the skill be present — run 13-07).
+   OUTPUT must MATCH the skeleton, not just the skill be present — run 13-07).
 
 These validators are agent-agnostic and deterministic: running them is **not** acceptance — they only
 clear the mechanical floor, so your judgement is spent solely where it must be.
@@ -86,23 +99,6 @@ What no exit code can assert — read and judge (`doc-quality-review` for the RE
   tech-debt (`TODO: caching later` · «pagination — out of scope» → ok)? A green build carrying "not
   done" prose is a reject — grep found the word, you decide if it lies.
 Any doubt → reject with the specific gap; never sign on "probably fine".
-
-## Foreign mode (route-foreign-lane) — native verification REPLACES Move 1
-When `.agent/planner/mode` = `foreign`, the target is a repo built OUTSIDE the harness: **Move 1's Go/Gherkin
-gate does NOT apply** (no `go.mod`/`.feature`/openapi/Dockerized godog). It is replaced by:
-- **Run the repo's OWN verification command** — read it from the `@surveyor` map
-  `docs/design/_harness/test-harness.md` (and `docs/foreign/<slug>/FOREIGN-PLAN.md`): the full native suite
-  (JUnit/pytest/…) must be **green**, including the previously-RED discriminating tests `@wirth-tester` authored.
-  **Do NOT** run `validate-component-tests` / `validate-dod` / `validate-readme` (Gherkin/Go-specific). Reject
-  by the **failing native test**. A native BUILD/ENV fault (toolchain, network) → surface to the operator and
-  STOP (same non-diagnosis rule — you inspect, you do not repair).
-- **Move 2 (semantic verdict) STILL applies** — the change does what the BRD says, no hardcoded constant. README
-  faithfulness is **best-effort** here (a foreign repo need not follow the harness README structure) — judge
-  only what the change actually touched; `doc-quality-review` guides, it does not gate.
-- **Sign (foreign) — there is NO `@wip` to strip** (native runners have no Gherkin tag). Acceptance is the
-  verdict itself: append `role=fagan · <slug> · foreign-DoD (verification: <cmd> green) · rationale` to
-  `.agent/decisions.log` and return `fagan → <slug> accepted (foreign)` → **Gate #2**. You write nothing but
-  the log line. Reject exactly as always (`FAIL: <item>` → izi → `@linger`); you never repair or weaken a test.
 
 ## Sign or reject
 - **Both moves green → SIGN:** strip `@wip` from the business scenarios (your only write); append the

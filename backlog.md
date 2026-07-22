@@ -45,9 +45,10 @@
 прошлой версии. Итог: (а) регенерация может **потерять эндпоинты/схемы**, не переописанные в этом прогоне;
 (б) тихую **ломающую** правку конвейер не остановит («breaking = new major» — принцип в голове apidesigner, не гейт).
 
-> **Код-путь — отдельный конвейер `KIND=rework`** (не режим-с-условиями): дизайн + тикеты (change-intake,
-> impact-map, **hughes-rework**, Δ-вход, регрессия-baseline, гардрэйлы) — в [`docs/features/rework-workflow.md`](docs/features/rework-workflow.md).
-> Пункты ниже — контракт-сторона того же.
+> ✅ **Закрыто SemVer-вертикалями.** Отдельного конвейера `KIND=rework` нет: доработка существующего кода —
+> это вес `patch|minor|major` (`@change-intake` → контракт-стадия → `@hughes-rework`), аддитивность minor
+> проверяет `harness/validate-contract-diff.mjs --require-additive`. См. [`docs/flows/`](docs/flows/) и
+> [`requirements/semver-verticals.md`](requirements/semver-verticals.md); [`docs/features/rework-workflow.md`](docs/features/rework-workflow.md) — исторический черновик.
 - [ ] **Прошлый контракт — вход `wirth-apidesigner`.** Если `api-specification/openapi.yaml` (или `config/report.schema.json`)
   уже существует и `x-frozen` — читать его и **эволюционировать совместимо** (сохранить поверхность, добавлять/менять
   только по задаче), а не регенерить из одних use-cases. Объявить существующий контракт входом в манифесте роли.
@@ -112,7 +113,9 @@ _izi-фиксы (роутер glm-5.2 + вопросы по одному) — в
 не слайс с контрактом. Конвейер её не вмещает экономично, и последнюю милю (pull транка → ветка → commit → push
 → PR → наблюдение CI) **делал человек руками** — ни одна роль не владеет git. Вскрылись две дыры:
 
-- [ ] **🟠 Полоса `chore` — экономичный проход простой задачи ПО ПЛАНУ (третий вес).** У конвейера два веса:
+- [x] **🟠 Полоса `chore` — экономичный проход простой задачи ПО ПЛАНУ.** ✅ реализовано: ось 0 в
+  `wirth-triage`, CHORE lane в `izi`, `CHORE-PLAN.md` в `docs/chores/<NNN-slug>/`, `no-bump` при закрытии
+  прогона. Описание ниже — исходный анализ дыры. (Веса теперь пять: `greenfield|patch|minor|major|chore`.)
   полный greenfield/rework — или `trivial → @hughes`. Для инфра-задач (CI, Dockerfile, Makefile, `.gitignore`,
   bump зависимостей, docs-only) оба мимо: (1) `wirth-triage` знает только оси greenfield/rework + уровень —
   **нет класса chore/infra**, задачу впихивают в `rework-refactor`/`greenfield trivial` (неточно); (2) даже
