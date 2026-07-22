@@ -45,14 +45,14 @@
 | `docs/flows/{greenfield,patch,minor,major,chore}-flow.md` | ✅ |
 | `CONCEPT`, `README`, `GLOSSARY`, `docs/00_PROCESS`, `01_DIAGRAM`, `harness-flow`, `05_REPO_STRUCTURE` | ✅ под вертикали |
 | Удалено: `surveyor`, `foreign-designer`, `conform-tests`, маршруты `rework-*`/`foreign` | ✅ |
-| `docs/SDLC.svg`, `presentation/sdlc.html` | 🔴 устарели (нарисованы до вертикалей) |
+| `docs/SDLC.svg` (веер весов + бампы), `presentation/sdlc.html` (9 слайдов) | ✅ под вертикали |
 | `docs/features/rework-workflow.md`, `docs/concept-api-workflow.md`, `docs/04_PLANNING_PIPELINE.md` | 🟡 исторические, помечены/не переписаны |
 
 ## Следующий шаг
 
-Перерисовать `docs/SDLC.svg` и `presentation/sdlc.html` под конвейер BRD → вес → вертикаль →
-Gate #2 → тег → канарейка; при желании — переписать `docs/concept-api-workflow.md` (граф ролей
-устарел).
+Живой прогон `opencode --agent izi` по вертикалям patch/minor (стенд — `/tmp/pinout-semver-test`,
+origin `max0l0gy/pinout-semver-test`, тег `v0.0.1` уже стоит): проверен механический контур, но не
+поведение ролей. При желании — переписать `docs/concept-api-workflow.md` (граф ролей устарел).
 
 ## Тестовый прогон харнеса — как запускать
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>rationaldev — AI-first рациональный SDLC · izi</title>
+<title>rationaldev — AI-first рациональный SDLC · izi · SemVer-вертикали</title>
 <style>
   :root{
     --bg:#06070b; --bg2:#0b0d14; --ink:#e8ecf4; --mut:#7c869b; --line:#1c2233;
@@ -33,55 +33,63 @@
     font-size:.74rem;letter-spacing:.28em;text-transform:uppercase;color:var(--cy)}
   .kicker::before{content:"";width:26px;height:2px;background:var(--cy);box-shadow:var(--glow)}
   h1{font-size:clamp(2rem,5vw,4.2rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
-  h2{font-size:clamp(1.5rem,3.1vw,2.5rem);line-height:1.08;font-weight:700;letter-spacing:-.01em;margin-bottom:2.4vh}
-  .lead{color:var(--mut);font-size:clamp(.95rem,1.4vw,1.2rem);line-height:1.5;max-width:62ch}
+  h2{font-size:clamp(1.4rem,2.9vw,2.35rem);line-height:1.08;font-weight:700;letter-spacing:-.01em;margin-bottom:2.2vh}
+  .lead{color:var(--mut);font-size:clamp(.9rem,1.3vw,1.12rem);line-height:1.5;max-width:74ch}
   .footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;
-    font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+    font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);padding-top:1.2vh}
   .dots{display:flex;gap:7px}
   .dots i{width:7px;height:7px;border-radius:50%;background:var(--line);transition:.3s}
   .dots i.act{background:var(--cy);box-shadow:var(--glow);transform:scale(1.15)}
   .neon{color:var(--cy)} .pink{color:var(--mg)} .lime{color:var(--lm)} .amb{color:var(--am)} .gold{color:var(--au)}
   .grid{display:grid;gap:1.1rem}
   .card{background:linear-gradient(180deg,var(--bg2),#080a11);border:1px solid var(--line);
-    border-radius:14px;padding:1.2rem 1.3rem;position:relative}
+    border-radius:14px;padding:1.1rem 1.2rem;position:relative}
   .card h3{font-size:.95rem;font-weight:650;margin-bottom:.45rem;display:flex;align-items:center;gap:.5rem}
-  .card p{color:var(--mut);font-size:.84rem;line-height:1.45}
+  .card p{color:var(--mut);font-size:.83rem;line-height:1.45}
   .badge{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
     padding:.22rem .5rem;border-radius:999px;white-space:nowrap}
   .b-ok{color:var(--lm);border:1px solid rgba(198,255,58,.4);background:rgba(198,255,58,.07)}
   .b-need{color:var(--am);border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.08)}
   .b-block{color:var(--mg);border:1px solid rgba(255,45,142,.4);background:rgba(255,45,142,.08)}
-  .pipe{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap}
-  .stage{flex:1;min-width:120px;border:1px solid var(--line);border-radius:12px;
-    padding:.9rem .8rem;background:var(--bg2);position:relative;display:flex;flex-direction:column}
-  .stage .s-role{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:.3rem}
-  .stage .s-name{font-weight:650;font-size:.92rem;margin-bottom:.55rem}
-  .stage.ci{border-color:rgba(0,229,255,.45);box-shadow:inset 0 0 0 1px rgba(0,229,255,.08)}
-  .stage.cd{border-color:rgba(255,45,142,.35)}
+  .steps{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap}
+  .step{flex:1;min-width:150px;border:1px solid var(--line);border-radius:12px;
+    padding:.9rem .8rem;background:var(--bg2);display:flex;flex-direction:column;gap:.35rem}
+  .step .s-role{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  .step .s-name{font-weight:650;font-size:.92rem}
+  .step p{color:var(--mut);font-size:.78rem;line-height:1.4}
   .arrow{align-self:center;color:var(--mut);font-size:1.1rem}
   .gate{align-self:flex-start;margin-top:auto;font-size:.6rem;letter-spacing:.05em;font-weight:700;
     padding:.28rem .52rem;border-radius:7px;color:var(--au);white-space:nowrap;
     border:1px solid rgba(255,209,102,.5);background:rgba(255,209,102,.12);
     box-shadow:0 0 14px rgba(255,209,102,.12)}
-  .legend{display:flex;gap:1.3rem;font-size:.68rem;letter-spacing:.06em;color:var(--mut);margin-bottom:.7rem;flex-wrap:wrap}
-  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:.45rem;vertical-align:middle}
-  table{width:100%;border-collapse:collapse;font-size:.82rem}
-  th,td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
-  th{color:var(--mut);font-weight:600;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
-  td .mono{font-size:.78rem;color:var(--neon)}
+  table{width:100%;border-collapse:collapse;font-size:.8rem}
+  th,td{text-align:left;padding:.48rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase}
+  td .mono{font-size:.76rem}
   tr:last-child td{border-bottom:none}
-  .big{font-size:clamp(2.4rem,6vw,5rem);font-weight:800;letter-spacing:-.03em;line-height:1}
+  .big{font-size:clamp(2.2rem,5.4vw,4.4rem);font-weight:800;letter-spacing:-.03em;line-height:1}
   .stat{display:flex;flex-direction:column;gap:.3rem}
-  .stat .l{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .stat .l{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
   .chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.74rem;
     border:1px solid var(--line);border-radius:8px;padding:.32rem .6rem;background:var(--bg2)}
-  .sig{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--line);border-radius:12px;padding:1rem;background:var(--bg2)}
-  .sig .n{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
-  .sig .v{font-weight:700;font-size:1.05rem}
-  .verd{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
-  .v-g{color:var(--lm);border:1px solid rgba(198,255,58,.4);background:rgba(198,255,58,.07)}
-  .v-y{color:var(--am);border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.08)}
-  .v-r{color:var(--mg);border:1px solid rgba(255,45,142,.4);background:rgba(255,45,142,.08)}
+  .diagram{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line);border-radius:14px;background:var(--bg2);padding:.8rem;margin-bottom:1rem}
+  .diagram img{max-width:100%;max-height:100%;height:100%;object-fit:contain}
+  /* Лента конвейера: вертикальная SDLC.svg (1040×2400) на слайде 16:9 нечитаема — здесь
+     показываем ПОРЯДОК шагов, полная схема остаётся единственным источником в docs/. */
+  .band{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:14px}
+  .row{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap}
+  .step{flex:1;border:1px solid #22304a;border-radius:10px;padding:10px 8px;background:#0d1421;
+        display:flex;flex-direction:column;gap:4px;min-width:0}
+  .step b{font-size:13px;letter-spacing:.2px}
+  .step span{font-size:11px;color:#9aa3b8;line-height:1.35}
+  .step.gate{border-color:#e8a33d;background:#1a1408}
+  .step.gate b{color:#e8a33d}
+  .step.close{border-color:#b6e34a;background:#111a08}
+  .step.close b{color:#b6e34a}
+  .step.canary{border-color:#ff2d8e;background:#1a0a14}
+  .step.canary b{color:#ff2d8e}
+  .arr{align-self:center;color:#44506b;font-size:15px}
   .nav{position:fixed;inset:0;z-index:4;display:flex}
   .nav .l,.nav .r{flex:1;cursor:pointer}
   .prog{position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--cy),var(--mg));z-index:6;transition:width .35s}
@@ -99,198 +107,250 @@
 <body>
 <div class="prog" id="prog"></div>
 
-<!-- 1 — COVER -->
+<!-- 1 — ЧТО ЭТО -->
 <section class="slide on">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
     <div style="margin:auto 0">
-      <div class="kicker">Рациональный SDLC · агенты izi</div>
-      <h1>Дерзкая разработка.<br><span class="neon">Человек + Машина.</span> Ничего лишнего.</h1>
-      <p class="lead" style="margin-top:1.6rem">Рациональная разработка с научно-обоснованным подходом к <span class="gold">проектированию корректности программ</span> и минимально необходимым составом тестов. <span class="neon">Математика и логика.</span></p>
-      <div style="margin-top:1.8rem">
-        <div style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:.7rem">В сердце проектирования и имплементации — труды великих инженеров, большей частью из IBM</div>
+      <div class="kicker">Что это</div>
+      <h1>AI-first SDLC<br>на агентах <span class="neon">izi</span>.</h1>
+      <p class="lead" style="margin-top:1.5rem">Команда в своей основе — <span class="gold">человек + машина</span>: инженер прорабатывает идею <b>с ИИ</b> и воплощает её <b>с ИИ</b>. Репозиторий — подключаемый мультиагентный харнес: ставишь его в проект, и агент ведёт задачу по SDLC-ролям сам — от требования до тега на транке.</p>
+      <p class="lead" style="margin-top:.9rem">Тестовых сред нет — только <span class="neon">CI</span> и <span class="pink">канареечный релиз за фиче-тогглом прямо в прод</span> на вариативную среду (VM / контейнер / serverless; Kubernetes не обязателен). Следствие: корректность некуда «отложить до отдельной среды» — она доказывается проектированием и проверяется реальным трафиком.</p>
+      <div style="margin-top:1.6rem">
+        <div style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-bottom:.6rem">Фундамент — труды инженеров, на чьих именах названы роли</div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <span class="chip mono">Wirth</span>
-          <span class="chip mono">Hughes</span>
-          <span class="chip mono">Michtom</span>
-          <span class="chip mono">Linger</span>
-          <span class="chip mono">Mills</span>
-          <span class="chip mono">Witt</span>
+          <span class="chip mono">Wirth</span><span class="chip mono">Mills</span><span class="chip mono">Hughes</span>
+          <span class="chip mono">Michtom</span><span class="chip mono">Linger</span><span class="chip mono">Witt</span>
+          <span class="chip mono">Gilb</span><span class="chip mono">Dijkstra</span><span class="chip mono">Fagan</span>
+          <span class="chip mono">Torvalds</span><span class="chip mono">Rochkind</span>
         </div>
       </div>
     </div>
-    <div class="footer"><span>1 — Обложка</span><div class="dots" id="d1"></div><span>rationaldev · izi</span></div>
+    <div class="footer"><span>1 — Что это</span><div class="dots" id="d1"></div><span>человек дирижирует, агенты выполняют</span></div>
   </div>
 </section>
 
-<!-- 2 — КОМАНДА -->
+<!-- 2 — ОДНА ОСЬ: ВЕС ПО SEMVER -->
 <section class="slide">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Суть модели</div>
-    <h2>Команда в основе — <span class="neon">человек + машина</span></h2>
-    <div class="grid" style="grid-template-columns:1fr 1fr">
-      <div class="card"><h3 class="neon">Discovery</h3><p>Инженер-разработчик <b>совместно с ИИ</b>: гипотезы, требования, продуктовая проработка. Аналитика здесь — отдельной роли-аналитика нет.</p></div>
-      <div class="card"><h3 class="pink">Delivery</h3><p>Агенты <b>izi</b> + дирижёр (человек): от плана до здоровой фичи в проде. Рутину ведут агенты, решения на границах — человек.</p></div>
-    </div>
-    <p class="lead" style="margin-top:1.4rem">Граница входа агентов — момент, когда задача сформулирована. Продуктовые решения, акцепт плана и мерж остаются за человеком. Ключевой принцип — <span class="gold">асимметрия генератор/критик</span>: кто создаёт артефакт, тот его не принимает.</p>
-    <div class="footer"><span>2 — Команда</span><div class="dots" id="d2"></div><span>человек дирижирует, агенты выполняют</span></div>
-  </div>
-</section>
-
-<!-- 3 — ФУНДАМЕНТ -->
-<section class="slide">
-  <div class="wrap">
-    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Научный фундамент</div>
-    <h2>Стоим на трудах <span class="neon">великих инженеров</span></h2>
-    <table>
-      <tr><th>Труд</th><th>Авторы</th></tr>
-      <tr><td><i>Systematic Programming: An Introduction</i></td><td class="mono">Niklaus Wirth</td></tr>
-      <tr><td><i>A Structured Approach to Programming</i></td><td class="mono">Joan K. Hughes · Jay I. Michtom</td></tr>
-      <tr><td><i>Structured Programming: Theory and Practice</i></td><td class="mono">Richard C. Linger · Harlan D. Mills · Bernard I. Witt</td></tr>
-    </table>
-    <p class="lead" style="margin-top:1.4rem">Плюс цикл статей автора. Ключевые идеи: <span class="gold">программа = дерево модулей</span> (Wirth), <span class="gold">корректность по построению</span> (Mills, Cleanroom), бизнес-логика отделена от I/O, математическая композиция модулей. «Качество достигается проектированием, а не тестированием».</p>
-    <div class="footer"><span>3 — Фундамент</span><div class="dots" id="d3"></div><span>на их именах названы агенты izi</span></div>
-  </div>
-</section>
-
-<!-- 4 — ДЕРЗКАЯ РАЗРАБОТКА -->
-<section class="slide">
-  <div class="wrap">
-    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Дерзкая разработка</div>
-    <h2>Чего <span class="pink">нет</span> и что <span class="lime">есть</span></h2>
-    <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="kicker">Классификатор работы</div>
+    <h2>Одна ось — <span class="neon">вес по SemVer 2.0.0</span></h2>
+    <p class="lead">Решающий тест ровно один: <span class="gold">обратная совместимость документированного контракта</span>. Вес определяет <span class="mono">@wirth-triage</span>; <span class="mono">izi</span> роутит по вердикту механически и никогда не переклассифицирует.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:1.4rem">
+      <div class="card">
+        <h3 class="neon">Порядок вопросов триажа</h3>
+        <p>0 · не трогает секрет модуля и контракт, не добавляет поведения, которое утверждал бы компонентный тест → <b>chore</b><br>
+        1 · кода/публичного API ещё нет (v0 → v1) → <b>greenfield</b><br>
+        2 · ломает существующих потребителей → <b>major</b><br>
+        3 · иначе добавляет функциональность → <b>minor</b><br>
+        4 · иначе совместимый багфикс → <b>patch</b></p>
+      </div>
       <div class="card" style="border-color:rgba(255,45,142,.35)">
-        <h3 class="pink">Убрано — лишнее</h3>
-        <p>· Тестовые среды и стенды<br>· Кольца раскатки и обязательный Kubernetes<br>· Отдельные роли QA / аналитика / SRE<br>· Тяжёлый governance (tech-radar)</p>
-      </div>
-      <div class="card" style="border-color:rgba(198,255,58,.35)">
-        <h3 class="lime">Оставлено — только экспертиза</h3>
-        <p>· CI + канареечные релизы прямо в прод за тогглом<br>· Вариативные среды: VM / контейнер / serverless<br>· Компонентные + контрактные тесты · маткомпозиция<br>· 4 золотых сигнала · security-scan · утилиты RRA в CI</p>
+        <h3 class="pink">Ловушка: причина ≠ вес</h3>
+        <p>Багфикс, который <b>сам</b> ломает совместимость (потребитель зависел от старого вывода в рамках контракта), — это <b class="pink">major</b>, а не patch. Обратно: чистый рефактор с идентичным поведением и спекой — <b>patch</b>, наименьший совместимый вес.<br>Pre-release (<span class="mono">X.Y.Z-canary.N</span>) и build-метадата вес не меняют.</p>
       </div>
     </div>
-    <div class="footer"><span>4 — Дерзкая разработка</span><div class="dots" id="d4"></div><span>ничего лишнего — только рациональный подход</span></div>
+    <p class="lead" style="margin-top:1.2rem">Аддитивность <b>minor</b> проверяется механически: <span class="mono neon">validate-contract-diff.mjs --require-additive</span> → 0 breaking-классов. Найден слом ⇒ вес был неверен ⇒ <span class="pink">STOP</span> и ре-триаж как <b>major</b>. Вес не выводится из BRD → тоже STOP, вопрос оператору: выдумывать вес запрещено.</p>
+    <div class="footer"><span>2 — Вес по SemVer</span><div class="dots" id="d2"></div><span>вес — суждение триажа, не роутера</span></div>
   </div>
 </section>
 
-<!-- 5 — ПРОЦЕСС -->
+<!-- 3 — ПЯТЬ ВЕРТИКАЛЕЙ -->
 <section class="slide">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Процесс целиком</div>
-    <h2>CI → канарейка · <span class="gold">3 человеческих гейта</span></h2>
-    <div class="legend"><span><i style="background:var(--cy)"></i>агентский шаг</span><span><i style="background:var(--mg)"></i>канарейка в прод</span><span><i style="background:var(--au)"></i>human gate</span></div>
-    <div class="pipe">
-      <div class="stage"><span class="s-role">Planning</span><span class="s-name neon">Wirth</span><span class="gate">→ Gate #1 акцепт</span></div>
-      <div class="arrow">→</div>
-      <div class="stage"><span class="s-role">Plan review</span><span class="s-name neon">Mills</span><span class="gate">асимметрия</span></div>
-      <div class="arrow">→</div>
-      <div class="stage"><span class="s-role">Implementation</span><span class="s-name lime">Hughes</span><span class="gate">тоггл OFF</span></div>
-      <div class="arrow">→</div>
-      <div class="stage ci"><span class="s-role">CI</span><span class="s-name neon">RRA + security</span><span class="gate">component · contract</span></div>
-      <div class="arrow">→</div>
-      <div class="stage"><span class="s-role">Code review</span><span class="s-name lime">Linger</span><span class="gate">→ Gate #2 мерж</span></div>
-      <div class="arrow">→</div>
-      <div class="stage cd"><span class="s-role">Release &amp; Health</span><span class="s-name pink">Michtom</span><span class="gate">→ Gate #3 приёмка</span></div>
-    </div>
-    <p class="lead" style="margin-top:1.6rem">Мерж триггерит <span class="pink">канареечный выкат прямо в прод</span> за фиче-тогглом. Доля растёт 1% → 5% → 25% → 100% только по зелёным сигналам. Полная схема — <span class="mono neon">docs/SDLC.svg</span>.</p>
-    <div class="footer"><span>5 — Процесс</span><div class="dots" id="d5"></div><span>дешёвое-первым, асимметрия генератор/критик</span></div>
-  </div>
-</section>
-
-<!-- 6 — АГЕНТЫ izi -->
-<section class="slide">
-  <div class="wrap">
-    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Агенты izi</div>
-    <h2>6 ролей · имена <span class="neon">великих инженеров</span></h2>
+    <div class="kicker">Вертикали</div>
+    <h2>Пять конвейеров — <span class="neon">один хребет</span>, разные головы</h2>
     <table>
-      <tr><th>Роль (общая)</th><th>Агент</th><th>Почему он</th></tr>
-      <tr><td>Planner</td><td class="mono">Wirth</td><td>дерево модулей, пошаговое уточнение → генерация плана</td></tr>
-      <tr><td>Plan Reviewer</td><td class="mono">Mills</td><td>Cleanroom, корректность по построению → верификация плана</td></tr>
-      <tr><td>Implementer</td><td class="mono">Hughes</td><td>прикладное структурное кодирование → пишет код</td></tr>
-      <tr><td>Fixer / Code Review</td><td class="mono">Linger</td><td>функциональная верификация + безопасность → ревью кода</td></tr>
-      <tr><td>Release &amp; Health</td><td class="mono">Michtom</td><td>системность и обратная связь → канарейка + 4 сигнала</td></tr>
-      <tr><td>Orchestrator (человек)</td><td class="mono">Witt</td><td>теория ↔ практика → держит границы на Human Gates</td></tr>
+      <tr><th>Вес</th><th>Голова конвейера</th><th>Транк</th><th>Тоггл</th><th>Тесты</th><th>Канарейка</th></tr>
+      <tr>
+        <td class="mono neon">greenfield</td>
+        <td>FRD → срезы → use-case → <b>заморозка контракта</b> → дерево модулей → README → тикеты → scaffold из шаблона</td>
+        <td class="mono">1.0.0</td><td>новое OFF</td>
+        <td>юниты по формуле + полный компонентный набор</td><td class="lime">да</td>
+      </tr>
+      <tr>
+        <td class="mono neon">patch</td>
+        <td>change-delta + discriminating; <b>контракт не трогается</b>; дизайн по радиусу ряби</td>
+        <td class="mono">Z+1</td><td>обычно нет</td>
+        <td>discriminating old ≠ new там, где различие наблюдаемо; весь сьют зелёный</td><td class="lime">да</td>
+      </tr>
+      <tr>
+        <td class="mono neon">minor</td>
+        <td>аддитивная эволюция контракта (0 breaking); дизайн <span class="mono">needed</span> всегда</td>
+        <td class="mono">Y+1.0</td><td><b>OFF обязателен</b></td>
+        <td>компонентный на <b>новое</b> API (RED-first); существующие контрактные не правятся</td><td class="lime">да (способность выключена)</td>
+      </tr>
+      <tr>
+        <td class="mono neon">major</td>
+        <td>редизайн + миграция/депрекейшн; breaking-список в тело PR</td>
+        <td class="mono">X+1.0.0</td><td>тоггл + миграционный путь</td>
+        <td>формула держится; изменённые компонентные дорабатываются под новый контракт</td><td class="lime">да</td>
+      </tr>
+      <tr>
+        <td class="mono amb">chore</td>
+        <td><span class="mono">CHORE-PLAN.md</span>: файлы · команда верификации · откат. Не срез: дизайна и компонентных нет</td>
+        <td class="mono amb">no-bump</td><td>—</td>
+        <td>команда верификации из плана</td><td class="pink">нет</td>
+      </tr>
     </table>
-    <p class="lead" style="margin-top:1.2rem"><span class="gold">izi</span> — строгая рациональность, поданная легко («make it as simple as possible», по Вирту).</p>
-    <div class="footer"><span>6 — Агенты izi</span><div class="dots" id="d6"></div><span>роль = модуль с контрактом вход/выход</span></div>
+    <p class="lead" style="margin-top:1.1rem"><span class="mono amb">no-bump</span> — <b>нормальный исход, а не отказ</b>: дифф трогает только плумбинг → тега нет, катить нечего, канарейка не запускается. Прогон всё равно закрывается записью и вайпом.</p>
+    <div class="footer"><span>3 — Пять вертикалей</span><div class="dots" id="d3"></div><span>вес задаёт глубину дизайна, бамп, тоггл, тесты</span></div>
   </div>
 </section>
 
-<!-- 7 — ТЕСТЫ -->
+<!-- 4 — КОНВЕЙЕР ЦЕЛИКОМ -->
 <section class="slide">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Качество без тестовых сред</div>
-    <h2>Три рубежа — и ни одного <span class="pink">лишнего</span></h2>
+    <div class="kicker">Конвейер целиком</div>
+    <h2>BRD → вес → вертикаль → <span class="gold">гейты</span> → тег → <span class="pink">канарейка</span></h2>
+    <div class="band">
+      <div class="row">
+        <div class="step"><b>@gilb</b><span>сырое требование → измеримое BRD</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>@wirth-triage</b><span>ВЕС по SemVer: ось — обратная совместимость контракта</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>вертикаль</b><span>greenfield · patch · minor · major · chore</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>тикеты + план</b><span>@wirth-ticketer · @wirth-planner · ревью @mills</span></div>
+        <div class="arr">→</div>
+        <div class="step gate"><b>GATE #1</b><span>акцепт плана · GATE1 APPROVE</span></div>
+      </div>
+      <div class="row">
+        <div class="step"><b>ветка</b><span>@git-hand mode=start от свежего транка</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>реализация</b><span>@wirth-tester RED · @hughes / @hughes-rework · K=2</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>DoD</b><span>@fagan: сборка/тесты/README + инвариант веса</span></div>
+        <div class="arr">→</div>
+        <div class="step"><b>PR + CI</b><span>@git-hand mode=terminal · вес в заголовке</span></div>
+        <div class="arr">→</div>
+        <div class="step gate"><b>GATE #2</b><span>мерж · GATE2 APPROVE</span></div>
+      </div>
+      <div class="row">
+        <div class="step close"><b>закрытие прогона · @ledger</b><span>пруф мерджа → тег (semver-bump) → docs/changes/LEDGER.md → вайп .agent/</span></div>
+        <div class="arr">→</div>
+        <div class="step canary"><b>канарейка · @michtom</b><span>1 % → 5 % → 25 % → 100 % · 4 золотых сигнала · no-bump (chore) выката не даёт</span></div>
+        <div class="arr">→</div>
+        <div class="step gate"><b>GATE #3</b><span>приёмка прод-релиза · тоггл → cleanup-тикет</span></div>
+      </div>
+    </div>
+    <p class="lead">Здесь — только порядок шагов: вертикальная схема на слайде нечитаема. Полная схема с веером весов и петлями — <span class="mono neon">docs/SDLC.svg</span> (единственный источник), Mermaid-версия и таблица «что решает вес» — <span class="mono">docs/01_DIAGRAM.md</span>, пошагово по весу — <span class="mono">docs/flows/</span>.</p>
+    <div class="footer"><span>4 — Конвейер</span><div class="dots" id="d4"></div><span>общий хребет для всех пяти вертикалей</span></div>
+  </div>
+</section>
+
+<!-- 5 — ТРИ ЧЕЛОВЕЧЕСКИХ ГЕЙТА -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Границы ответственности</div>
+    <h2>Три человеческих гейта — <span class="gold">по точному токену</span></h2>
+    <div class="steps">
+      <div class="step"><span class="s-role">Gate #1</span><span class="s-name gold">Акцепт плана</span>
+        <p>Принимается <span class="mono">PLAN.md</span> / <span class="mono">CHORE-PLAN.md</span>, проверенный <span class="mono">@mills</span>. До маркера имплементаторы (<span class="mono">@hughes</span>, <span class="mono">@wirth-tester</span>, <span class="mono">@scaffolder</span>) жёстко заблокированы.</p>
+        <span class="gate mono">GATE1 APPROVE</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="s-role">Gate #2</span><span class="s-name gold">Мерж PR</span>
+        <p>Показывается только на <span class="mono">ci=green</span>. Оператор читает финальный PR и мержит сам; без маркера <span class="mono">close-run.mjs</span> отказывает.</p>
+        <span class="gate mono">GATE2 APPROVE</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="s-role">Gate #3</span><span class="s-name gold">Приёмка прод-релиза</span>
+        <p>После канарейки: вердикт по 4 золотым сигналам (latency · traffic · errors · saturation) + SLO + guardrail vs baseline на 100%.</p>
+        <span class="gate">вердикт дирижёра</span></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:1.3rem">
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Маркер ставит гардрейл, не агент</h3><p><span class="mono">.agent/gates/gate1.approved</span> и <span class="mono">gate2.approved</span> создаёт только гардрейл по точному токену. Самоакцепт роли или роутера — нарушение, блокируется механически. Свободные слова («ок», «принято») акцептом не являются.</p></div>
+      <div class="card"><h3 class="neon">Почему это не формальность</h3><p>Модель может ошибиться и не несёт последствий — ответственность на человеке. Контроль перенесён с кода на границы: намерение (план) и результат (PR + CI + тег). Асимметрия генератор/критик: кто создаёт артефакт, тот его не принимает.</p></div>
+    </div>
+    <div class="footer"><span>5 — Три гейта</span><div class="dots" id="d5"></div><span>гейты не автокликабельны</span></div>
+  </div>
+</section>
+
+<!-- 6 — ЗАКРЫТИЕ ПРОГОНА -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">RUN-CLOSE</div>
+    <h2>Закрытие прогона — <span class="neon">из состояния в запись</span></h2>
+    <p class="lead"><span class="mono">.agent/</span> истинно, <b>пока прогон открыт</b>. После Gate #2 <span class="mono">@ledger</span> вызывает детерминированный <span class="mono neon">harness/close-run.mjs --pr &lt;N&gt;</span> — три акта в причинном порядке: вайп последний, потому что первые два читают то, что он стирает.</p>
+    <div class="steps" style="margin-top:1.4rem">
+      <div class="step"><span class="s-role">Акт 1</span><span class="s-name neon">Пруф мерджа → тег</span><p>PR влит (<span class="mono">state == MERGED</span>, читается у forge). Не влит → отказ, тега нет. Затем тег на транке: арифметика — <span class="mono">ci/semver-bump.mjs</span> по весу из <span class="mono">.agent/planner/mode</span>; форма тега берётся у последнего релизного тега репо, тегов нет → дефолт <span class="mono">v</span>.</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="s-role">Акт 2</span><span class="s-name lime">Запись в LEDGER</span><p>Append-only самодостаточная запись в <span class="mono">docs/changes/LEDGER.md</span> — она переживает вайп и остаётся историей закрытых прогонов.</p></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="s-role">Акт 3</span><span class="s-name pink">Атомарный вайп .agent/</span><p>Состояние прогона стирается целиком; <span class="mono">decisions.log</span> сохраняется — это трасса, а не состояние.</p></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:1.3rem">
+      <div class="card"><h3 class="neon">Тег — механика, не суждение</h3><p>Вес уже определён триажем; <span class="mono">ci/semver-bump.mjs</span> лишь считает: <span class="mono">patch → Z+1</span>, <span class="mono">minor → Y+1.0</span>, <span class="mono">major → X+1.0.0</span>, <span class="mono">greenfield → 1.0.0</span>. Существующий тег не перезаписывается.</p></div>
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Один источник тега</h3><p>Тег ставит <b>только</b> <span class="mono">@ledger</span>; <span class="mono">ci/recipes/*</span> — образец для репозиториев <b>без</b> харнеса. Без явного закрытия <span class="mono">gate1.approved</span> прошлой задачи пропустил бы следующую через гейт.</p></div>
+    </div>
+    <div class="footer"><span>6 — Закрытие прогона</span><div class="dots" id="d6"></div><span>пруф → тег → запись → вайп</span></div>
+  </div>
+</section>
+
+<!-- 7 — ЯДРО КАЧЕСТВА -->
+<section class="slide">
+  <div class="wrap">
+    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
+    <div class="kicker">Стандарт разработки — единый для всех вертикалей</div>
+    <h2>Ядро качества: <span class="neon">проектированием, а не тестированием</span></h2>
     <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
-      <div class="card"><h3 class="neon">Композиция</h3><p>Корректность модулей доказывается математически: предусловие/постусловие, один data-аргумент, <span class="mono">Result&lt;T,E&gt;</span>. <b>program-design</b>.</p></div>
-      <div class="card"><h3 class="lime">Компонентные</h3><p>Поведение сервиса как чёрного ящика — Gherkin-сценарии. Заменяют отдельную QA-дисциплину.</p></div>
-      <div class="card"><h3 class="amb">Контрактные</h3><p>Границы между компонентами как netlist, проверяет <b>pinout</b> (openapi / asyncapi / netlist). Падение = блок до прода.</p></div>
+      <div class="card"><h3 class="neon">Формула тестов</h3><p>Юниты — <span class="mono">1 happy + Σ ветвей antecedent</span>; компонентные — <span class="mono">N = 1 + Σ различимых ветвей адаптера</span>. Число тестов выводится из спецификации, а не из вкуса.</p></div>
+      <div class="card"><h3 class="lime">Один секрет на модуль</h3><p>Parnas: секрет задаёт радиус ряби изменения. Программа = дерево модулей (Вирт), корректность — композицией: предусловие/постусловие, один data-аргумент, <span class="mono">Result&lt;T,E&gt;</span>.</p></div>
+      <div class="card"><h3 class="amb">Контракт заморожен</h3><p>API-first: OpenAPI/AsyncAPI · CLI-spec первичен и заморожен <b>до</b> реализации; код следует контракту. Границы между компонентами проверяет <span class="mono">pinout</span>.</p></div>
+      <div class="card"><h3 class="neon">Doc-as-Code</h3><p>README / ADR / C4 / дизайн-пакет живут в репо, ревьюятся и машинно валидируются. Документация — продукт для четырёх JTBD-потребителей.</p></div>
+      <div class="card"><h3 class="lime">Git-TBD + тоггл OFF</h3><p>Короткая ветка <span class="mono">&lt;type&gt;/&lt;slug&gt;</span> от свежего транка, один PR, частый мерж. Новое едет <b>выключенным</b>; тоггл же — ручка канареечной раскатки и мгновенного отката без передеплоя.</p></div>
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Запрет на gaming</h3><p>Агент не правит тесты, ассерты, CI-конфиги и пороги ради «позеленения». На <b>minor</b> правка существующего контрактного теста — блокер: сигнал неверного веса. Предохранитель <span class="mono">@linger K=2</span> → эскалация.</p></div>
     </div>
-    <p class="lead" style="margin-top:1.6rem">Внутренняя корректность — композицией, поведение — компонентными тестами, межсервисные границы — контрактами, здоровье в проде — 4 золотыми сигналами. Тестовые среды не нужны.</p>
-    <div class="footer"><span>7 — Тесты</span><div class="dots" id="d7"></div><span>качество проектированием, не тестированием</span></div>
+    <p class="lead" style="margin-top:1.1rem">Discriminating-сценарий обязателен: изменение доказывается <span class="gold">old ≠ new на данных</span> (для <b>minor</b> — отсутствие → присутствие). Успех цикла — только <span class="mono">@fagan accepted</span> + зелёный CI на PR + доказанный инвариант веса.</p>
+    <div class="footer"><span>7 — Ядро качества</span><div class="dots" id="d7"></div><span>качество достигается проектированием</span></div>
   </div>
 </section>
 
-<!-- 8 — РЕЛИЗ / СИГНАЛЫ -->
+<!-- 8 — ЧЕГО ХАРНЕС НЕ ДЕЛАЕТ -->
 <section class="slide">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Релиз · Release &amp; Health (Michtom)</div>
-    <h2>Канарейка под <span class="gold">4 золотыми сигналами</span></h2>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">
-      <div class="sig"><span class="n">Latency</span><span class="v neon">задержка</span><span style="font-size:.74rem;color:var(--mut)">p50/p99, отдельно для ошибок</span></div>
-      <div class="sig"><span class="n">Traffic</span><span class="v neon">нагрузка</span><span style="font-size:.74rem;color:var(--mut)">RPS, ожидаемый трафик</span></div>
-      <div class="sig"><span class="n">Errors</span><span class="v neon">ошибки</span><span style="font-size:.74rem;color:var(--mut)">5xx, исключения, DLQ/ретраи</span></div>
-      <div class="sig"><span class="n">Saturation</span><span class="v neon">насыщение</span><span style="font-size:.74rem;color:var(--mut)">CPU, память, пулы, лаг очереди</span></div>
+    <div class="kicker">Граница применимости</div>
+    <h2>Чего харнес <span class="pink">не делает</span> — и почему это честно</h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Нет тестовых сред</h3><p>Ни стендов, ни колец раскатки, ни обязательного Kubernetes. Есть CI и канареечный выкат прямо в прод на вариативные среды. Следствие: доказательство корректности переносится в проектирование, а проверка «фича жива» — на реальный трафик под тогглом.</p></div>
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Нет разведки чужих репо</h3><p>Ведёт <b>только те репозитории, которые построил сам</b>: замороженный контракт <span class="mono">api-specification/</span>, дизайн-пакет <span class="mono">docs/design/slice-*/</span>, своя парадигма тестов. Стандарт <b>задаётся</b>, а не подбирается — режима подстройки под чужие парадигмы (conform) в конвейере нет.</p></div>
+      <div class="card" style="border-color:rgba(255,45,142,.35)"><h3 class="pink">Не водит эпики</h3><p>&gt;2 модулей или &gt;1 репозитория — триаж детектит <span class="mono">level=epic</span> и честно <b>STOP</b>: алгоритм не реализован. Вместо имитации работы — возврат оператору на декомпозицию.</p></div>
     </div>
-    <p class="lead" style="margin-top:1.4rem">После каждого шага канарейки — сравнение с baseline на достаточном окне. Плюс бизнес-<span class="gold">guardrail</span> и SLI фичи. Вердикт:</p>
-    <div class="verd">
-      <span class="badge v-g">GREEN → расширить долю</span>
-      <span class="badge v-y">YELLOW → держать, продлить</span>
-      <span class="badge v-r">RED → откат (тоггл OFF)</span>
-    </div>
-    <p class="lead" style="margin-top:1.2rem;font-size:.92rem">Анти-gaming: нельзя ослаблять SLO, глушить алерты, расширять долю на YELLOW/RED. <b>Нет данных ≠ зелёно.</b></p>
-    <div class="footer"><span>8 — Релиз и сигналы</span><div class="dots" id="d8"></div><span>откат всегда дешевле починки в проде</span></div>
+    <p class="lead" style="margin-top:1.3rem">Тот же принцип на входе: вес не выводится из BRD, миграционный путь не определяется, диффер нашёл breaking на <b>minor</b> — везде <span class="pink">STOP</span> и вопрос оператору. <span class="gold">Отказ в границах дешевле правдоподобного результата за границами.</span> Задача должна укладываться в 1–2 модуля — это входной критерий agent-ready архитектуры, а не пожелание.</p>
+    <div class="footer"><span>8 — Границы</span><div class="dots" id="d8"></div><span>область применимости — строгая</span></div>
   </div>
 </section>
 
-<!-- 9 — CI / RRA -->
+<!-- 9 — РОЛИ -->
 <section class="slide">
   <div class="wrap">
     <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">CI как страж дисциплины</div>
-    <h2>CI валидирует решения <span class="neon">утилитами RRA</span></h2>
-    <div class="grid" style="grid-template-columns:1fr 1fr">
-      <div class="card"><h3 class="neon">Экосистема RRA</h3><p>В CI работают аудиторы рациональной дисциплины: <span class="mono">rra-docs-another</span> (качество доки, JTBD), <span class="mono">rra-audit-repo</span> (I/O-граница), <span class="mono">rra-docs</span> (гейт дисциплины). Репозиторий проверяет сам себя.</p></div>
-      <div class="card"><h3 class="pink">Security-scan</h3><p>Отдельный шаг: SAST, зависимости, секреты. «Секрет в коде = блок мержа». Правила безопасной разработки вшиты в дизайн и реализацию — раньше, чем статика в CI.</p></div>
-    </div>
-    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.4rem">
-      <span class="chip">component</span><span class="chip">contract · pinout</span><span class="chip">lint</span>
-      <span class="chip neon">RRA-утилиты</span><span class="chip pink">security-scan</span>
-    </div>
-    <div class="footer"><span>9 — CI</span><div class="dots" id="d9"></div><span>жёсткие нарушения = блок слияния</span></div>
-  </div>
-</section>
-
-<!-- 10 — ИТОГ -->
-<section class="slide">
-  <div class="wrap">
-    <div class="topbar"><span>rationaldev · AI-first SDLC</span><span class="tag">izi</span></div>
-    <div class="kicker">Итог</div>
-    <h2>База для агентов <span class="neon">проектирования и разработки</span></h2>
-    <p class="lead">На этих ролях и скиллах строятся агенты <span class="gold">izi</span> — в честь Вирта (и его Оберона), Хьюза, Михтома, Лингера, Миллса и Витта. Тяжёлый научный фундамент, простой опыт.</p>
-    <div style="display:flex;gap:2.5rem;margin-top:auto;padding-top:2vh">
-      <div class="stat"><span class="l">Ролей-агентов</span><span class="big neon">6</span></div>
-      <div class="stat"><span class="l">Человеческих гейтов</span><span class="big lime">3</span></div>
-      <div class="stat"><span class="l">Золотых сигналов</span><span class="big amb">4</span></div>
-      <div class="stat"><span class="l">Тестовых сред</span><span class="big pink">0</span></div>
-    </div>
-    <div class="footer"><span>10 — Итог</span><div class="dots" id="d10"></div><span>rationaldev · izi · в честь Оберона</span></div>
+    <div class="kicker">Агенты izi — набор закрыт</div>
+    <h2>Роли одним экраном · <span class="neon">два тира моделей</span></h2>
+    <table>
+      <tr><th>Роль</th><th>izi-имя</th><th>Тир</th><th>Выход</th></tr>
+      <tr><td class="mono">izi</td><td class="neon">Witt</td><td>large</td><td>механический роутер-дирижёр: делегирует, читает статусы, держит гейты, пишет <span class="mono">decisions.log</span></td></tr>
+      <tr><td class="mono">gilb</td><td class="neon">Gilb</td><td>large</td><td>фронт-дор: сырое требование → измеримый BRD, открытые вопросы оператору по одному</td></tr>
+      <tr><td class="mono">wirth-triage</td><td class="neon">Wirth</td><td>large</td><td><b>вес</b> (SemVer) + уровень greenfield; вердикт <span class="mono">route=</span></td></tr>
+      <tr><td class="mono">wirth-intake · slicer · usecase · apidesigner · moduledesigner · ticketer · wirth-planner</td><td class="neon">Wirth</td><td>large</td><td>FRD → срезы → use-case → <b>замороженный контракт</b> → дерево модулей → тикеты → PLAN</td></tr>
+      <tr><td class="mono">change-intake</td><td class="neon">Wirth</td><td>large</td><td>дельта изменения, discriminating-сценарий, <span class="mono">design=needed|skip</span></td></tr>
+      <tr><td class="mono">dijkstra</td><td class="neon">Dijkstra</td><td>large</td><td>README репозитория по скиллу <span class="mono">documentation</span></td></tr>
+      <tr><td class="mono">mills</td><td class="neon">Mills</td><td>large</td><td>ревью плана одним проходом: <span class="mono">OK | blocker | escalate</span></td></tr>
+      <tr><td class="mono">scaffolder · wirth-tester</td><td class="neon">Wirth</td><td>small · large</td><td>скелет из шаблона (только greenfield) · компонентные сценарии в RED-тесты</td></tr>
+      <tr><td class="mono">hughes · hughes-rework</td><td class="lime">Hughes</td><td>small</td><td>реализация нового модуля · правка существующего под вес</td></tr>
+      <tr><td class="mono">linger</td><td class="lime">Linger</td><td>large</td><td>локальный фикс по блокеру/красному CI, предохранитель K=2</td></tr>
+      <tr><td class="mono">fagan</td><td class="lime">Fagan</td><td>large</td><td>терминальная приёмка DoD + инвариант веса; снимает <span class="mono">@wip</span>, сам не чинит</td></tr>
+      <tr><td class="mono">git-hand</td><td class="amb">Torvalds</td><td>small</td><td>ветка от свежего транка, коммит, push, PR (вес в заголовке), чтение CI</td></tr>
+      <tr><td class="mono">ledger</td><td class="amb">Rochkind</td><td>small</td><td>закрытие прогона: пруф мерджа → тег → LEDGER → вайп <span class="mono">.agent/</span></td></tr>
+      <tr><td class="mono">michtom</td><td class="pink">Michtom</td><td>small/large</td><td>канарейка 1% → 5% → 25% → 100% + 4 золотых сигнала, вердикт GREEN/YELLOW/RED и откат</td></tr>
+    </table>
+    <p class="lead" style="margin-top:.9rem">Большой тир несёт тяжесть рассуждения, малый — объём генерации и механику. <span class="gold">izi</span> — строгая рациональность, поданная легко («make it as simple as possible», по Вирту).</p>
+    <div class="footer"><span>9 — Роли</span><div class="dots" id="d9"></div><span>роль = модуль с контрактом вход/выход</span></div>
   </div>
 </section>
 
