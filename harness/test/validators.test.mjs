@@ -1,7 +1,7 @@
 // Юнит-тесты чистых ядер валидаторов (io: none). Формула: 1 happy + по ветке-blocker.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests, foreignModuleOutputWarnings } from "../lib/validators.mjs"
+import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests } from "../lib/validators.mjs"
 import { contractDiff } from "../validate-contract-diff.mjs"
 
 // --- validateFrd ---
@@ -95,38 +95,22 @@ test("validateTicketHeaders: normId 05 == 5 (blocked_by резолвится)", 
   assert.deepEqual(validateTicketHeaders([s, child]), [])
 })
 
-// --- rework-режим: scaffold недопустим (0), а не обязателен (1) ---
-test("validateTicketHeaders rework: 0 scaffold + module → нет ошибок", () => {
-  assert.deepEqual(validateTicketHeaders([T({ data: { blocked_by: [] } })], { rework: true }), [])
+// --- проект уже существует (SemVer-полосы patch|minor|major): scaffold недопустим (0), а не обязателен (1) ---
+test("validateTicketHeaders existingProject: 0 scaffold + module → нет ошибок", () => {
+  assert.deepEqual(validateTicketHeaders([T({ data: { blocked_by: [] } })], { existingProject: true }), [])
 })
-// --- foreignModuleOutputWarnings (чисто, foreign-декомпозиция: один тикет = один модуль) ---
-const M = (name, outputs, type = "module") => ({ name, data: { type, outputs } })
-test("foreignModuleOutputWarnings: 2 кодовых output в module-тикете → warning (адаптер+логика слиплись)", () => {
-  const w = foreignModuleOutputWarnings([M("01.md", ["src/x/Wrapper.java", "src/x/util/Logic.java"])])
-  assert.equal(w.length, 1); assert.match(w[0], /один тикет = один модуль/)
+test("validateTicketHeaders existingProject: есть scaffold → ошибка (проект уже существует)", () => {
+  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { blocked_by: [] } })], { existingProject: true }).some((e) => /scaffold-тикет недопустим/.test(e)))
 })
-test("foreignModuleOutputWarnings: 1 кодовый output → нет warning", () => {
-  assert.deepEqual(foreignModuleOutputWarnings([M("01.md", ["src/x/Logic.java"])]), [])
-})
-test("foreignModuleOutputWarnings: код + docs/фикстуры не считаются кодом", () => {
-  assert.deepEqual(foreignModuleOutputWarnings([M("01.md", ["src/x/Logic.java", "README.md", "src/test/resources/x.csv"])]), [])
-})
-test("foreignModuleOutputWarnings: component-тикет (не module) игнорируется даже с многими файлами", () => {
-  assert.deepEqual(foreignModuleOutputWarnings([M("03.md", ["a.java", "b.java", "c.csv"], "component")]), [])
-})
-
-test("validateTicketHeaders rework: есть scaffold → ошибка (проект уже существует)", () => {
-  assert.ok(validateTicketHeaders([SCAFFOLD, T({ data: { blocked_by: [] } })], { rework: true }).some((e) => /scaffold-тикет недопустим/.test(e)))
-})
-test("validateComponentTests rework: без @wip → нет ошибки про @wip; smoke всё ещё требуется", () => {
-  assert.deepEqual(validateComponentTests({ business: ["a"], wip: 0, smoke: 1 }, 1, { rework: true }), [])
-  assert.ok(validateComponentTests({ business: ["a"], wip: 0, smoke: 0 }, 1, { rework: true }).some((e) => /smoke/i.test(e)))
+test("validateComponentTests existingProject: без @wip → нет ошибки про @wip; smoke всё ещё требуется", () => {
+  assert.deepEqual(validateComponentTests({ business: ["a"], wip: 0, smoke: 1 }, 1, { existingProject: true }), [])
+  assert.ok(validateComponentTests({ business: ["a"], wip: 0, smoke: 0 }, 1, { existingProject: true }).some((e) => /smoke/i.test(e)))
 })
 test("validateComponentTests greenfield: без @wip → ошибка (защита от гейминга)", () => {
   assert.ok(validateComponentTests({ business: ["a"], wip: 0, smoke: 1 }, 1).some((e) => /@wip/.test(e)))
 })
 
-// --- contractDiff (rework-api advisory diff-gate) ---
+// --- contractDiff (diff-gate эволюции контракта: minor additive-only / major advisory) ---
 test("contractDiff: убрали поле → REMOVED", () => {
   assert.ok(contractDiff({ properties: { a: {}, b: {} } }, { properties: { a: {} } }).some((b) => b.code === "REMOVED" && /b/.test(b.path)))
 })

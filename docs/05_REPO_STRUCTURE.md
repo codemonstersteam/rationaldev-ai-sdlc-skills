@@ -13,21 +13,41 @@
 <repo>/
 ├── README.md                         ← documentation (этап 7)
 ├── CONTEXT.md                        ← глоссарий (§3)
-├── api-specification/                ← ОДИН контракт на сервис
+├── api-specification/                ← ОДИН контракт на сервис, замороженный
 │   ├── openapi.yaml                  ← этап 3
 │   └── asyncapi.yaml                 ← этап 4
 ├── docs/
 │   ├── adr/                          ← решения уровня сервиса (§4)
 │   │   ├── 0001-<slug>.md
 │   │   └── 0002-<slug>.md
+│   ├── changes/
+│   │   └── LEDGER.md                 ← append-only журнал закрытых прогонов (@ledger, §5)
+│   ├── chores/
+│   │   └── <NNN-slug>/CHORE-PLAN.md  ← вертикаль chore: файлы, команда верификации, откат
 │   └── design/
 │       └── <slice>/                  ← карта контекста слайса (этап 9)
 │           ├── use-case.md           ← Cockburn fully-dressed (этап 2)
 │           ├── c4.md                 ← C4 (этап 9)
 │           ├── module-tree.md        ← дерево модулей + псевдокод головного (этап 8)
-│           └── contracts.md          ← контракты модулей + их совместимость (этапы 9–10)
+│           ├── contracts.md          ← контракты модулей + их совместимость (этапы 9–10)
+│           ├── tickets/              ← тикеты greenfield-вертикали
+│           └── changes/
+│               └── <NNN-slug>/       ← work-scoped изменение (patch|minor|major)
+│                   ├── change-delta.md   ← дельта + discriminating-сценарий (@change-intake)
+│                   ├── PLAN.md           ← план изменения (@wirth-planner)
+│                   ├── tickets/          ← тикеты изменения (НЕ поверх greenfield)
+│                   └── adr/              ← решения, зарябившие на модули
+├── .agent/                           ← состояние ОТКРЫТОГО прогона, стирается при закрытии
+│   ├── planner/                      ← brd.md · mode (вес) · frd.md · slices.md · change-dir · done.log
+│   ├── gates/                        ← gate1.approved · gate2.approved (ставит только гардрейл)
+│   ├── vcs/branch
+│   └── decisions.log                 ← трассировка, переживает вайп
 └── src/
 ```
+
+**Правило размещения по весу:** `greenfield` пишет в `docs/design/<slice>/` (+ `tickets/`);
+`patch|minor|major` — **только** в `changes/<NNN-slug>/` того же среза (greenfield-запись «как
+построили» не затирается); `chore` — в top-level `docs/chores/<NNN-slug>/`.
 
 **Несколько контекстов** — появляется корневой `CONTEXT-MAP.md`, а `CONTEXT.md`/`docs/adr`
 переезжают внутрь контекста:
@@ -61,6 +81,9 @@
 | `docs/design/<slice>/module-tree.md` | 8 | `program-design` |
 | `docs/design/<slice>/contracts.md` | 9–10 | `program-design` |
 | `docs/adr/NNNN-*.md` | 8–9 | `program-design` (§4) |
+| `docs/design/<slice>/changes/<NNN-slug>/change-delta.md` | вход изменения | `@change-intake` |
+| `docs/chores/<NNN-slug>/CHORE-PLAN.md` | план chore | `@wirth-planner` |
+| `docs/changes/LEDGER.md` | закрытие прогона | `@ledger` → `harness/close-run.mjs` |
 
 ## 3. Формат `CONTEXT.md` (глоссарий)
 
@@ -104,3 +127,29 @@ _Avoid_: Bill, payment request
 Квалифицируется: архитектурная форма; паттерны интеграции между контекстами; выбор технологии
 с lock-in (БД, брокер, auth); решения о границах/scope; намеренные отклонения от очевидного пути;
 ограничения, не видимые в коде; неочевидно отклонённые альтернативы. Иначе — ADR не нужен.
+
+## 5. `docs/changes/LEDGER.md` — журнал прогонов
+
+Append-only запись **закрытых** прогонов, которую пишет `@ledger` (через `harness/close-run.mjs`)
+**до** вайпа `.agent/`. Запись самодостаточна: она обязана оставаться осмысленной после того, как
+change-папку подрежет retention. Одна строка/блок = один прогон: вес, слаг, PR, тег (или `no-bump`).
+Это единственный долговременный след «что и когда поехало в транк»; `.agent/` истинно только пока
+прогон открыт.
+
+## 6. Структура репозитория харнеса (не сервиса)
+
+Раскладка выше — про **репо сервиса**. Сам харнес держит:
+
+```
+rationaldev-ai-sdlc-skills/
+├── harness/                  роли (`agents/_shared/*.md`), валидаторы (`validate-*.mjs`),
+│                             `close-run.mjs`, генератор ролей, enforcement-плагин
+├── ci/
+│   ├── semver-bump.mjs       чистое ядро арифметики версий (io: none) + CLI-хвост
+│   ├── recipes/              образец CI-тегирования для репозиториев БЕЗ харнеса
+│   └── README.md
+├── requirements/             FRD доработок харнеса (`semver-verticals.md`)
+├── docs/flows/               пошаговые флоу пяти вертикалей (greenfield/patch/minor/major/chore)
+├── skills/{lib,roles}/       библиотека скиллов + сгенерированные манифесты ролей
+└── template/                 шаблоны целевых проектов (без воркфлоу тегирования — тег ставит @ledger)
+```

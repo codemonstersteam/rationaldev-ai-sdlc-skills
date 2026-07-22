@@ -1,6 +1,6 @@
 ---
 name: wirth-ticketer
-description: "Stage 6: design package → atomic per-slice tickets sized for Qwen, with io-router skills. Rework → tickets from the change-delta into the change folder. FOREIGN (mode=foreign) → tickets with native repo paths + a per-ticket ### Repo cheat-sheet distilled from the @surveyor map (docs/design/_harness/). Keywords: tickets, backlog, io-router, atomic, rework, foreign, cheat-sheet."
+description: "Stage 6: design package → atomic per-slice tickets sized for Qwen, with io-router skills. On a SemVer lane (patch|minor|major) → tickets from the change-delta into the change folder, coverage by weight. Keywords: tickets, backlog, io-router, atomic, semver, patch, minor, major."
 version: "1.0"
 model: opus
 ---
@@ -38,43 +38,29 @@ lead slice, `blocked_by: []`, blocks all) → per slice {component RED → modul
 There is **NO file-producing «final» ticket** — the slice is closed by the **@fagan acceptance step** (remove
 `@wip` + run tests + DoD-closure), a pipeline step, not a cut ticket.
 
-**REWORK mode (branch on the INPUT, not a flag).** When `.agent/planner/change-dir` is present (a rework: it
-points to `<change-dir>` = `docs/design/<slice>/changes/<slug>/`, where `@change-intake` wrote `change-delta.md`),
-you are on the **rework** path — cut tickets from the **change-delta's affected-modules table**, not from a fresh tree:
-- **WRITE INTO THE CHANGE FOLDER — never on top of greenfield (MUST).** Rework tickets go to
+**SemVer lane (branch on the INPUT, not a flag).** When `.agent/planner/change-dir` is present (it points to
+`<change-dir>` = `docs/design/<slice>/changes/<slug>/`, where `@change-intake` wrote `change-delta.md`), you cut
+tickets from the **change-delta's affected-modules table**, not from a fresh tree. Read the **weight** from
+`.agent/planner/mode` (`patch` | `minor` | `major`) — it decides the coverage, not your taste:
+- **WRITE INTO THE CHANGE FOLDER — never on top of greenfield (MUST).** The change's tickets go to
   **`<change-dir>/tickets/ticket-N.md`** (read `<change-dir>` from `.agent/planner/change-dir`), NOT
   `docs/design/<slice>/tickets/`. The slice's greenfield `tickets/` is the immutable record of how it was built;
   overwriting it destroys per-change traceability. `mkdir -p <change-dir>/tickets` first.
-- **NO scaffold ticket** — the project already exists (a scaffold ticket in a rework set is an error; `validate-tickets` in rework-mode requires **zero** scaffolds). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
-- Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module`+rework → `@hughes-rework`).
-- **`rework-behavior`/`rework-api`:** additionally cut **ONE `type: component` ticket** for the changed/added scenarios named in the delta (new/changed scenarios tagged `@wip`); the affected `module` tickets `blocked_by` it (RED-first preserved). **`rework-refactor`:** **no** component ticket — behaviour is unchanged, the existing suite is the invariant.
+- **NO scaffold ticket** — the project already exists (a scaffold ticket under `patch|minor|major` is an error; `validate-tickets` requires **zero** scaffolds there). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
+- Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module` on a SemVer lane → `@hughes-rework`).
+- **Coverage BY WEIGHT** — the test follows where the difference is observable:
+  - **`patch`** — the difference reaches the endpoint → **ONE `type: component` ticket** for the discriminating
+    scenario (the module tickets `blocked_by` it, RED-first); it stays inside the module → a discriminating
+    **unit** test in the module ticket, the component suite staying the invariant. An existing component test
+    that asserted the old (defective) value is **corrected in that same ticket** — restoring the invariant, not
+    loosening an assertion. Nothing deterministic can pin it (a race, a latent path) → no test ticket, and the
+    DoD **states why**.
+  - **`minor`** — **ONE `type: component` ticket on the NEW surface** (RED-first: before = 404 / absent /
+    default), module tickets from the tree, plus the explicit **toggle requirement: the capability ships default
+    OFF**. Existing contract tests are **NOT edited** — an edit there would signal a break, i.e. the wrong weight.
+  - **`major`** — the formula holds (`N = 1 + Σ branches`): the **changed** component tests are reworked to the
+    new contract, plus a **migration/deprecation ticket** and the breaking-list for the PR body.
 - Same header contract + `skills` io-router rules as greenfield. Run `validate-layout` self-check as usual.
-
-**FOREIGN mode (`.agent/planner/mode` = `foreign` — `change-dir` points to `docs/foreign/<slug>/`).** Like
-rework (cut tickets from the delta's affected-modules + one component ticket, **NO** scaffold/README, write into
-`<change-dir>/tickets/`), with three foreign specifics:
-- **Module tickets — SOURCE: the design tree if it ran, else the delta.** When `@foreign-designer` produced
-  **`<change-dir>/module-tree.md`** (`design=needed`), cut **ONE `module` ticket per TREE NODE** — `outputs` =
-  that node's module (repo path from the tree), **`io:` from its `contracts.md` entry** (native touchpoints),
-  and reference the node's contract in the ticket. When there was **no design** (`design=skip` — sibling-clone /
-  scoped edit), cut **one per affected native module** from `change-delta.md`'s one-row-per-module table.
-  **Either way: one module = one ticket, `outputs` = exactly ONE** — never bundle the adapter/wrapper and the
-  logic `util` (two modules → two tickets). `io: n/a` only for pure glue (a delegating `@Service` wrapper). The
-  `component` ticket's scenarios are the delta's native
-  `test-class::method` set (**no `@wip`** — native runner). Implementer = `@hughes-rework`, tester =
-  `@wirth-tester` (loads `conform-tests`). **Skip the `validate-layout` self-check** (a non-harness repo has no
-  `internal/<slug>/` layout); `validate-tickets` already treats `foreign` as scaffold-less.
-- **Each ticket carries a `### Repo cheat-sheet` section** — a FOCUSED excerpt distilled from the `@surveyor`
-  map `docs/design/_harness/test-harness.md`, scoped to THAT ticket, so the tester/implementer read the ticket,
-  not the whole map or the whole test-tree (the failure this lane fixes: research burned every ticket). For a
-  `component` ticket: the target test-class/file, the assert helper (with the map's sibling `file:line`), the
-  fixture format, and the 1–2 neighbours to mimic. For a `module` ticket: the native source path(s), the
-  build/single-test command, any **known gap** that bites, **and — if a design ran — the node's contract
-  (antecedent/consequent) + its head-pipe from `<change-dir>/{contracts,module-tree}.md`** (so the implementer
-  builds to the designed secret, not by guessing). **Cite the map/design — invent nothing;** map absent →
-  `STOP: run @surveyor first`.
-- **The verification command** (from the map) is named in the `component` ticket's DoD — that is the foreign
-  lane's acceptance, not `.feature`/Docker. The tester runs it instead of `validate-component-tests` (Gherkin-only).
 
 **Scaffold `outputs` = the scaffold script's deterministic output (MUST — never invented).** The scaffold
 ticket's `outputs` are **exactly what `harness/scaffold.sh` produces**: the template's `cmd/app/main.go`,

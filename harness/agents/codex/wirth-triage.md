@@ -28,47 +28,44 @@ is a **chore** — repo infrastructure, not a slice. Typical chores: CI/CD workf
 `.gitignore`/lint/formatter config, dependency bump, pure docs (README/backlog) with no behaviour change. A chore
 has **no target shape** (it is neither a new service nor a slice of one) and needs **no FRD/spec/module-tree**.
 
-- **chore** → emit `route=chore`, write `chore` to the mode marker, and STOP classifying (do not pick greenfield/rework).
+- **chore** → emit `route=chore`, write `chore` to the mode marker, and STOP classifying (do not pick greenfield or a SemVer weight).
 - Anything that changes product behaviour, an interface, or a module's secret is **NOT** a chore → fall through to Axis 1.
 
 Rule of thumb: if the deliverable is a config/build/doc file and the program's black-box behaviour is unchanged,
 it is a chore. When genuinely ambiguous (a "config" that actually changes behaviour) → **not** a chore; use Axis 1.
 
-## Axis 0.5 — provenance: harness-native vs FOREIGN (ask right after chore)
-The greenfield/rework/chore lanes all **assume the target was built by this harness** — it carries (or will
-carry) a harness design package (`docs/design/<slice>/` with `PLAN.md` + module-tree/contracts). Before splitting
-greenfield vs rework, ask: **was this repo built by the harness at all?**
-
-A target is **foreign** when BOTH hold (you may `glob`/`ls`):
-- an **existing implementation is present** — source plus a build/test manifest of some stack
-  (`build.gradle`/`pom.xml`/`package.json`/`pyproject.toml`/`Cargo.toml`/… + a `src`/`test` tree), AND
-- **no harness design package** exists (`docs/design/*/PLAN.md` + module-tree/contracts absent) — the repo's
-  test/build conventions are **its own**, not the harness's (this is exactly change-intake's out-of-scope STOP).
-
-- **foreign** → emit `route=foreign`, write `foreign` to the mode marker, and STOP classifying (do NOT pick
-  greenfield/rework/level). The foreign lane **discovers** the repo's paradigm (`@surveyor` →
-  `docs/design/_harness/`) instead of imposing the harness contract/Gherkin — see
-  [`docs/features/route-foreign-lane.md`](../../../docs/features/route-foreign-lane.md).
-- **harness-native** → fall through to Axis 1.
-
-Distinguish carefully: **existing foreign code + no harness package = foreign** (NOT greenfield — code already
-exists; NOT rework — no harness package). **Nothing exists yet = greenfield.** **Harness design package present
-= rework.**
-
-## Axis 1 — greenfield vs rework (only if Axis 0/0.5 fell through — harness-native code)
+## Axis 1 — greenfield vs a SemVer change (only if Axis 0 fell through)
 Does the task **build new code** or **change existing code**? Look at the BRD *and* the repo (you may `glob`):
 a target with an **existing harness design package** (`docs/design/<slice>/` + code) that the task *modifies*
-= **rework**; building a service/CLI that does not yet exist = **greenfield**.
+carries a **SemVer weight**; building a service/CLI that does not yet exist = **greenfield** (→ Axis 2).
 
-If **rework**, pick the change type (this is the same "blast radius / contract ripple" reasoning as levels):
-- **rework-refactor** — restructure/cleanup/perf; **behaviour identical, spec identical** (the black box is unchanged; the existing suite must stay green).
-- **rework-behavior** — an **outcome/rule changes**, but the **API surface (endpoints/fields/flags) stays** — no contract change.
-- **rework-api** — the **contract changes** (add/alter/remove an operation, field, flag, or output shape) → spec must evolve.
+The weight is **SemVer 2.0.0, verbatim** — the single source of the boundary:
+
+> Given a version number MAJOR.MINOR.PATCH, increment the:
+> **MAJOR** when you make incompatible API changes · **MINOR** when you add functionality in a backward
+> compatible manner · **PATCH** when you make backward compatible bug fixes.
+
+**The decisive test is ONE axis: backward compatibility of the documented contract.** Ask in order:
+1. Does it break existing consumers of the contract or of documented behaviour? → **major**.
+2. Otherwise, does it add functionality? → **minor**.
+3. Otherwise (a backward-compatible bug fix — the code drifted from the contract, the fix converges to it) → **patch**.
+
+| Weight | Cause | Effect | Compatibility |
+|---|---|---|---|
+| **patch** | code deviates from the documented contract (a defect) | the fix restores conformity to the spec | backward compatible |
+| **minor** | a new capability is required | additive; existing calls untouched | backward compatible |
+| **major** | contract or documented behaviour changes incompatibly | consumers break → migration | **INCOMPATIBLE** |
+
+**Cause ≠ weight (the trap):** a bug fix that itself breaks backward compatibility (a consumer relied on the
+old output *within* the contract) is a **major**, not a patch. Compatibility decides — not "is it a bug, a
+behaviour or an api change". A pure restructure/cleanup/perf with **identical** behaviour and spec is a
+**patch** (the smallest compatible weight; the existing suite is the invariant and must stay green).
+Pre-release (`X.Y.Z-canary.N`) and build metadata are format extensions — they do not change the weight.
 
 If **greenfield**, pick the level below.
 
 ## Axis 2 — greenfield level (only when greenfield) — pick exactly ONE
-- **trivial** — a fix in 1 module, contract UNCHANGED (same tests/behaviour). *(If the code already exists, prefer `rework-refactor`.)*
+- **trivial** — a fix in 1 module, contract UNCHANGED (same tests/behaviour). *(If the code already exists, this is a `patch`, not greenfield.)*
 - **modular** — 1–2 modules / **one service**, new or changed contract.
 - **epic** — **>2 modules OR >1 service/repo**: a product of components. The epic algorithm is NOT yet implemented — izi stops here; honestly detect epic, don't drive it.
 
@@ -76,22 +73,20 @@ Unclear / no coherent requirement, or ambiguous whether the code already exists 
 
 ## Write the mode marker (MUST, before returning)
 You **MUST** write `.agent/planner/mode` with exactly one token (creates `.agent/planner/` if absent):
-`chore` · `foreign` · `greenfield` · `rework-refactor` · `rework-behavior` · `rework-api`. (For `unclear`, write
+`chore` · `greenfield` · `patch` · `minor` · `major`. (For `unclear`, write
 nothing — izi returns to the operator.) The validators and the `--hard` guardrail read this marker to self-adjust
-(under `chore` the guardrail requires `CHORE-PLAN.md` instead of full plan-review; the `foreign` lane wiring —
-`isForeignMode` gate, `@surveyor`, `conform-tests` — lands in backlog `route-foreign-lane` T2–T8); do it before
+(under `chore` the guardrail requires `CHORE-PLAN.md` instead of full plan-review); do it before
 your verdict line.
 
 ## Return contract (izi routes ONLY by this line)
 You **MUST** return **one line**:
 ```
 wirth-triage → route=chore · <basis>
-wirth-triage → route=foreign · <basis: existing <stack> repo, no harness design package>
 wirth-triage → route=greenfield · level=modular · <basis>
 wirth-triage → route=greenfield · level=trivial · <basis>
-wirth-triage → route=rework-refactor · <basis>
-wirth-triage → route=rework-behavior · <basis>
-wirth-triage → route=rework-api · <basis>
+wirth-triage → route=patch · <basis>
+wirth-triage → route=minor · <basis>
+wirth-triage → route=major · <basis>
 wirth-triage → route=greenfield · level=epic · targets: <component-a, …> · <basis>
 wirth-triage → level=unclear · <what's missing — clarify with the operator>
 ```

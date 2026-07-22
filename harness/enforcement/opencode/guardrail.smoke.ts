@@ -38,10 +38,8 @@ async function run() {
 
   // B. Прочие роли проходят свободно
   await hooks["tool.execute.before"](task("wirth-planner"), { args: { subagent: "wirth-planner" } }); pass++
-  // B1. @surveyor (foreign lane, route-foreign-lane T3) — в closed-set, не implementer → проходит (brd.md есть)
-  await hooks["tool.execute.before"](task("surveyor"), { args: { subagent: "surveyor" } }); pass++
-  // B1.5. @foreign-designer (foreign-designer-lane F1) — в closed-set, не implementer → проходит
-  await hooks["tool.execute.before"](task("foreign-designer"), { args: { subagent: "foreign-designer" } }); pass++
+  // B1. @change-intake (rework lane) — в closed-set, не implementer → проходит (brd.md есть)
+  await hooks["tool.execute.before"](task("change-intake"), { args: { subagent: "change-intake" } }); pass++
 
   // B2. Делегация ВНЕ пайплайн-набора (@general / general-purpose) блокируется в источнике (мис-роут)
   await assert.rejects(
@@ -77,24 +75,6 @@ async function run() {
   await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
   await chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
   await rm(cdir, { recursive: true, force: true })
-
-  // C3. mode=foreign (route-foreign-lane): implementer требует DURABLE docs/foreign/<slug>/FOREIGN-PLAN.md
-  // (не plan-review.md — чужой репо, mills-полного ревью нет). Параллель chore.
-  const fdir = await mkdtemp(join(tmpdir(), "rg-foreign-"))
-  const fhooks: any = await RationalGuardrail({ directory: fdir, worktree: fdir } as any)
-  await mkdir(join(fdir, ".agent", "planner"), { recursive: true })
-  await writeFile(join(fdir, ".agent", "planner", "brd.md"), "# BRD\n")
-  await writeFile(join(fdir, ".agent", "planner", "mode"), "foreign")
-  await mkdir(join(fdir, ".agent", "gates"), { recursive: true })
-  await writeFile(join(fdir, ".agent", "gates", "gate1.approved"), "")
-  await assert.rejects(
-    () => fhooks["tool.execute.before"](task("hughes-rework"), { args: { subagent: "hughes-rework" } }),
-    /FOREIGN-PLAN/,
-  ); pass++
-  await mkdir(join(fdir, "docs", "foreign", "001-extend-2027"), { recursive: true })
-  await writeFile(join(fdir, "docs", "foreign", "001-extend-2027", "FOREIGN-PLAN.md"), "# plan\n")
-  await fhooks["tool.execute.before"](task("hughes-rework"), { args: { subagent: "hughes-rework" } }); pass++
-  await rm(fdir, { recursive: true, force: true })
 
   // D. decisions.log пишется на делегирование
   await hooks["tool.execute.after"](task("wirth-planner"), { title: "design slice 01" })
@@ -267,8 +247,56 @@ async function run() {
   await rm(rdir, { recursive: true, force: true })
   await rm(chatdir, { recursive: true, force: true })
 
+  // P. (Gate #2 — мерж) Зеркало Gate #1: @ledger (закрытие прогона) заблокирован до маркера; маркер ставит
+  // ПЛАГИН по токену «GATE2 APPROVE» (чат ИЛИ меню) и только когда работа дошла до мержа (gate1 + ветка);
+  // самозапись маркера агентом (bash/write) — блок; свободные слова — не акцепт.
+  const pdir = await mkdtemp(join(tmpdir(), "rg-gate2-"))
+  await mkdir(join(pdir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(pdir, ".agent", "planner", "brd.md"), "# BRD\n")
+  const ph: any = await RationalGuardrail({ directory: pdir, worktree: pdir } as any)
+  const g2 = join(pdir, ".agent", "gates", "gate2.approved")
+  // P1. @ledger без маркера → блок
+  await assert.rejects(
+    () => ph["tool.execute.before"](task("ledger"), { args: { subagent: "ledger" } }),
+    /Gate #2 не пройден/,
+  ); pass++
+  // P2. токен без gate1/ветки → маркера нет (мержить нечего)
+  await ph["chat.message"]({}, { parts: [{ type: "text", text: "GATE2 APPROVE #7" }] })
+  assert.equal(await exists(g2), false); pass++
+  // P3. работа дошла до мержа (gate1 + .agent/vcs/branch): свободные слова НЕ акцепт, токен — акцепт
+  await mkdir(join(pdir, ".agent", "gates"), { recursive: true })
+  await writeFile(join(pdir, ".agent", "gates", "gate1.approved"), "")
+  await mkdir(join(pdir, ".agent", "vcs"), { recursive: true })
+  await writeFile(join(pdir, ".agent", "vcs", "branch"), "feat/x\n")
+  await ph["chat.message"]({}, { parts: [{ type: "text", text: "ок, мержим, approve" }] })
+  assert.equal(await exists(g2), false); pass++
+  await ph["chat.message"]({}, { parts: [{ type: "text", text: "GATE2 APPROVE https://github.com/o/r/pull/7" }] })
+  assert.equal(await exists(g2), true); pass++
+  assert.match(await readFile(g2, "utf8"), /ref\tpr-7/); pass++            // provenance — PR-референс, не plan_hash
+  // P4. маркер стоит → @ledger проходит
+  await ph["tool.execute.before"](task("ledger"), { args: { subagent: "ledger" } }); pass++
+  // P5. самозапись маркера агентом — блок (bash и write), чтение разрешено
+  const pbash = (c: string) => ph["tool.execute.before"]({ tool: "bash", args: { command: c } }, { args: { command: c } })
+  await assert.rejects(() => pbash("touch .agent/gates/gate2.approved"), /Маркер Gate #2/); pass++
+  await assert.rejects(
+    () => ph["tool.execute.before"]({ tool: "write", args: { filePath: ".agent/gates/gate2.approved" } }, { args: { filePath: ".agent/gates/gate2.approved" } }),
+    /Маркер Gate #2/,
+  ); pass++
+  await pbash("test -f .agent/gates/gate2.approved && echo EXISTS"); pass++
+  // P6. МЕНЮ-канал: выбор опции «GATE2 APPROVE» ставит маркер (паритет с Gate #1)
+  const qdir = await mkdtemp(join(tmpdir(), "rg-gate2-menu-"))
+  const qh: any = await RationalGuardrail({ directory: qdir, worktree: qdir } as any)
+  await mkdir(join(qdir, ".agent", "gates"), { recursive: true })
+  await writeFile(join(qdir, ".agent", "gates", "gate1.approved"), "")
+  await mkdir(join(qdir, ".agent", "vcs"), { recursive: true })
+  await writeFile(join(qdir, ".agent", "vcs", "branch"), "feat/y\n")
+  await qh.event({ event: { type: "question.replied", properties: { answers: [["GATE2 APPROVE"]] } } })
+  assert.equal(await exists(join(qdir, ".agent", "gates", "gate2.approved")), true); pass++
+  await rm(qdir, { recursive: true, force: true })
+  await rm(pdir, { recursive: true, force: true })
+
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/44 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/51 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

@@ -40,11 +40,13 @@ function decl(rawText, name) {
 }
 
 const INLINED = [
-  "GATE_MARK", "PIPELINE", "IMPLEMENTERS", "requiresFrontDoor", "TRUNK_BRANCHES", "branchFromHead",
+  "GATE_MARK", "GATE2_MARK", "GATE_MARKS", "PIPELINE", "IMPLEMENTERS", "RUN_CLOSERS", "requiresFrontDoor",
+  "TRUNK_BRANCHES", "branchFromHead",
   "isTrunkBranch", "PLAN_REVIEW_MARK", "DESIGN_DIR", "CHORES_DIR", "CHORE_PLAN_FILE", "isChoreMode",
-  "hasChorePlan", "FOREIGN_DIR", "FOREIGN_PLAN_FILE", "isForeignMode", "hasForeignPlan",
-  "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
-  "inPipeline", "writesGateMarker", "doneGreenTicketId", "parseTicketOutputs", "isOperatorApproval",
+  "hasChorePlan", "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
+  "isRunCloser", "inPipeline", "writtenGateMarker", "writesGateMarker", "gateMarkerInPath",
+  "doneGreenTicketId", "parseTicketOutputs", "isOperatorApproval", "isGate2Approval",
+  "VCS_BRANCH_MARK", "mergeReadyForApproval", "prRefFromText",
   "gateMarkerContent", "answerTextFromEvent", "toolCallSignature", "detectLoop",
 ]
 

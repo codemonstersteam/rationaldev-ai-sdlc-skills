@@ -60,21 +60,6 @@ The slices' `docs/design/slice-<name>/PLAN.md` (index + summary) + the package p
 `docs/design/slice-<name>/tickets/ticket-*.md` (you open all of them for the per-ticket walk). Do not dive
 into module source — tickets and design artifacts only.
 
-**Foreign mode (`.agent/planner/mode` = `foreign`).** A foreign repo has no FRD/slices/harness contract, so the
-greenfield validators below (`validate-frd`/`slices`/`contract-frozen`/`plan`/`layout`) do **NOT** apply — skip
-them. Input = `docs/foreign/<slug>/FOREIGN-PLAN.md` + `change-delta.md` + the `@surveyor` map + the tickets
-(**+ the design if `@foreign-designer` ran**). Always check: (1) the **discriminating** scenarios are
-non-degenerate — `output(current) ≠ output(changed)` on the named input (degenerate row → `blocker` →
-`@change-intake`); (2) each ticket's `### Repo cheat-sheet` is coherent with the map (native paths, assert
-helper, fixture format, verification command); (3) `validate-tickets` (foreign-aware) passes.
-
-**When a design ran (`<change-dir>/module-tree.md` present) — also review it** (this is the greenfield
-contracts-graph discipline, applied to the change): (4) **tree ↔ contracts reconcile** — each module's
-**consequent ⊆ the next's antecedent**, and every C4 edge exists as a contract (a module that doesn't compose
-→ `blocker` → `@foreign-designer`); (5) **C4 renders** — `node harness/validate-mermaid.mjs <change-dir>/c4.md`
-(non-zero → blocker); (6) **ADR present** for any genuine load-bearing trade-off named in `module-tree.md`
-(none is fine if there was no hard choice). Same `OK | blocker | escalate` verdict + `plan-review.md` output.
-
 ## Checks (top-level consistency)
 - **decomposition complete**, slices atomic (1 external input = 1 slice);
 - **ticket order**: scaffold first → per slice {component RED → module} → infra;
@@ -108,6 +93,23 @@ contracts-graph discipline, applied to the change): (4) **tree ↔ contracts rec
 > **You MUST NOT trust the slicer's prose justification** (e.g. "405/404 are distinct inputs"):
 > over-decomposition is caught ONLY by the deterministic `validate-slices` + the "1 endpoint = 1 slice" rule,
 > never by eye.
+
+## Checks on a SemVer lane (`.agent/planner/mode` = `patch` | `minor` | `major`)
+The input is the change folder — `<change-dir>/{PLAN,change-delta}.md` + `<change-dir>/tickets/` (pointer
+`.agent/planner/change-dir`) — not a greenfield package. The greenfield decomposition validators
+(`validate-frd`/`validate-slices`/`validate-contract-frozen`) **do not apply**: nothing is being decomposed or
+frozen anew. Still run `validate-tickets` / `validate-plan` / `validate-layout` (they self-adjust: zero
+scaffold tickets under `patch|minor|major`). Add three judgements a script cannot make:
+- **the discriminating scenario is non-degenerate** — the delta's affected scenarios show `old ≠ new` **computed
+  on the data** (for `minor`: absent → present). Equal outputs = a no-op test blind to the change = **blocker**
+  (quote the row); the fix is a discriminating input, not a re-asserted literal.
+- **coverage matches the WEIGHT** — `patch`: the test sits where the difference is observable (component if it
+  reaches the endpoint, unit if it stays in the module) or the DoD **states why none is deterministic**;
+  `minor`: a component ticket on the **new** surface, **no existing contract test edited**, the toggle
+  **defaults OFF**; `major`: the reworked component tests + a migration/deprecation ticket + the breaking-list.
+- **the weight itself is coherent** with the delta — a `minor` whose delta removes/renames/re-types/newly-requires
+  an element is mis-weighted = **blocker** (re-triage as `major`); a `patch` that needs a spec-evolve likewise.
+The plan must otherwise be coherent as always. Same terminal `OK | blocker | escalate` line.
 
 ## Per-ticket walk (SEMANTIC pass — the mechanical facts are already deterministic)
 `validate-tickets` + `validate-plan` already prove every **mechanical** per-ticket fact: header syntax,

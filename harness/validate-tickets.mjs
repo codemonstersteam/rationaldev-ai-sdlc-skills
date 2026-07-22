@@ -21,7 +21,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join, isAbsolute } from "node:path"
 import { parseFrontmatter } from "./frontmatter.mjs"
-import { validateTicketHeaders, foreignModuleOutputWarnings } from "./lib/validators.mjs"
+import { validateTicketHeaders } from "./lib/validators.mjs"
 import { discoverTicketFiles } from "./lib/ticket-fs.mjs"
 
 const root = process.argv[3] || process.cwd()
@@ -36,11 +36,12 @@ const ticketFiles = explicit
 if (!ticketFiles.length) { console.error(`validate-tickets: не найдено тикетов (docs/design/slice-*/tickets|changes/*/tickets/*.md)`); process.exit(1) }
 
 const tickets = ticketFiles.map(({ rel, abs }) => ({ name: rel, data: parseFrontmatter(readFileSync(abs, "utf8")).data }))
-// scaffold-less режимы (маркер от wirth-triage): rework (правим существующее) И foreign (чужой репо, вне
-// харнеса) — scaffold-тикет недопустим; только greenfield ждёт ровно ОДИН scaffold.
+// scaffold-less режим (маркер от wirth-triage — ровно один токен): SemVer-полосы patch|minor|major
+// правят СУЩЕСТВУЮЩИЙ проект — scaffold-тикет недопустим; только greenfield ждёт ровно ОДИН scaffold
+// (chore тикетов не выпускает вовсе — его план одностраничный CHORE-PLAN.md).
 const mode = (() => { try { return readFileSync(join(root, ".agent", "planner", "mode"), "utf8").trim() } catch { return "" } })()
-const noScaffold = mode.startsWith("rework") || mode === "foreign"
-const errors = validateTicketHeaders(tickets, { rework: noScaffold }) // структура + ссылки + scaffold (greenfield=1 / rework|foreign=0)
+const existingProject = ["patch", "minor", "major"].includes(mode)
+const errors = validateTicketHeaders(tickets, { existingProject }) // структура + ссылки + scaffold (greenfield=1 / semver-полоса=0)
 
 // I/O-часть: inputs-пути должны существовать (это не логика — файловая система).
 for (const { name, data } of tickets) {
@@ -56,7 +57,4 @@ if (errors.length) {
   for (const e of errors) console.error(`  ✗ ${e}`)
   process.exit(1)
 }
-// foreign-бэкстоп декомпозиции (module-tree нет для сверки): >1 кодовый output в module-тикете → WARNING,
-// не фейлит (нативный модуль изредка = 2 файла), но @mills/оператор увидят слипшийся адаптер+логику.
-if (mode === "foreign") for (const w of foreignModuleOutputWarnings(tickets)) console.error(`  ⚠ ${w}`)
 console.log(`validate-tickets: OK — ${tickets.length} тикетов, заголовки валидны, blocked_by/inputs целы, scaffold один`)

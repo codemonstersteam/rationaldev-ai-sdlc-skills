@@ -29,16 +29,18 @@ const lightHash = (str, len = 16) =>
 
 // ── ИНЛАЙН из shared.mjs (SYNC — держать идентично) ─────────────────────────────
 const GATE_MARK = ".agent/gates/gate1.approved"
+const GATE2_MARK = ".agent/gates/gate2.approved"
+const GATE_MARKS = [GATE_MARK, GATE2_MARK]
 const PIPELINE = new Set([
   "izi", "gilb", "wirth-triage", "wirth-intake", "wirth-slicer", "wirth-usecase", "wirth-apidesigner",
   "wirth-moduledesigner", "dijkstra", "wirth-ticketer", "wirth-planner", "mills",
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
   "git-hand",
   "change-intake", "hughes-rework",
-  "surveyor",
-  "foreign-designer",
+  "ledger",
 ])
 const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
+const RUN_CLOSERS = new Set(["ledger"])
 const requiresFrontDoor = (role) => normRole(role) !== "gilb"
 const TRUNK_BRANCHES = new Set(["main", "master", "trunk"])
 function branchFromHead(headContent) {
@@ -55,17 +57,9 @@ function hasChorePlan(choreDirsFn, existsFn) {
   for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
   return false
 }
-const FOREIGN_DIR = "docs/foreign"
-const FOREIGN_PLAN_FILE = "FOREIGN-PLAN.md"
-const isForeignMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "foreign"
-function hasForeignPlan(foreignDirsFn, existsFn) {
-  for (const c of foreignDirsFn() || []) if (existsFn(FOREIGN_DIR + "/" + c + "/" + FOREIGN_PLAN_FILE)) return true
-  return false
-}
-function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => [], foreignDirsFn = () => []) {
+function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
   if (hasChorePlan(choreDirsFn, existsFn)) return true
-  if (hasForeignPlan(foreignDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }
@@ -77,12 +71,18 @@ function pickRole(args) {
 }
 const normRole = (role) => String(role).toLowerCase().replace(/^@/, "").trim()
 const isImplementer = (role) => IMPLEMENTERS.has(normRole(role))
+const isRunCloser = (role) => RUN_CLOSERS.has(normRole(role))
 const inPipeline = (role) => PIPELINE.has(normRole(role))
-function writesGateMarker(cmd) {
-  const gm = GATE_MARK.replace(/[.]/g, "\\.")
-  return new RegExp(`>>?\\s*['"]?[^\\s;|&'"]*${gm}`).test(cmd) ||
-         new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)
+function writtenGateMarker(cmd) {
+  for (const mark of GATE_MARKS) {
+    const gm = mark.replace(/[.]/g, "\\.")
+    if (new RegExp(`>>?\\s*['"]?[^\\s;|&'"]*${gm}`).test(cmd) ||
+        new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)) return mark
+  }
+  return null
 }
+const writesGateMarker = (cmd) => writtenGateMarker(cmd) !== null
+const gateMarkerInPath = (p) => GATE_MARKS.find((m) => String(p ?? "").includes(m)) ?? null
 function doneGreenTicketId(cmd) {
   const doneWrite = />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd)
   if (!doneWrite) return null
@@ -97,15 +97,25 @@ function parseTicketOutputs(text) {
 function isOperatorApproval(text) {
   return /\bgate1\s+approve\b/i.test(String(text))
 }
-function gateMarkerContent({ timestamp, source, prompt, planHash }) {
+function isGate2Approval(text) {
+  return /\bgate2\s+approve\b/i.test(String(text))
+}
+const VCS_BRANCH_MARK = ".agent/vcs/branch"
+function mergeReadyForApproval(existsFn) {
+  return Boolean(existsFn(GATE_MARK) && existsFn(VCS_BRANCH_MARK))
+}
+function prRefFromText(text) {
+  const s = String(text ?? "")
+  const m = /https?:\/\/\S*?\/pull\/(\d+)/.exec(s) || /\b(?:pr\s*#?|#)(\d+)\b/i.exec(s)
+  return m ? "pr-" + m[1] : "na"
+}
+function gateMarkerContent({ timestamp, source, prompt, planHash, ref }) {
   const one = (s) => String(s ?? "").replace(/[\t\r\n]+/g, " ").trim().slice(0, 500)
-  return [
-    `approved_at\t${timestamp}`,
-    `source\t${source}`,
-    `plan_hash\t${planHash ?? "na"}`,
-    `prompt\t${one(prompt)}`,
-    "",
-  ].join("\n")
+  const lines = [`approved_at\t${timestamp}`, `source\t${source}`]
+  if (planHash !== undefined) lines.push(`plan_hash\t${planHash ?? "na"}`)
+  if (ref !== undefined) lines.push(`ref\t${one(ref)}`)
+  lines.push(`prompt\t${one(prompt)}`, "")
+  return lines.join("\n")
 }
 function toolCallSignature(tool, args) {
   const norm = (v) => {
@@ -153,6 +163,7 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
   const agentDir = join(root, ".agent")
   const logPath = join(agentDir, "decisions.log")
   const gate1 = join(agentDir, "gates", "gate1.approved")
+  const gate2 = join(agentDir, "gates", "gate2.approved")
   const review = join(agentDir, "plan-reviewer", "plan-review.md")
   const brd = join(agentDir, "planner", "brd.md")
 
@@ -272,22 +283,31 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
   const existsFn = (rel) => existsSync(join(root, rel))
   const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
   const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
-  const foreignDirsFn = () => { try { return readdirSync(join(root, FOREIGN_DIR)) } catch { return [] } }
 
   // Единый акцепт Gate #1 — из ДВУХ каналов: печатный токен в чате (chat.message) ИЛИ выбор пункта
   // нативного меню opencode (event question.replied). Одна идемпотентная запись маркера, одна защита
   // (план собран + маркер ещё не стоит). Оператор — только через плагин; izi маркер ставить НЕ может.
   const tryOperatorApproval = async (text, source) => {
-    if (!isOperatorApproval(text)) return
-    if (!planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn, foreignDirsFn)) return
-    if (await exists(gate1)) return
-    await mkdir(join(agentDir, "gates"), { recursive: true })
-    await writeFile(gate1, gateMarkerContent({
-      timestamp: new Date().toISOString(),
-      source,
-      prompt: text,
-      planHash: await planHashSnapshot(),
-    }))
+    if (isOperatorApproval(text) && planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn) && !(await exists(gate1))) {
+      await mkdir(join(agentDir, "gates"), { recursive: true })
+      await writeFile(gate1, gateMarkerContent({
+        timestamp: new Date().toISOString(),
+        source,
+        prompt: text,
+        planHash: await planHashSnapshot(),
+      }))
+    }
+    // Gate #2 (мерж) — тот же контракт: явный токен «GATE2 APPROVE», маркер ставит ПЛАГИН, не агент.
+    // Валиден только когда работа дошла до мержа (Gate #1 + ветка прогона). Provenance — PR-референс.
+    if (isGate2Approval(text) && mergeReadyForApproval(existsFn) && !(await exists(gate2))) {
+      await mkdir(join(agentDir, "gates"), { recursive: true })
+      await writeFile(gate2, gateMarkerContent({
+        timestamp: new Date().toISOString(),
+        source,
+        prompt: text,
+        ref: prRefFromText(text),
+      }))
+    }
   }
 
   return {
@@ -313,10 +333,11 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       // Маркер Gate #1 ставит ТОЛЬКО оператор вне сессии (не через bash/write/edit агента).
       if (tool === "bash") {
         const cmd = String(args.command ?? "")
-        if (writesGateMarker(cmd)) {
+        const mark = writtenGateMarker(cmd)
+        if (mark) {
           throw new Error(
-            "[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") ставит ТОЛЬКО оператор " +
-            "вне сессии. Создавать/писать его агенту запрещено — на Gate #1 задай question и жди. " +
+            "[rational-guardrail] Маркер Gate " + (mark.includes("gate2") ? "#2" : "#1") + " (" + mark + ") " +
+            "ставит ТОЛЬКО оператор вне сессии. Создавать/писать его агенту запрещено — на гейте задай question и жди. " +
             "(Чтение-проверка `ls`/`test -f` разрешена.)",
           )
         }
@@ -334,8 +355,9 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       }
       if (tool === "write" || tool === "edit") {
         const p = String(args.filePath ?? args.path ?? "")
-        if (p.includes(GATE_MARK))
-          throw new Error("[rational-guardrail] Маркер Gate #1 (" + GATE_MARK + ") нельзя ставить через write/edit агента — только оператор вне сессии.")
+        const mark = gateMarkerInPath(p)
+        if (mark)
+          throw new Error("[rational-guardrail] Маркер Gate " + (mark.includes("gate2") ? "#2" : "#1") + " (" + mark + ") нельзя ставить через write/edit агента — только оператор вне сессии.")
       }
 
       if (tool !== "task") return
@@ -357,6 +379,14 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
           "Триаж/планирование/реализация заблокированы до этого. СНАЧАЛА делегируй @gilb.",
         )
       }
+      // (1.6) Gate #2 — закрытие прогона (@ledger) только после акцепта мержа оператором.
+      if (role !== "unknown" && isRunCloser(role) && !(await exists(gate2))) {
+        throw new Error(
+          "[rational-guardrail] Gate #2 не пройден: требуется акцепт мержа оператором (.agent/gates/" +
+          "gate2.approved, токен «GATE2 APPROVE») перед делегированием закрытия прогона (" + role + "). " +
+          "Маркер ставит плагин, НЕ ты — покажи зелёный PR и жди.",
+        )
+      }
       // (1.7) On-trunk poka-yoke.
       if (role !== "unknown" && isImplementer(role)) {
         try {
@@ -374,22 +404,13 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       }
 
       if (!isImplementer(role)) return
-      // Gate #1: под mode=chore — durable CHORE-PLAN.md; под mode=foreign — durable FOREIGN-PLAN.md;
-      // иначе plan-review.md. + апрув оператора.
+      // Gate #1: под mode=chore — durable CHORE-PLAN.md; иначе plan-review.md. + апрув оператора.
       let mode = ""
       try { mode = await readFile(join(agentDir, "planner", "mode"), "utf8") } catch { /* нет маркера */ }
       if (isChoreMode(mode)) {
         if (!hasChorePlan(choreDirsFn, existsFn) || !(await exists(gate1)))
           throw new Error(
             "[rational-guardrail] Gate #1 (chore) не пройден: требуется durable план docs/chores/<slug>/CHORE-PLAN.md " +
-            "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
-          )
-        return
-      }
-      if (isForeignMode(mode)) {
-        if (!hasForeignPlan(foreignDirsFn, existsFn) || !(await exists(gate1)))
-          throw new Error(
-            "[rational-guardrail] Gate #1 (foreign) не пройден: требуется durable план docs/foreign/<slug>/FOREIGN-PLAN.md " +
             "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
           )
         return

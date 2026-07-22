@@ -8,42 +8,51 @@
 
 ## Принятые решения
 
-- **6 ролей-агентов (izi)** с кодовыми именами инженеров: `planner`=Wirth, `plan-reviewer`=Mills,
-  `implementer`=Hughes, `fixer`=Linger, `release-health`=Michtom (слияние Release+SRE),
-  `orchestrator`=Witt (человек-дирижёр, honorary).
+- **Одна ось — вес по SemVer 2.0.0.** Пять вертикалей: `greenfield | patch | minor | major | chore`.
+  Решающий тест — **обратная совместимость документированного контракта**
+  (`harness/agents/_shared/wirth-triage.md`); `izi` роутит по вердикту механически.
+  Маршрутов `rework-*` и `foreign` **нет**.
+- **Только native-репозитории.** Харнес ведёт репозитории, которые построил сам (замороженный
+  контракт + дизайн-пакет + своя парадигма тестов). Роли `surveyor`/`foreign-designer`, скилл
+  `conform-tests` и вся разведочная/conform-механика **удалены**.
+- **Роли (izi-имена):** `izi`=Witt (роутер), `gilb`=Gilb, `wirth-*`/`change-intake`/`scaffolder`=Wirth,
+  `dijkstra`=Dijkstra, `mills`=Mills, `hughes`/`hughes-rework`=Hughes, `linger`=Linger, `fagan`=Fagan,
+  `git-hand`=Torvalds, **`ledger`=Rochkind**, `michtom`=Michtom. Набор закрыт.
+- **Human Gates — три:** #1 акцепт плана (`GATE1 APPROVE`), #2 мерж (`GATE2 APPROVE` → маркер
+  `.agent/gates/gate2.approved`), #3 приёмка прод-релиза после канарейки. Маркеры ставит только гардрейл.
+- **RUN-CLOSE (`@ledger` → `harness/close-run.mjs`):** пруф мерджа → тег на транке
+  (`ci/semver-bump.mjs`) → запись в `docs/changes/LEDGER.md` → атомарный вайп `.agent/`.
+  Бампы: greenfield→`1.0.0`, patch→`Z+1`, minor→`Y+1.0`, major→`X+1.0.0`, chore→**no-bump**.
+  Форма тега — от последнего релизного тега репо; тегов нет → дефолт `v` (`DEFAULT_PREFIX`).
+  Тег ставит **только** `@ledger`; `ci/recipes/*` — образец для репо без харнеса, в `template/` не кладётся.
+- **minor:** аддитивность механически (`node harness/validate-contract-diff.mjs --require-additive`;
+  breaking ⇒ exit 2 ⇒ ре-триаж как `major`) + новая способность за тогглом **default OFF**.
 - **Нет тестовых сред.** Деплой — канарейкой за фиче-тогглом прямо в прод на вариативные
-  среды (VM/контейнер/serverless, не обязательно k8s).
-- **Human Gates — три:** #1 акцепт плана, #2 мерж, #3 приёмка прод-релиза после канарейки.
-- **Тесты:** только компонентные + контрактные (проверяет `pinout`). Корректность модулей —
-  математической композицией (`program-design`).
-- **Мониторинг — 4 золотых сигнала.** Безопасность — на планировании + security-scan в CI.
-- **CI использует утилиты экосистемы RRA** для валидации решений.
-- **Убрано:** тестовые среды/стенды, кольца/k8s-обязательность, презентация, банковский контекст,
-  скиллы `tech-radar`/`qa`; `analytics` схлопнут в продуктовую разработку (Discovery инженер+ИИ).
+  среды (VM/контейнер/serverless, не обязательно k8s). Мониторинг — 4 золотых сигнала.
+- **Тесты:** юниты по формуле + компонентные + контрактные (`pinout`); корректность модулей —
+  математической композицией (`program-design`). Безопасность — на планировании + security-scan в CI.
 - **Фундамент:** труды Wirth / Hughes & Michtom / Linger, Mills, Witt + статьи автора.
 
 ## Статус
 
-Репозиторий переработан из `rational-skills-ai` под дерзкий SDLC разработки с ИИ.
+Харнес переведён на SemVer-вертикали (ветка `feat/semver-verticals`), 254 теста зелёные.
 
 | Артефакт | Статус |
 |---|---|
-| README, CONCEPT | ✅ переработаны |
-| Роли (6, izi-имена), `release-health` | ✅ |
-| `skills/lib/observability` (4 сигнала, канарейка) | ✅ |
-| `skills/lib/contract-tests` (pinout) | ✅ новый |
-| SKILLS-BACKLOG (canary/security/contract/высоконагруз) | ✅ |
-| GLOSSARY | ✅ |
-| `docs/00_PROCESS`, `01_DIAGRAM`, `02_MEASUREMENT`, `03_REPORTING`, `get-started` | ✅ вычищены (стенд/кольца/sre/банк убраны) |
-| `plan.md`, `CONTRIBUTING.md`, `docs/story/*`, `skills/lib/{security,architecture,git-conventions,code-style}` | ✅ вычищены |
-| Манифесты ролей (загрузка скиллов, гейты) | ✅ выровнены (нет analytics/qa/tech-radar; гейты #1–3) |
-| `docs/SDLC.svg` (заменил `.jpeg`) + `presentation/sdlc.html` | ✅ перерисованы под CI→канарейку |
+| Роли: `ledger`, `wirth-triage` (SemVer), `change-intake`, `git-hand`, `izi` (5 лейнов) | ✅ |
+| `harness/close-run.mjs`, `ci/semver-bump.mjs`, `ci/recipes/*` | ✅ |
+| `requirements/semver-verticals.md` (FRD, открытых вопросов нет) | ✅ |
+| `docs/flows/{greenfield,patch,minor,major,chore}-flow.md` | ✅ |
+| `CONCEPT`, `README`, `GLOSSARY`, `docs/00_PROCESS`, `01_DIAGRAM`, `harness-flow`, `05_REPO_STRUCTURE` | ✅ под вертикали |
+| Удалено: `surveyor`, `foreign-designer`, `conform-tests`, маршруты `rework-*`/`foreign` | ✅ |
+| `docs/SDLC.svg`, `presentation/sdlc.html` | 🔴 устарели (нарисованы до вертикалей) |
+| `docs/features/rework-workflow.md`, `docs/concept-api-workflow.md`, `docs/04_PLANNING_PIPELINE.md` | 🟡 исторические, помечены/не переписаны |
 
 ## Следующий шаг
 
-Ревью репозитория; при желании — завести GitHub-репо. Грязных маркеров
-(стенд/кольца/SRE-агент/банк/удалённые скиллы) не осталось. Диаграмма (`docs/SDLC.svg`)
-и презентация (`presentation/sdlc.html`) перерисованы под CI→канарейку.
+Перерисовать `docs/SDLC.svg` и `presentation/sdlc.html` под конвейер BRD → вес → вертикаль →
+Gate #2 → тег → канарейка; при желании — переписать `docs/concept-api-workflow.md` (граф ролей
+устарел).
 
 ## Тестовый прогон харнеса — как запускать
 

@@ -4,7 +4,8 @@
 //
 // Раскладка (природа работы → её durable папка):
 //   greenfield: docs/design/slice-<slug>/tickets/ticket-N.md         — сборка слайса (неизменная запись)
-//   rework:     docs/design/slice-<slug>/changes/<NNN-slug>/tickets/  — доработка слайса (modify-тикеты)
+//   change:     docs/design/slice-<slug>/changes/<NNN-slug>/tickets/  — change-папка SemVer-полосы
+//               (patch|minor|major): доработка слайса modify-тикетами, поверх неизменной сборки
 // Machines slug-агностичны: глобим на уровень глубже, имя папки не парсим.
 import { readdirSync, existsSync } from "node:fs"
 import { join } from "node:path"

@@ -13,8 +13,14 @@
 
 1. **Gate #1.** Делегирование роли `implementer` запрещено, пока нет
    `.agent/plan-reviewer/plan-review.md` **и** маркера `.agent/gates/gate1.approved`.
-   Маркер ставит оператор при акцепте плана: `mkdir -p .agent/gates && touch .agent/gates/gate1.approved`.
-2. **decisions.log.** Каждое делегирование роли дописывает строку в `.agent/decisions.log`
+   Маркер ставит **хук/плагин** по явному токену оператора `GATE1 APPROVE` (чат или пункт меню) —
+   и только когда план собран. Агенту запись маркера (`touch`/`>`/write/edit) заблокирована.
+2. **Gate #2 (мерж).** Делегирование `@ledger` (закрытие прогона: тег → `docs/changes/LEDGER.md` →
+   вайп `.agent/`) запрещено, пока нет `.agent/gates/gate2.approved`. Маркер ставит хук/плагин по
+   токену `GATE2 APPROVE` — и только когда работа дошла до мержа (`gate1.approved` + `.agent/vcs/branch`);
+   provenance — PR-референс из реплики. Самозапись агентом заблокирована так же, как на Gate #1.
+   Второй рубеж — сам `harness/close-run.mjs` (`STOP: Gate #2 not approved`).
+3. **decisions.log.** Каждое делегирование роли дописывает строку в `.agent/decisions.log`
    (роль, источник `via=`, время) — без участия модели.
 
 ## Проверка

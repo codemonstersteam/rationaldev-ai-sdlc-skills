@@ -1,108 +1,122 @@
 # Диаграмма целевого процесса
 
-> **Векторная схема процесса:** [`SDLC.svg`](SDLC.svg) — открывается в браузере,
-> отражает актуальный поток CI → канарейка (прежний растровый `SDLC.jpeg` удалён).
-> Актуальный поток (как в `README.md`): PLANNING → PLAN REVIEW → Human Gate #1 →
-> IMPLEMENTATION → CI (RRA-утилиты + security-scan) → CODE REVIEW → Human Gate #2 →
-> канареечный релиз прямо в прод (Release & Health, агент Michtom: выкат ⇄ 4 золотых
-> сигнала, доля канарейки 1%→5%→25%→100%) → Human Gate #3 (приёмка прод-релиза).
-> Mermaid-схема ниже — тот же поток в текстовом виде.
+> Поток целиком: измеримый BRD → **вес по SemVer** → вертикаль → Gate #1 → реализация → DoD →
+> PR/CI → Gate #2 → **закрытие прогона** (пруф мерджа → тег → `LEDGER.md` → вайп `.agent/`) →
+> канарейка + 4 золотых сигнала → Gate #3. Роли и правила — [`00_PROCESS.md`](00_PROCESS.md);
+> граф делегирования харнеса — [`harness-flow.md`](harness-flow.md); пошагово по весу —
+> [`flows/`](flows/).
+>
+> `SDLC.svg` — **устаревшая** векторная схема (нарисована до SemVer-вертикалей); источник правды —
+> Mermaid ниже.
+
+## Общий хребет
 
 ```mermaid
 flowchart TD
-    Start([Задача сформулирована<br/>граница: конец Discovery]) --> Entry
+    Start([Требование сформулировано<br/>граница: конец Discovery]) --> Gilb
 
-    Entry{{ВХОДНОЙ GATE<br/>инженер-дирижёр:<br/>задача готова? agent-ready?}}
-    Entry -->|переформулировать /<br/>рефакторинг границ| Start
-    Entry -->|запуск| Plan
+    Gilb["ФРОНТ-ДОР · @gilb<br/>сырое требование → измеримый BRD<br/>открытые вопросы → оператору по одному"]
+    Gilb --> Triage{"ТРИАЖ · @wirth-triage<br/>ВЕС по SemVer 2.0.0<br/>ось: обратная совместимость контракта"}
 
-    subgraph PlanPhase[PLANNING - крупная модель]
-        Plan[Planner Wirth пишет plan.md<br/>скиллы: architecture, security, component-tests]
-    end
+    Triage -->|chore| Chore["CHORE-PLAN.md<br/>файлы · команда верификации · откат"]
+    Triage -->|greenfield| Green["FRD → срезы → use-case →<br/>ЗАМОРОЗКА контракта → дерево модулей → README"]
+    Triage -->|patch| Patch["change-delta + discriminating<br/>контракт НЕ трогается"]
+    Triage -->|minor| Minor["аддитивная эволюция контракта<br/>--require-additive = 0 breaking"]
+    Triage -->|major| Major["редизайн + миграция<br/>breaking-список в тело PR"]
+    Triage -->|epic / unclear| Stop["STOP → оператор"]
 
-    Plan -->|plan.md в ветку| PlanReview
+    Minor -->|найден breaking| Triage
 
-    subgraph ReviewPhase[PLAN REVIEW - крупная модель]
-        PlanReview[Plan Reviewer Mills<br/>скиллы: architecture, security, component-tests]
-    end
+    Green --> Tickets
+    Patch --> Tickets
+    Minor --> Tickets
+    Major --> Tickets
+    Tickets["ТИКЕТЫ · @wirth-ticketer<br/>покрытие по весу; тип: scaffold|component|module"] --> Plan
+    Plan["ПЛАН · @wirth-planner<br/>индекс путей + сводка Gate #1"] --> Review
 
-    PlanReview -->|проблема| Plan
-    PlanReview -->|OK| Gate1{{HUMAN GATE 1<br/>инженер-дирижёр акцептует план}}
+    Review["РЕВЬЮ ПЛАНА · @mills<br/>OK | blocker | escalate"]
+    Review -->|blocker| Fix1["@linger — локальный фикс"]
+    Fix1 --> Review
+    Review -->|OK / escalate| Gate1
+    Chore --> Gate1
+
+    Gate1{{"HUMAN GATE #1 — акцепт плана<br/>токен GATE1 APPROVE"}}
     Gate1 -->|доработать| Plan
-    Gate1 -->|принято| Freeze[plan.md заморожен в репо<br/>источник правды]
+    Gate1 -->|принято| Branch["@git-hand mode=start<br/>ветка type/slug от свежего транка"]
 
-    Freeze --> Impl
+    Branch --> Impl["РЕАЛИЗАЦИЯ по тикетам<br/>@wirth-tester RED · @hughes / @hughes-rework"]
+    Impl --> Layout["validate-layout — раскладка кода"]
+    Layout -->|leak| Fix2["@linger — фикс (K=2)"]
+    Fix2 --> Impl
+    Layout -->|clean| Dod
 
-    subgraph ImplPhase[IMPLEMENTATION - мелкая модель]
-        Impl[Implementer Hughes пишет код по плану<br/>скилл: code-style]
+    Dod["DoD-ПРИЁМКА · @fagan<br/>сборка/тесты/README + инвариант веса<br/>снимает @wip"]
+    Dod -->|FAIL| Fix2
+    Dod -->|accepted| Terminal
+
+    Terminal["@git-hand mode=terminal<br/>commit → push → PR (вес в заголовке) → CI"]
+    Terminal -->|ci=red| Fix2
+    Terminal -->|ci=green| Gate2
+
+    Gate2{{"HUMAN GATE #2 — мерж<br/>токен GATE2 APPROVE"}}
+    Gate2 --> Close
+
+    Close["ЗАКРЫТИЕ ПРОГОНА · @ledger → close-run.mjs<br/>пруф мерджа → тег (semver-bump) →<br/>docs/changes/LEDGER.md → вайп .agent/"]
+    Close -->|no-bump| Done
+    Close -->|тег| Deploy
+
+    subgraph Prod["КАНАРЕЕЧНЫЙ РЕЛИЗ ПРЯМО В ПРОД · вариативная среда: VM / контейнер / serverless"]
+        Deploy["@michtom: деплой, тоггл OFF,<br/>health окружения"]
+        Deploy --> Rollout["расширение доли: 1% → 5% → 25% → 100%"]
+        Rollout --> Health["@michtom (анализ): 4 золотых сигнала +<br/>SLO + guardrail vs baseline"]
+        Health -->|YELLOW: держать долю| Rollout
+        Health -->|GREEN: расширить| Rollout
     end
 
-    Impl -->|PR| CI
-
-    subgraph CIPhase[CI PIPELINE]
-        CI[component / contract / lint<br/>RRA-утилиты валидация решений +<br/>отдельный security-scan]
-    end
-
-    CI -->|ошибки| Classify{Классификация<br/>ошибки}
-    Classify -->|дефект реализации| Impl
-    Classify -->|дефект плана| Plan
-    CI -->|всё зелёное| CodeReview
-
-    subgraph CRPhase[CODE REVIEW - крупная модель]
-        CodeReview[Fixer Linger проверяет PR]
-    end
-
-    CodeReview -->|правки| Impl
-    CodeReview -->|OK| Gate2{{HUMAN GATE 2<br/>инженер-дирижёр: мерж}}
-    Gate2 --> Merge([merge -> релизный артефакт<br/>фича-тоггл OFF])
-
-    Merge --> Deploy
-
-    subgraph Prod[КАНАРЕЕЧНЫЙ РЕЛИЗ ПРЯМО В ПРОД - цель: здорова под реальным трафиком<br/>вариативная среда: VM / контейнер / serverless]
-        Deploy[Release & Health Michtom мелкая модель<br/>деплой в прод, health-check окружения<br/>тоггл OFF<br/>скиллы: observability, security]
-        Deploy -->|окружение зелёное| Rollout[Michtom расширяет канарейку<br/>доля: 1% -> 5% -> 25% -> 100%]
-        Rollout --> Health[Michtom крупная модель: анализ здоровья<br/>4 золотых сигнала + SLO + guardrail<br/>vs baseline<br/>скилл: observability]
-        Health -->|YELLOW: держать долю,<br/>продлить наблюдение| Rollout
-        Health -->|GREEN: расширить долю| Rollout
-    end
-
-    Deploy -->|smoke/health провал| ClassifyDeploy{Классификация<br/>дефект реализации /<br/>дефект деплоя}
-    ClassifyDeploy -->|дефект реализации| Impl
-    ClassifyDeploy -->|дефект конфига деплоя| Deploy
-    Health -->|RED: откат| Rollback[ОТКАТ<br/>тоггл OFF / откат версии]
+    Health -->|RED: откат| Rollback["ОТКАТ — тоггл OFF / откат версии"]
     Rollback --> Escalate
-    Rollout -->|100% и стабильно N времени| Gate3{{HUMAN GATE 3<br/>дирижёр: приёмка прод-релиза<br/>после канарейки, мелкие фичи - авто}}
-    Gate3 --> Done([Фича принята<br/>тоггл -> cleanup-тикет])
+    Rollout -->|100% и стабильно| Gate3{{"HUMAN GATE #3<br/>приёмка прод-релиза"}}
+    Gate3 --> Done([Фича принята<br/>тоггл → cleanup-тикет])
 
-    Classify -.->|лимит итераций<br/>исчерпан| Escalate[ЭСКАЛАЦИЯ<br/>инженеру-дирижёру]
-    CI -.->|бюджет исчерпан| Escalate
-    ClassifyDeploy -.->|лимит / непонятно| Escalate
+    Fix2 -.->|K=2 исчерпан| Escalate["ЭСКАЛАЦИЯ инженеру-дирижёру"]
+    Review -.->|раунд ≥1 с блокером| Escalate
 
-    style Entry fill:#ffe6cc
     style Gate1 fill:#ffe6cc
     style Gate2 fill:#ffe6cc
     style Gate3 fill:#ffe6cc
+    style Stop fill:#ffcccc
     style Escalate fill:#ffcccc
     style Rollback fill:#ffcccc
-    style Freeze fill:#d5e8d4
-    style Merge fill:#d5e8d4
+    style Close fill:#d5e8d4
     style Done fill:#d5e8d4
 ```
 
+## Что решает вес
+
+| Вес | Голова конвейера | Транк | Канарейка |
+|---|---|---|---|
+| `greenfield` | полный дизайн-пакет + scaffold | `1.0.0` | да |
+| `patch` | дельта + discriminating, контракт не трогается | `Z+1` | да |
+| `minor` | аддитивная эволюция контракта, тоггл OFF | `Y+1.0` | да (способность выключена) |
+| `major` | редизайн + миграция + breaking-список | `X+1.0.0` | да |
+| `chore` | `CHORE-PLAN.md`, без дизайна и компонентных | **no-bump** | нет |
+
 ## Цикл Ralph Loop
 
-Замкнутая часть `IMPLEMENTATION → CI → классификация → IMPLEMENTATION/PLANNING` крутится до выполнения стоп-условия:
+Замкнутая часть `реализация → валидатор/DoD/CI → классификация → фикс` крутится до стоп-условия:
 
-- **Успех:** всё зелёное в CI + пройден code review крупной модели.
-- **Принудительный выход:** превышен лимит итераций (рекоменд. 5 фиксов / 2 репланирования) или исчерпан бюджет токенов/GPU-времени → эскалация человеку.
-- **Защита:** агент не может менять тесты, CI-конфиги и пороги покрытия для «позеленения» — такие изменения требуют отдельного human review.
+- **Успех:** `@fagan accepted` + зелёный CI на PR + инвариант веса доказан.
+- **Принудительный выход:** предохранитель `@linger` K=2 или исчерпанный бюджет → эскалация человеку.
+- **Защита:** агент не может менять тесты, CI-конфиги и пороги ради «позеленения»; на `minor` правка
+  существующего контрактного теста — блокер (сигнал неверного веса).
 
 ## Цикл Rollout Loop
 
-Замкнутая часть `расширить долю канарейки → POST-DEPLOY наблюдение → вердикт → расширить/держать/откатить` крутится по доле канарейки (1% → 5% → 25% → 100%) до выполнения стоп-условия:
+Замкнутая часть `расширить долю → наблюдение → вердикт → расширить/держать/откатить` (1% → 5% →
+25% → 100%):
 
-- **Успех:** все 4 золотых сигнала и SLI в пределах SLO, guardrail не просел против baseline на достаточном окне → раскатка дошла до 100% и стабильна → фича принята.
-- **Держать (YELLOW):** сигналы пограничны или окна наблюдения не хватило → текущая доля канарейки удерживается, расширение запрещено.
-- **Принудительный выход (RED):** нарушен SLO / всплеск ошибок-латентности / просадка guardrail / горит error budget → немедленный откат (тоггл OFF) и эскалация человеку.
-- **Асимметрия:** внутри Release & Health (Michtom) фаза выката (мелкая модель) катит, а фаза анализа здоровья (крупная модель) оценивает и решает об откате — генератор и критик не совпадают, как и в CI/code review.
-- **Защита:** агент не может ослаблять SLO, глушить алерты или трактовать отсутствие данных как «зелёно» ради продвижения раскатки — анти-gaming, симметричный запрету «позеленения» тестов.
+- **Успех:** 4 золотых сигнала и SLI в пределах SLO, guardrail не просел против baseline → 100% стабильно.
+- **Держать (YELLOW):** сигналы пограничны или окна не хватило — расширение запрещено.
+- **Принудительный выход (RED):** немедленный откат (тоггл OFF) + эскалация.
+- **Асимметрия:** фаза выката (малый тир) не совпадает с фазой анализа здоровья (большой тир).
+- **Защита:** нельзя ослаблять SLO, глушить алерты или трактовать отсутствие данных как «зелёно».

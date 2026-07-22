@@ -4,6 +4,10 @@
 
 // Строка-маркер акцепта Gate #1 (ставит только оператор вне сессии).
 export const GATE_MARK = ".agent/gates/gate1.approved"
+// Строка-маркер акцепта Gate #2 — мерж PR (тоже ТОЛЬКО оператор; агенту самоакцепт запрещён, как на #1).
+export const GATE2_MARK = ".agent/gates/gate2.approved"
+// Оба человеческих файловых гейта — один список для poka-yoke «агент не пишет маркер».
+export const GATE_MARKS = [GATE_MARK, GATE2_MARK]
 
 // Замкнутый набор пайплайн-ролей. Делегация `task`/`Task` вне набора (@general и пр.) = мис-роут.
 export const PIPELINE = new Set([
@@ -12,12 +16,15 @@ export const PIPELINE = new Set([
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
   "git-hand", // VCS-порт: start (ветка от транка) + terminal (commit/push/PR/CI)
   "change-intake", "hughes-rework", // rework pipeline (доработка существующего кода)
-  "surveyor", // foreign lane: разведка чужого репо → docs/design/_harness/ (route-foreign-lane T3)
-  "foreign-designer", // foreign lane: дизайн модулей ченджа (foreign-designer-lane F1)
+  "ledger", // закрытие прогона после Gate #2: тег на транке → LEDGER.md → вайп .agent/
 ])
 
 // Реализаторы, заблокированные до Gate #1 (нужны plan-review.md + gate1.approved).
 export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
+
+// Закрывающие прогон роли, заблокированные до Gate #2 (нужен gate2.approved — акцепт мержа оператором).
+// Зеркало IMPLEMENTERS/Gate #1: делегация @ledger до мержа сорвала бы тег/вайп на неслитой работе.
+export const RUN_CLOSERS = new Set(["ledger"])
 
 // Маркер прохождения фронтдора: @gilb пишет измеримый BRD сюда. Пока файла нет — грил не пройден.
 export const BRD_MARK = ".agent/planner/brd.md"
@@ -61,24 +68,12 @@ export function hasChorePlan(choreDirsFn, existsFn) {
   for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
   return false
 }
-// foreign-полоса (route-foreign-lane): ЧУЖОЙ (не-harness) репо. План-делта живёт durable в
-// docs/foreign/<NNN-slug>/FOREIGN-PLAN.md (своя папка, параллель chore) — ревью-пригодно, переживает прогон.
-// Парадигму репо разведывает @surveyor в docs/design/_harness/ (репо-уровень, ОТДЕЛЬНО от плана).
-// Machines slug-агностичны (глобят docs/foreign/*).
-export const FOREIGN_DIR = "docs/foreign"
-export const FOREIGN_PLAN_FILE = "FOREIGN-PLAN.md"
-export const isForeignMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "foreign"
-export function hasForeignPlan(foreignDirsFn, existsFn) {
-  for (const c of foreignDirsFn() || []) if (existsFn(FOREIGN_DIR + "/" + c + "/" + FOREIGN_PLAN_FILE)) return true
-  return false
-}
-// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()/foreignDirsFn()→string[] имён
-// подкаталогов под DESIGN_DIR / CHORES_DIR / FOREIGN_DIR (все от вызывающего). chore: durable CHORE-PLAN.md,
-// foreign: durable FOREIGN-PLAN.md — тоже «план собран».
-export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => [], foreignDirsFn = () => []) {
+// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()→string[] имён
+// подкаталогов под DESIGN_DIR / CHORES_DIR (все от вызывающего). chore: durable CHORE-PLAN.md —
+// тоже «план собран».
+export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
   if (hasChorePlan(choreDirsFn, existsFn)) return true
-  if (hasForeignPlan(foreignDirsFn, existsFn)) return true
   for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
   return false
 }
@@ -94,14 +89,22 @@ export function pickRole(args) {
 
 export const normRole = (role) => String(role).toLowerCase().replace(/^@/, "").trim()
 export const isImplementer = (role) => IMPLEMENTERS.has(normRole(role))
+export const isRunCloser = (role) => RUN_CLOSERS.has(normRole(role))
 export const inPipeline = (role) => PIPELINE.has(normRole(role))
 
-// bash-команда СОЗДАЁТ/ПИШЕТ маркер Gate #1? (чтение — ls/test/cat/stat — НЕ ловим: izi должен верифицировать)
-export function writesGateMarker(cmd) {
-  const gm = GATE_MARK.replace(/[.]/g, "\\.")
-  return new RegExp(`>>?\\s*['"]?[^\\s;|&'"]*${gm}`).test(cmd) ||
-         new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)
+// Какой маркер гейта СОЗДАЁТ/ПИШЕТ bash-команда? → путь маркера или null. (чтение — ls/test/cat/stat —
+// НЕ ловим: izi должен верифицировать). Оба гейта человеческие → самозапись любого из них запрещена.
+export function writtenGateMarker(cmd) {
+  for (const mark of GATE_MARKS) {
+    const gm = mark.replace(/[.]/g, "\\.")
+    if (new RegExp(`>>?\\s*['"]?[^\\s;|&'"]*${gm}`).test(cmd) ||
+        new RegExp(`\\b(touch|tee|cp|mv|ln|install|dd)\\b[^;|&]*${gm}`).test(cmd)) return mark
+  }
+  return null
 }
+export const writesGateMarker = (cmd) => writtenGateMarker(cmd) !== null
+// Путь (write/edit-инструмент) целится в маркер гейта? → путь маркера или null.
+export const gateMarkerInPath = (p) => GATE_MARKS.find((m) => String(p ?? "").includes(m)) ?? null
 
 // bash-команда пишет `ticket-NN <...> green` в .agent/planner/done.log? → id тикета (строка) или null.
 export function doneGreenTicketId(cmd) {
@@ -127,19 +130,42 @@ export function isOperatorApproval(text) {
   return /\bgate1\s+approve\b/i.test(String(text))
 }
 
-// Содержимое маркера Gate #1 — PROVENANCE акцепта (аудит, НЕ enforcement: gate-check смотрит только
+// Токен-команда акцепта Gate #2 (мерж PR) — близнец isOperatorApproval. Свободные «ок / мержим / approve»
+// НЕ акцепт: мерж — человеческое решение, а не NLP-догадка. Ручной `touch` оператором вне сессии валиден.
+export function isGate2Approval(text) {
+  return /\bgate2\s+approve\b/i.test(String(text))
+}
+
+// Маркер живой работы: @git-hand mode=start пишет сюда имя ветки. Нет ветки → и мержить нечего.
+export const VCS_BRANCH_MARK = ".agent/vcs/branch"
+
+// Gate #2 акцепт валиден ТОЛЬКО когда работа реально дошла до мержа: Gate #1 пройден И ветка прогона
+// нарезана (@git-hand). Зеркало planReadyForApproval: ранняя реплика «gate2 approve» до работы не должна
+// ставить маркер и открывать @ledger (тег+вайп на пустоте). existsFn(relPath)→bool — от вызывающего.
+export function mergeReadyForApproval(existsFn) {
+  return Boolean(existsFn(GATE_MARK) && existsFn(VCS_BRANCH_MARK))
+}
+
+// PR-референс из реплики оператора (provenance Gate #2 вместо plan_hash): URL форжа `…/pull/<N>` или
+// `#<N>` / `PR <N>`. Merge-SHA тут НЕ достаём — это git-I/O; факт мержа перепроверяет close-run.mjs на форже.
+export function prRefFromText(text) {
+  const s = String(text ?? "")
+  const m = /https?:\/\/\S*?\/pull\/(\d+)/.exec(s) || /\b(?:pr\s*#?|#)(\d+)\b/i.exec(s)
+  return m ? "pr-" + m[1] : "na"
+}
+
+// Содержимое маркера гейта — PROVENANCE акцепта (аудит, НЕ enforcement: gate-check смотрит только
 // существование файла, дрейф плана НЕ ре-блокирует). Несёт: когда, каким раннером, ПО КАКОЙ реплике
-// оператора и хеш снимка плана НА ТОТ МИГ — чтобы акцепт был привязуем к реальному решению.
-// planHash считает вызывающий (fs+crypto). Формат — TSV-строки; prompt санитизируется (без tab/newline).
-export function gateMarkerContent({ timestamp, source, prompt, planHash }) {
+// оператора и ЧТО именно акцептовано на тот миг: Gate #1 — хеш снимка плана (planHash, считает
+// вызывающий), Gate #2 — референс PR (ref). Поле, которое не передали, в файл не попадает.
+// Формат — TSV-строки; prompt/ref санитизируются (без tab/newline).
+export function gateMarkerContent({ timestamp, source, prompt, planHash, ref }) {
   const one = (s) => String(s ?? "").replace(/[\t\r\n]+/g, " ").trim().slice(0, 500)
-  return [
-    `approved_at\t${timestamp}`,
-    `source\t${source}`,
-    `plan_hash\t${planHash ?? "na"}`,
-    `prompt\t${one(prompt)}`,
-    "",
-  ].join("\n")
+  const lines = [`approved_at\t${timestamp}`, `source\t${source}`]
+  if (planHash !== undefined) lines.push(`plan_hash\t${planHash ?? "na"}`)
+  if (ref !== undefined) lines.push(`ref\t${one(ref)}`)
+  lines.push(`prompt\t${one(prompt)}`, "")
+  return lines.join("\n")
 }
 
 // Текст выбора оператора из НАТИВНОГО меню opencode (event `question.replied`) — параллель chat.message-акцепту.

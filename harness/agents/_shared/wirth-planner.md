@@ -6,7 +6,7 @@ tier: large
 mode: subagent
 temperature: 0.2
 steps: 15
-description: "Plan-index assembler (Wirth): from the finished design package assembles the plan — per-slice docs/design/slice-<name>/PLAN.md (greenfield), the change folder's <change-dir>/PLAN.md (rework), or docs/chores/<slug>/CHORE-PLAN.md (chore) — path index + Gate #1 summary. Does not design or delegate. Keywords: plan, index, PLAN.md, CHORE-PLAN.md, summary, Gate #1, rework, chore."
+description: "Plan-index assembler (Wirth): from the finished design package assembles the plan — per-slice docs/design/slice-<name>/PLAN.md (greenfield), the change folder's <change-dir>/PLAN.md (a SemVer lane: patch/minor/major), or docs/chores/<slug>/CHORE-PLAN.md (chore) — path index + Gate #1 summary. Does not design or delegate. Keywords: plan, index, PLAN.md, CHORE-PLAN.md, summary, Gate #1, semver, chore."
 skills: [memory]
 inputs: [.agent/planner/frd.md, .agent/planner/slices.md, .agent/planner/change-dir, .agent/planner/mode, docs/design, api-specification]
 outputs: [docs/design, docs/chores, .agent/decisions.log]
@@ -71,9 +71,9 @@ You **MUST** verify the package is complete (every slice has design, tickets are
 — if something is missing, return **STOP** to the orchestrator naming the unfinished stage. Append the
 decision → `.agent/decisions.log`.
 
-## REWORK / CHORE modes — the plan lands in the WORK's OWN durable folder (MUST, never on greenfield)
+## SEMVER-LANE / CHORE modes — the plan lands in the WORK's OWN durable folder (MUST, never on greenfield)
 Each unit of work owns its plan folder; you never overwrite the slice's greenfield `PLAN.md`/`tickets/`.
-- **REWORK** (`.agent/planner/change-dir` present → `<change-dir>` = `docs/design/<slice>/changes/<slug>/`):
+- **SEMVER LANE** (`patch`/`minor`/`major` — `.agent/planner/change-dir` present → `<change-dir>` = `docs/design/<slice>/changes/<slug>/`):
   write **`<change-dir>/PLAN.md`** (NOT the slice `PLAN.md`). It indexes the change: links to
   `<change-dir>/change-delta.md` + the affected slice design + `<change-dir>/tickets/`, and the Gate #1 summary
   (what changes + why, the affected-module list, the RED→GREEN scenarios, regression invariants). `M tickets` =
@@ -86,4 +86,4 @@ Each unit of work owns its plan folder; you never overwrite the slice's greenfie
   the folder first.
 
 Produce exactly your output and return **one line**: `planner → PLAN.md ready (N slices, M tickets)` (greenfield),
-`planner → PLAN.md ready (<change-dir>, M tickets)` (rework), or `planner → CHORE-PLAN.md ready (docs/chores/<slug>)` (chore).
+`planner → PLAN.md ready (<change-dir>, M tickets)` (a SemVer lane), or `planner → CHORE-PLAN.md ready (docs/chores/<slug>)` (chore).
