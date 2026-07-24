@@ -256,7 +256,10 @@ Gate #2 → RUN-CLOSE below:**
    - **`minor`** → a breaking class ⇒ **STOP**, surface to the operator, the weight was wrong (re-triage as
      `major`). Additivity is checked mechanically, not by eye.
    - **`major`** → the breaking-list is the **migration input**: announce it to the operator and require it
-     verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break.
+     verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break. The
+     **decision on the compatibility switch / migration window is pinned in an ADR** (`<change-dir>/adr/`,
+     authored by `@wirth-moduledesigner` at step 2.5) and `@fagan` verifies it at acceptance — a major that
+     changed compatibility without that ADR is incomplete.
 2.5. **Design — only if `@change-intake` returned `design=needed`** (`minor`/`major`: `needed` by default —
    a new or changed surface is a decision): `@wirth-moduledesigner` (input: `change-delta` + the affected
    design package) → `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` for the rippled modules only.
@@ -403,6 +406,16 @@ finished: proceed to `## DoD-closure` below. Do NOT stop, do NOT run the tests y
 is clean. Implementation is done — but YOU are not: one imperative step remains. You MUST NOT run the
 tests yourself and MUST NOT idle here.
 
+**SemVer README refresh — `minor`/`major` only, NARROW trigger (runs BEFORE `@fagan`).** On
+`mode=minor|major`, read the change and decide by ONE test: does the delta touch the **documented surface**
+— a new/changed API or command, or a **new failure mode** (a row of the README's `## Карта режимов отказа`)?
+**Yes** → delegate **`@dijkstra` in change-mode** (input: `<change-dir>/change-delta.md` + the evolved frozen
+contract + the existing `README.md`) to actualize the affected README sections + the failure-mode map — it
+stays the **sole** README author (`@hughes-rework` never writes README). **Purely internal edit** (no
+README-visible surface, no new failure mode) → **do NOT call `@dijkstra`**. `patch`/`chore`/`onboard` never
+call it. If `@fagan` later returns `FAIL: README stale`, re-delegate **`@dijkstra` change-mode** (NOT
+`@linger` — README is `@dijkstra`'s exclusive artifact), then re-run `@fagan`.
+
 **Delegate `@fagan` — the terminal acceptance inspector** (NOT `@linger`; the acceptor is never the
 author or the fixer — separation of duties). Input = slice path + slug. `@fagan` inspects and returns
 `accepted | FAIL: <item>`: it runs the deterministic DoD gate (`validate-component-tests` re-check +
@@ -446,6 +459,13 @@ git yourself. It commits the working tree (git-conventions message), pushes the 
 **Trigger:** the operator issued `GATE2 APPROVE` (marker `.agent/gates/gate2.approved` present, set by the
 hook) and merged the PR. A run is closed **explicitly**: without this step the finished task's `.agent/`
 state would masquerade as the next task's (a stale `gate1.approved` waving it through the gate).
+
+**Design-package consolidation (SemVer with design — ASSUMPTION-owner, do FIRST).** On `mode=minor|major`
+(and `patch` with `design=needed`) whose change produced a design package, **before** `@ledger`, fold the
+change's `<change-dir>/{module-tree,contracts,c4}.md` (+ `adr/`) into the **canonical** slice package
+`docs/design/<slice>/` — else the next task reads a stale map (drift). **Default owner is
+`@wirth-moduledesigner`** (it owns the design package); **this owner is an ASSUMPTION — the operator may
+reassign it.** `design=skip`/`chore`/`greenfield`/`onboard` → nothing to fold, skip straight to `@ledger`.
 
 **Delegate `@ledger` (Rochkind)** with the PR number. It invokes the deterministic
 `node "$(readlink harness)/close-run.mjs" --pr <N>` (the repo's `harness/` is a symlink into the clone;

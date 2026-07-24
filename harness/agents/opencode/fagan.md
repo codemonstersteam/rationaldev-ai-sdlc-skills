@@ -67,7 +67,14 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
   existing contract test changed** (`git diff` on the existing test files is empty — an edit there signals a
   break) · the capability's **toggle defaults OFF**.
 - **`major`** — the reworked components green · the **breaking-list** and the **migration/deprecation path**
-  present in the change folder and carried into the PR body (`BREAKING CHANGE`).
+  present in the change folder and carried into the PR body (`BREAKING CHANGE`) · the **compatibility-switch /
+  migration-window decision pinned in an ADR** (`<change-dir>/adr/`) — a major that changed compatibility
+  with no such ADR → `FAIL`.
+- **`minor`/`major` — the README reflects THIS change (not the pre-change README).** `validate-readme`
+  (Move 1.3) checks the skeleton's *structure*; **you** check the *content*: the delta's new surface / new
+  failure mode is now documented (the affected API/command block + a matching row in `## Карта режимов
+  отказа`). A stale README on a surface-changing delta → `FAIL: README stale` — izi routes the fix to
+  `@dijkstra` change-mode (the sole README author), **not** `@linger`.
 Where the contract is not machine-readable, `validate-contract-diff` cannot prove additivity — then **you** are
 the proof: existing tests untouched + the whole suite green. Any missing item → `FAIL: <item>`, never a soft pass.
 
