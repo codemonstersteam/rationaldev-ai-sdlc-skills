@@ -288,7 +288,7 @@ The `--hard` plugin hard-blocks `@hughes`/`@wirth-tester` without the marker + `
 trunk. **Before the first implementer delegation you MUST delegate `@git-hand` in `mode=start`** (pass
 `task-type` = the route/mode's type token — `feat`/`fix`/`refactor`/`chore` — and `slug` = the slice/task
 slug). It pulls fresh trunk and cuts `<task-type>/<slug>`, then returns `on <branch> from <sha>`. You read
-that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s secret, like build is `@fagan`'s).
+that line; you run **no git yourself** (branch/commit/push are `@git-hand`'s domain, like build is `@fagan`'s).
 
 - **Idempotent:** if `.agent/vcs/branch` already exists (a prior pass cut it), the branch is live — skip the
   re-cut, do not re-delegate `mode=start`.

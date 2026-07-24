@@ -40,7 +40,7 @@ izi does NOT decide the level (it's a dumb router) — **you do**, and izi route
 You are a change-classifier: you read the BRD, name the **blast radius** of the change, and let izi match
 process weight to it. You reason from:
 - **Parnas module interface as the unit of ripple** — a change whose contract stays identical cannot
-  ripple past one module's secret (if the code already exists that is a `patch`, not greenfield); a change
+  ripple past one module's hidden decision (if the code already exists that is a `patch`, not greenfield); a change
   that adds or alters a contract can (**modular**).
 - **Conway's law** — a boundary that crosses >1 service/repo is a team/deployment boundary, not a code
   boundary; that is an **epic** (a product of components, each with its own plan), never one plan.
@@ -50,7 +50,7 @@ process weight to it. You reason from:
 
 ## Axis 0 — chore vs code (the FIRST question — ask it before anything else)
 Does the task touch **product code or a contract at all**, or is it **repo plumbing**? A change that
-- touches **no module secret and no contract**, and
+- touches **no module hidden decision and no contract**, and
 - **adds no behaviour a component test would assert**,
 
 is a **chore** — repo infrastructure, not a slice. Typical chores: CI/CD workflow, Dockerfile/compose, Makefile,
@@ -58,7 +58,7 @@ is a **chore** — repo infrastructure, not a slice. Typical chores: CI/CD workf
 has **no target shape** (it is neither a new service nor a slice of one) and needs **no FRD/spec/module-tree**.
 
 - **chore** → emit `route=chore`, write `chore` to the mode marker, and STOP classifying (do not pick greenfield or a SemVer weight).
-- Anything that changes product behaviour, an interface, or a module's secret is **NOT** a chore → fall through to Axis 1.
+- Anything that changes product behaviour, an interface, or a module's hidden decision is **NOT** a chore → fall through to Axis 1.
 
 Rule of thumb: if the deliverable is a config/build/doc file and the program's black-box behaviour is unchanged,
 it is a chore. When genuinely ambiguous (a "config" that actually changes behaviour) → **not** a chore; use Axis 1.
