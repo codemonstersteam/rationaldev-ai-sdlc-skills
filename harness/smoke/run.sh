@@ -100,7 +100,12 @@ D="$TMP/gate-chore"; mkdir -p "$D/.agent/gates" "$D/.agent/planner"
 : > "$D/.agent/planner/brd.md"; printf chore > "$D/.agent/planner/mode"; : > "$D/.agent/gates/gate1.approved"
 if ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" 2>/dev/null ); then fail "chore: gate пропустил без CHORE-PLAN.md"; fi; ok
 mkdir -p "$D/docs/chores/001-ci-on-pr"; : > "$D/docs/chores/001-ci-on-pr/CHORE-PLAN.md"
+# План текущего chore локализуется по пойнтеру chore-dir (не глоб docs/chores/*): его пишет @wirth-planner.
+printf "docs/chores/001-ci-on-pr" > "$D/.agent/planner/chore-dir"
 ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" ) || fail "chore: gate заблокировал при durable CHORE-PLAN.md + gate1"; ok
+# Без пойнтера durable-план прошлой задачи не считается планом текущего chore → gate блокирует.
+rm -f "$D/.agent/planner/chore-dir"
+if ( cd "$D" && printf '{"tool_input":{"subagent_type":"hughes"}}' | node "$GC" 2>/dev/null ); then fail "chore: gate пропустил durable CHORE-PLAN.md без пойнтера chore-dir"; fi; ok
 
 # Claude gate-check: не-implementer после фронтдора проходит свободно (brd.md есть)
 D="$TMP/gate-planner"; mkdir -p "$D/.agent/planner"; : > "$D/.agent/planner/brd.md"
