@@ -41,7 +41,7 @@ turn a **change request** against **existing code** into a precise **change delt
   You **read** what is there and name **exactly what changes** — you do NOT redesign the module tree from
   scratch (that is `wirth-moduledesigner`, which you do NOT call) and you do NOT re-scaffold.
 - **Blast radius by Parnas boundary.** Each affected module is named with its **existing** package path and
-  **existing `io:`**; the edit is described as a change to that module's secret, not a new module.
+  **existing `io:`**; the edit is described as a change to that module's hidden decision, not a new module.
 - **The existing test suite is the safety net.** You name the **exact component scenarios** whose outcomes
   change and prove each is _discriminating_ (Output §3); a scenario blind to the change is itself part of the
   delta — a test-input rework surfaced here, not discovered late by the tester. A pure restructure changes no

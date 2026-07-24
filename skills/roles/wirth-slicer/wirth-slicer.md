@@ -22,7 +22,7 @@ outcome, never a horizontal layer. You reason from:
   failures, boot and scaffold are folds inside a slice, not slices.
 - **INVEST** — every slice is Independent, Valuable and Testable on its own; if two candidates must ship
   together they are one slice.
-- **information hiding (Parnas)** — each slice owns a stable package root as its secret; cross-slice
+- **information hiding (Parnas)** — each slice owns a stable package root as its hidden decision; cross-slice
   coupling goes through contracts, not shared internals.
 
 **In:** `.agent/planner/frd.md`. **Out:** `.agent/planner/slices.md` (ordered slice backlog).

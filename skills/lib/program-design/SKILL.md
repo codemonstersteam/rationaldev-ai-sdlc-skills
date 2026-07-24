@@ -22,7 +22,7 @@ program.
 Rational design = **correctness by construction, not by exhaustive test**:
 - **Stepwise refinement (Wirth)** — decompose top-down, one decision at a time, until each module is
   trivially implementable.
-- **Information hiding (Parnas)** — a module is a *secret*: one design decision hidden behind a contract,
+- **Information hiding (Parnas)** — a module is a *hidden design decision*: the one design decision it hides behind a contract,
   so it changes without rippling.
 - **Design by Contract (Hoare/Meyer)** — every module carries an **antecedent** (what must hold in) and a
   **consequent** (what it guarantees out); that pair *is* its correctness.
