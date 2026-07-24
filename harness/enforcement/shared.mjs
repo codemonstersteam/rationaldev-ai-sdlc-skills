@@ -16,10 +16,14 @@ export const PIPELINE = new Set([
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
   "git-hand", // VCS-порт: start (ветка от транка) + terminal (commit/push/PR/CI)
   "change-intake", "hughes-rework", // rework pipeline (доработка существующего кода)
+  "wirth-onboard", // onboard-полоса: восстановление дизайн-пакета своего легаси (docs-only, no-bump)
   "ledger", // закрытие прогона после Gate #2: тег на транке → LEDGER.md → вайп .agent/
 ])
 
 // Реализаторы, заблокированные до Gate #1 (нужны plan-review.md + gate1.approved).
+// wirth-onboard СЮДА НЕ входит: он работает ДО Gate #1 (пишет пакет, который @mills ревьюит под-шагом
+// гейта — блокировать его до маркера = дедлок, ревьюить нечего). Пишет docs (класс дизайн-ролей, не код) →
+// on-trunk-poka-yoke к нему тоже не применяется, как к change-intake/moduledesigner.
 export const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])
 
 // Закрывающие прогон роли, заблокированные до Gate #2 (нужен gate2.approved — акцепт мержа оператором).
