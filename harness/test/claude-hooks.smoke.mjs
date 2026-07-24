@@ -58,10 +58,14 @@ await writeFile(join(cdir, ".agent", "planner", "brd.md"), "# BRD\n")
 await writeFile(join(cdir, ".agent", "planner", "mode"), "chore")
 await mkdir(join(cdir, ".agent", "gates"), { recursive: true })
 await writeFile(join(cdir, ".agent", "gates", "gate1.approved"), "ok\n")
+await writeFile(join(cdir, ".agent", "planner", "chore-dir"), "docs/chores/001-ci-on-pr")
 assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 2, "chore: @hughes без durable CHORE-PLAN.md → блок"); pass++
 await mkdir(join(cdir, "docs", "chores", "001-ci-on-pr"), { recursive: true })
 await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
-assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с docs/chores/<slug>/CHORE-PLAN.md + gate1 → пропуск"); pass++
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 0, "chore: @hughes с <chore-dir>/CHORE-PLAN.md + gate1 → пропуск"); pass++
+// C2: durable CHORE-PLAN.md ЧУЖОГО chore (не текущий chore-dir) → блок (глоб-защита не воскресает)
+await writeFile(join(cdir, ".agent", "planner", "chore-dir"), "docs/chores/099-other")
+assert.equal(runHook("gate-check.mjs", task("hughes"), { CLAUDE_PROJECT_DIR: cdir }), 2, "chore: chore-dir указывает на пустой 099-other → блок (durable 001 не в счёт)"); pass++
 await rm(cdir, { recursive: true, force: true })
 
 await rm(gdir, { recursive: true, force: true })
@@ -94,6 +98,24 @@ await mkdir(join(dir, "internal", "x"), { recursive: true })
 await writeFile(join(dir, "internal", "x", "logic.go"), "package x\n")
 assert.equal(runHook("gate-bash.mjs", green, { CLAUDE_PROJECT_DIR: dir }), 0, "green с непустым output → пропуск"); pass++
 
+// gate-bash (C3): chore green-маркер (без ticket-NN) — по <chore-dir>/CHORE-PLAN.md должен быть реальный файл
+const chgdir = await mkdtemp(join(tmpdir(), "claude-chore-green-"))
+await mkdir(join(chgdir, ".agent", "planner"), { recursive: true })
+await writeFile(join(chgdir, ".agent", "planner", "mode"), "chore")
+await writeFile(join(chgdir, ".agent", "planner", "chore-dir"), "docs/chores/001-ci")
+await mkdir(join(chgdir, "docs", "chores", "001-ci"), { recursive: true })
+await writeFile(join(chgdir, "docs", "chores", "001-ci", "CHORE-PLAN.md"), "# chore\nМеняем `.github/workflows/ci.yml` — CI на PR.\n")
+const choreGreen = bash('echo "chore 001-ci green" >> .agent/planner/done.log')
+assert.equal(runHook("gate-bash.mjs", choreGreen, { CLAUDE_PROJECT_DIR: chgdir }), 2, "chore green без изменённого файла → блок"); pass++
+await mkdir(join(chgdir, ".github", "workflows"), { recursive: true })
+await writeFile(join(chgdir, ".github", "workflows", "ci.yml"), "name: ci\n")
+assert.equal(runHook("gate-bash.mjs", choreGreen, { CLAUDE_PROJECT_DIR: chgdir }), 0, "chore green с реальным изменённым файлом → пропуск"); pass++
+// не-chore green без ticket-NN → chore-проверка не применяется (fail-open, не наш маркер)
+await rm(join(chgdir, ".github", "workflows", "ci.yml"))
+await writeFile(join(chgdir, ".agent", "planner", "mode"), "patch")
+assert.equal(runHook("gate-bash.mjs", choreGreen, { CLAUDE_PROJECT_DIR: chgdir }), 0, "green без ticket-NN и не chore → пропуск (chore-poka-yoke не триггерит)"); pass++
+await rm(chgdir, { recursive: true, force: true })
+
 // fail-open: битый JSON не блокирует
 assert.equal(spawnSync("node", [join(HOOKS, "gate-bash.mjs")], { input: "not json" }).status, 0, "битый JSON → fail-open"); pass++
 
@@ -102,9 +124,18 @@ const adir = await mkdtemp(join(tmpdir(), "claude-approve-"))
 const marker = join(adir, ".agent", "gates", "gate1.approved")
 runHook("gate-approve.mjs", { prompt: "ну что, поехали дальше" }, { CLAUDE_PROJECT_DIR: adir })
 assert.ok(!existsSync(marker), "не-акцепт → маркера нет"); pass++
-// собираем PLAN.md (planReadyForApproval=true) — но согласие всё равно требует токена
+// собираем PLAN.md ТЕКУЩЕГО среза (planReadyForApproval=true) — slices.md привязывает срез к прогону,
+// иначе durable PLAN.md чужой задачи не в счёт (C1). Согласие всё равно требует токена.
 await mkdir(join(adir, "docs", "design", "slice-x"), { recursive: true })
 await writeFile(join(adir, "docs", "design", "slice-x", "PLAN.md"), "# plan\n")
+await mkdir(join(adir, ".agent", "planner"), { recursive: true })
+await writeFile(join(adir, ".agent", "planner", "slices.md"), "slices.md ready: slice-x\n")
+await writeFile(join(adir, ".agent", "planner", "mode"), "greenfield")
+// C1-робастность: под mode=patch (другая полоса) stale slices.md НЕ подтверждает план — токен не ставит маркер
+await writeFile(join(adir, ".agent", "planner", "mode"), "patch")
+runHook("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir })
+assert.ok(!existsSync(marker), "mode=patch: stale slices.md/PLAN.md не подтверждает план → маркера нет"); pass++
+await writeFile(join(adir, ".agent", "planner", "mode"), "greenfield")
 // РЕГРЕССИЯ (run 16-07): свободные «go ahead / approve / акцепт» БОЛЬШЕ НЕ согласие даже при готовом плане
 runHook("gate-approve.mjs", { prompt: "ок, go ahead — approve, акцепт, принял план" }, { CLAUDE_PROJECT_DIR: adir })
 assert.ok(!existsSync(marker), "свободные слова + PLAN.md → маркера НЕТ (нужен явный токен)"); pass++
@@ -146,4 +177,4 @@ assert.equal(readFileSync(m2, "utf8"), g2first, "повтор не клоббе�
 await rm(g2dir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/36 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore + poka-yoke + gate-write + GATE1/GATE2-APPROVE-токены + provenance + @ledger/Gate #2)`)
+console.log(`PASS ${pass}/41 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore[dir-pointer] + poka-yoke[ticket+chore] + gate-write + GATE1/GATE2-APPROVE-токены + provenance + @ledger/Gate #2)`)

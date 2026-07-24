@@ -59,22 +59,45 @@ export const DESIGN_DIR = "docs/design" // PLAN.md лежит per-slice: docs/de
 export const CHORES_DIR = "docs/chores"
 export const CHORE_PLAN_FILE = "CHORE-PLAN.md"
 export const MODE_MARK = ".agent/planner/mode"
+// Пойнтеры ТЕКУЩЕЙ работы (пишут change-intake/wirth-planner/wirth-slicer). Содержимое читает вызывающий
+// (fs снаружи); ядро сверяет план ПО адресу из состояния, а не глобом durable-артефактов.
+export const CHANGE_DIR_MARK = ".agent/planner/change-dir" // SemVer/онбординг: → docs/design/<slice>/changes/<slug>/
+export const CHORE_DIR_MARK = ".agent/planner/chore-dir"   // chore: → docs/chores/<slug>
+export const SLICES_MARK = ".agent/planner/slices.md"      // greenfield: run-scoped бэклог срезов
 // mode-маркер (пишет @wirth-triage) == "chore"? content от вызывающего (fs-чтение снаружи).
 // Срезаем ведущий BOM (﻿) — Windows-тулзы (PowerShell Set-Content) пишут его; trim() его не берёт.
 export const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
-// Есть ли durable chore-план docs/chores/<slug>/CHORE-PLAN.md? choreDirsFn()→подкаталоги docs/chores/;
-// existsFn(relPath)→bool (оба инжектит вызывающий — fs снаружи, ядро чистое/тестируемое).
-export function hasChorePlan(choreDirsFn, existsFn) {
-  for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
-  return false
+// Приклеить файл к пойнтер-пути (содержимое change-dir/chore-dir). Обрезаем BOM/пробелы/CRLF и хвостовой
+// слэш; пустой пойнтер → null (проверять нечего — работа не в этой полосе).
+export function planPathUnder(pointer, file) {
+  const base = String(pointer || "").replace(/^﻿/, "").trim().replace(/[\\/]+$/, "")
+  return base ? base + "/" + file : null
 }
-// Готов ли план к акцепту? existsFn(relPath)→bool, sliceDirsFn()/choreDirsFn()→string[] имён
-// подкаталогов под DESIGN_DIR / CHORES_DIR (все от вызывающего). chore: durable CHORE-PLAN.md —
-// тоже «план собран».
-export function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
+// Срезы ТЕКУЩЕГО greenfield-прогона: подкаталоги docs/design/, упомянутые в run-scoped slices.md (по имени
+// каталога ИЛИ поведенческому slug — хвосту slice-NN-<slug>). Durable-каталоги прошлых (закрытых) задач,
+// которых нет в текущем slices.md, отсекаются → «есть хоть один PLAN.md» больше не воскрешает мёртвый гейт.
+export function currentGreenfieldSlices(slicesText, designDirs) {
+  const t = String(slicesText || "")
+  if (!t.trim()) return []
+  return (designDirs || []).filter((d) => {
+    if (t.includes(d)) return true
+    const slug = String(d).replace(/^slice-\d+-?/i, "")
+    return slug.length > 0 && t.includes(slug)
+  })
+}
+// Готов ли план ТЕКУЩЕЙ задачи к акцепту Gate #1? Привязка к СОСТОЯНИЮ прогона, НЕ глоб durable-артефактов:
+// PLAN.md/CHORE-PLAN.md вечны → «есть хоть один» после первой задачи всегда истинно, человеческий гейт мёртв.
+// existsFn(relPath)→bool. Сигналы (fs — на вызывающем): plan-review.md (run-scoped критика @mills —
+// greenfield/SemVer); changeDir = содержимое .agent/planner/change-dir (план <changeDir>/PLAN.md); choreDir =
+// содержимое .agent/planner/chore-dir (план <choreDir>/CHORE-PLAN.md); sliceDirs = срезы текущего прогона
+// (currentGreenfieldSlices — план docs/design/<slice>/PLAN.md).
+export function planReadyForApproval(existsFn, { changeDir = null, choreDir = null, sliceDirs = [] } = {}) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
-  if (hasChorePlan(choreDirsFn, existsFn)) return true
-  for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
+  const cd = planPathUnder(changeDir, "PLAN.md")
+  if (cd && existsFn(cd)) return true
+  const chd = planPathUnder(choreDir, CHORE_PLAN_FILE)
+  if (chd && existsFn(chd)) return true
+  for (const s of sliceDirs || []) if (existsFn(DESIGN_DIR + "/" + s + "/PLAN.md")) return true
   return false
 }
 
@@ -114,11 +137,30 @@ export function doneGreenTicketId(cmd) {
   return mk ? mk[1] : null
 }
 
+// bash-команда пишет `green` в done.log (маркер завершения) БЕЗ ticket-NN? У chore тикетов нет →
+// doneGreenTicketId=null; здесь ловим сам факт green-записи, дальше вызывающий под mode=chore сверяет
+// объявленные выходы chore-плана (poka-yoke «зелёный без реального артефакта»).
+export function doneGreenWrite(cmd) {
+  return />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd) && /\bgreen\b/.test(String(cmd))
+}
+
 // Разобрать `outputs: [a, b, …]` (flow-массив) из тела тикета → массив путей.
 export function parseTicketOutputs(text) {
   const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
   if (!m) return []
   return m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+}
+
+// Пути изменяемых файлов, объявленные в CHORE-PLAN.md. План — durable проза (не машинное поле как
+// `outputs:` у тикета), поэтому берём и `outputs: [...]` (если планировщик дал его), и backtick-цитированные
+// path-like токены (есть `/` или расширение). Пусто → проверку не применяем (fail-open, как у тикетов).
+export function choreOutputs(text) {
+  const out = new Set(parseTicketOutputs(text))
+  for (const m of String(text || "").matchAll(/`([^`\n]+)`/g)) {
+    const t = m[1].trim()
+    if (/^[\w./-]+$/.test(t) && (t.includes("/") || /\.[a-z0-9]+$/i.test(t))) out.add(t)
+  }
+  return [...out]
 }
 
 // Явный ТОКЕН-КОМАНДА акцепта Gate #1 — НЕ свободный текст. Оператор ДОЛЖЕН написать «GATE1 APPROVE»

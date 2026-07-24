@@ -8,7 +8,7 @@
 // SYNC: константы+чистые функции ниже — ИНЛАЙН-КОПИЯ из ../shared.mjs (единый источник для claude-хуков).
 //   ДЕРЖАТЬ ИДЕНТИЧНО. Дрейф ловит harness/test/guardrail-sync.test.mjs (loader-check + drift) (сравнивает с shared.mjs).
 import { appendFile, writeFile, mkdir, access, readFile, readdir, stat } from "node:fs/promises"
-import { existsSync, readdirSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 // ── лёгкий non-crypto хеш (аудит-отпечатки: plan_hash/skillset_hash — НЕ безопасность) — заменяет node:crypto ──
@@ -52,15 +52,31 @@ const PLAN_REVIEW_MARK = ".agent/plan-reviewer/plan-review.md"
 const DESIGN_DIR = "docs/design"
 const CHORES_DIR = "docs/chores"
 const CHORE_PLAN_FILE = "CHORE-PLAN.md"
+const MODE_MARK = ".agent/planner/mode"
+const CHANGE_DIR_MARK = ".agent/planner/change-dir"
+const CHORE_DIR_MARK = ".agent/planner/chore-dir"
+const SLICES_MARK = ".agent/planner/slices.md"
 const isChoreMode = (modeContent) => String(modeContent || "").replace(/^﻿/, "").trim() === "chore"
-function hasChorePlan(choreDirsFn, existsFn) {
-  for (const c of choreDirsFn() || []) if (existsFn(CHORES_DIR + "/" + c + "/" + CHORE_PLAN_FILE)) return true
-  return false
+function planPathUnder(pointer, file) {
+  const base = String(pointer || "").replace(/^﻿/, "").trim().replace(/[\\/]+$/, "")
+  return base ? base + "/" + file : null
 }
-function planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn = () => []) {
+function currentGreenfieldSlices(slicesText, designDirs) {
+  const t = String(slicesText || "")
+  if (!t.trim()) return []
+  return (designDirs || []).filter((d) => {
+    if (t.includes(d)) return true
+    const slug = String(d).replace(/^slice-\d+-?/i, "")
+    return slug.length > 0 && t.includes(slug)
+  })
+}
+function planReadyForApproval(existsFn, { changeDir = null, choreDir = null, sliceDirs = [] } = {}) {
   if (existsFn(PLAN_REVIEW_MARK)) return true
-  if (hasChorePlan(choreDirsFn, existsFn)) return true
-  for (const slice of sliceDirsFn() || []) if (existsFn(DESIGN_DIR + "/" + slice + "/PLAN.md")) return true
+  const cd = planPathUnder(changeDir, "PLAN.md")
+  if (cd && existsFn(cd)) return true
+  const chd = planPathUnder(choreDir, CHORE_PLAN_FILE)
+  if (chd && existsFn(chd)) return true
+  for (const s of sliceDirs || []) if (existsFn(DESIGN_DIR + "/" + s + "/PLAN.md")) return true
   return false
 }
 const ROLE_KEYS = ["subagent", "subagentType", "subagent_type", "agent", "agentType"]
@@ -89,10 +105,21 @@ function doneGreenTicketId(cmd) {
   const mk = /\bticket-0*(\d+)\b[^\n]*\bgreen\b/.exec(cmd)
   return mk ? mk[1] : null
 }
+function doneGreenWrite(cmd) {
+  return />>?\s*['"]?[^\s;|&'"]*\.agent\/planner\/done\.log/.test(cmd) && /\bgreen\b/.test(String(cmd))
+}
 function parseTicketOutputs(text) {
   const m = /^outputs:\s*\[([^\]]*)\]/m.exec(text)
   if (!m) return []
   return m[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+}
+function choreOutputs(text) {
+  const out = new Set(parseTicketOutputs(text))
+  for (const m of String(text || "").matchAll(/`([^`\n]+)`/g)) {
+    const t = m[1].trim()
+    if (/^[\w./-]+$/.test(t) && (t.includes("/") || /\.[a-z0-9]+$/i.test(t))) out.add(t)
+  }
+  return [...out]
 }
 function isOperatorApproval(text) {
   return /\bgate1\s+approve\b/i.test(String(text))
@@ -250,6 +277,25 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
     return missing
   }
 
+  // C3 poka-yoke (chore): у chore тикетов нет → берём объявленные файлы из <chore-dir>/CHORE-PLAN.md
+  // (пойнтер, не глоб). Блок ТОЛЬКО когда файлы объявлены И НИ ОДНОГО реального (все отсутствуют/пусты) —
+  // прозаичное извлечение консервативно: один настоящий выход = chore что-то произвёл. Нет плана/выходов
+  // → null (fail-open). → { declared:[…] } к блоку | null.
+  const choreGreenGap = async () => {
+    let choreDir = ""
+    try { choreDir = await readFile(join(root, CHORE_DIR_MARK), "utf8") } catch { return null }
+    const rel = planPathUnder(choreDir, CHORE_PLAN_FILE)
+    if (!rel) return null
+    let text
+    try { text = await readFile(join(root, rel), "utf8") } catch { return null }
+    const declared = choreOutputs(text)
+    if (!declared.length) return null
+    for (const p of declared) {
+      try { const st = await stat(join(root, p)); if (!(st.isFile() && st.size === 0)) return null } catch { /* нет файла */ }
+    }
+    return { declared }
+  }
+
   // Фрейм трассировки: model + agents_rev + skillset_hash (считаем один раз на init, best-effort).
   const sha12 = (s) => lightHash(s, 12)
   let agentsRev = "na", skillsetHash = "na"
@@ -281,14 +327,23 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
   }
 
   const existsFn = (rel) => existsSync(join(root, rel))
-  const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
-  const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
+  const readMaybe = (rel) => { try { return readFileSync(join(root, rel), "utf8") } catch { return "" } }
+  const designDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
+  // Готовность плана ТЕКУЩЕЙ задачи — по пойнтерам состояния (change-dir/chore-dir/slices.md), не глобом.
+  // greenfield-срезы учитываем ТОЛЬКО в greenfield-полосе (иначе stale slices.md прошлого прогона, вне
+  // текущего WIPE close-run, ложно подтвердил бы план в patch/chore).
+  const planReadyNow = () => planReadyForApproval(existsFn, {
+    changeDir: readMaybe(CHANGE_DIR_MARK),
+    choreDir: readMaybe(CHORE_DIR_MARK),
+    sliceDirs: readMaybe(MODE_MARK).replace(/^﻿/, "").trim() === "greenfield"
+      ? currentGreenfieldSlices(readMaybe(SLICES_MARK), designDirsFn()) : [],
+  })
 
   // Единый акцепт Gate #1 — из ДВУХ каналов: печатный токен в чате (chat.message) ИЛИ выбор пункта
   // нативного меню opencode (event question.replied). Одна идемпотентная запись маркера, одна защита
   // (план собран + маркер ещё не стоит). Оператор — только через плагин; izi маркер ставить НЕ может.
   const tryOperatorApproval = async (text, source) => {
-    if (isOperatorApproval(text) && planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn) && !(await exists(gate1))) {
+    if (isOperatorApproval(text) && planReadyNow() && !(await exists(gate1))) {
       await mkdir(join(agentDir, "gates"), { recursive: true })
       await writeFile(gate1, gateMarkerContent({
         timestamp: new Date().toISOString(),
@@ -351,6 +406,15 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
               "непустого состояния или не пиши `green`. (Проверка существования, НЕ build.)",
             )
           }
+        } else if (doneGreenWrite(cmd) && isChoreMode(readMaybe(MODE_MARK))) {
+          const gap = await choreGreenGap()
+          if (gap) {
+            throw new Error(
+              "[rational-guardrail] poka-yoke (chore): `green` в done.log, но НИ ОДИН объявленный в CHORE-PLAN.md " +
+              "файл не существует/непуст: " + gap.declared.join(", ") + ". Маркер НЕ записан — доведи правку до " +
+              "реального артефакта или не пиши `green`. (Проверка существования, НЕ build.)",
+            )
+          }
         }
       }
       if (tool === "write" || tool === "edit") {
@@ -408,10 +472,12 @@ export const RationalGuardrail = async ({ directory, worktree, client }) => {
       let mode = ""
       try { mode = await readFile(join(agentDir, "planner", "mode"), "utf8") } catch { /* нет маркера */ }
       if (isChoreMode(mode)) {
-        if (!hasChorePlan(choreDirsFn, existsFn) || !(await exists(gate1)))
+        // План ТЕКУЩЕГО chore — по пойнтеру chore-dir (не глоб docs/chores/*: durable-план прошлой задачи не в счёт).
+        const chorePlan = planPathUnder(readMaybe(CHORE_DIR_MARK), CHORE_PLAN_FILE)
+        if (!chorePlan || !existsFn(chorePlan) || !(await exists(gate1)))
           throw new Error(
-            "[rational-guardrail] Gate #1 (chore) не пройден: требуется durable план docs/chores/<slug>/CHORE-PLAN.md " +
-            "и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
+            "[rational-guardrail] Gate #1 (chore) не пройден: требуется durable план <chore-dir>/CHORE-PLAN.md " +
+            "(пойнтер .agent/planner/chore-dir) и апрув оператора (.agent/gates/gate1.approved) перед делегированием реализации (" + role + ").",
           )
         return
       }

@@ -65,6 +65,7 @@ async function run() {
   await mkdir(join(cdir, ".agent", "planner"), { recursive: true })
   await writeFile(join(cdir, ".agent", "planner", "brd.md"), "# BRD\n")
   await writeFile(join(cdir, ".agent", "planner", "mode"), "chore")
+  await writeFile(join(cdir, ".agent", "planner", "chore-dir"), "docs/chores/001-ci-on-pr")
   await mkdir(join(cdir, ".agent", "gates"), { recursive: true })
   await writeFile(join(cdir, ".agent", "gates", "gate1.approved"), "")
   await assert.rejects(
@@ -74,6 +75,12 @@ async function run() {
   await mkdir(join(cdir, "docs", "chores", "001-ci-on-pr"), { recursive: true })
   await writeFile(join(cdir, "docs", "chores", "001-ci-on-pr", "CHORE-PLAN.md"), "# plan\n")
   await chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }); pass++
+  // C2: chore-dir указывает на ПУСТОЙ 099-other (durable 001 не в счёт) → снова блок
+  await writeFile(join(cdir, ".agent", "planner", "chore-dir"), "docs/chores/099-other")
+  await assert.rejects(
+    () => chooks["tool.execute.before"](task("hughes"), { args: { subagent: "hughes" } }),
+    /CHORE-PLAN/,
+  ); pass++
   await rm(cdir, { recursive: true, force: true })
 
   // D. decisions.log пишется на делегирование
@@ -123,6 +130,22 @@ async function run() {
   await assert.rejects(() => bash(chMark), /poka-yoke/); pass++            // output нет → deny (тикет найден в changes/)
   await writeFile(join(dir, "internal", "demo", "round.go"), "package demo\n")
   await bash(chMark); pass++                                              // output создан → allow
+
+  // J5. (C3) chore green-маркер (БЕЗ ticket-NN): по <chore-dir>/CHORE-PLAN.md должен быть реальный изменённый файл.
+  const cgdir = await mkdtemp(join(tmpdir(), "rg-chore-green-"))
+  const cghooks: any = await RationalGuardrail({ directory: cgdir, worktree: cgdir } as any)
+  await mkdir(join(cgdir, ".agent", "planner"), { recursive: true })
+  await writeFile(join(cgdir, ".agent", "planner", "mode"), "chore")
+  await writeFile(join(cgdir, ".agent", "planner", "chore-dir"), "docs/chores/001-ci")
+  await mkdir(join(cgdir, "docs", "chores", "001-ci"), { recursive: true })
+  await writeFile(join(cgdir, "docs", "chores", "001-ci", "CHORE-PLAN.md"), "# chore\nМеняем `.github/workflows/ci.yml`.\n")
+  const cgBash = (c: string) => cghooks["tool.execute.before"]({ tool: "bash", args: { command: c } }, { args: { command: c } })
+  const cgMark = 'echo "chore 001-ci green" >> .agent/planner/done.log'
+  await assert.rejects(() => cgBash(cgMark), /poka-yoke \(chore\)/); pass++    // изменённого файла нет → deny
+  await mkdir(join(cgdir, ".github", "workflows"), { recursive: true })
+  await writeFile(join(cgdir, ".github", "workflows", "ci.yml"), "name: ci\n")
+  await cgBash(cgMark); pass++                                                // реальный файл → allow
+  await rm(cgdir, { recursive: true, force: true })
 
   // F. Регресс (баг "/"): directory="/" НЕ используется как корень → фоллбэк на cwd, без EROFS-краша.
   const origCwd = process.cwd()
@@ -296,7 +319,7 @@ async function run() {
   await rm(pdir, { recursive: true, force: true })
 
   await rm(dir, { recursive: true, force: true })
-  console.log(`PASS ${pass}/51 — opencode guardrail smoke`)
+  console.log(`PASS ${pass}/54 — opencode guardrail smoke`)
 }
 
 run().catch((e) => { console.error("FAIL:", e?.message ?? e); process.exit(1) })

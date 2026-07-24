@@ -7,8 +7,7 @@
 // Fail-open: любая инфра-ошибка НЕ рубит делегацию (иначе агент не сохранит даже план).
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
-import { readdirSync } from "node:fs"
-import { pickRole, inPipeline, isImplementer, isRunCloser, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, hasChorePlan, CHORES_DIR, GATE2_MARK } from "../shared.mjs"
+import { pickRole, inPipeline, isImplementer, isRunCloser, normRole, requiresFrontDoor, branchFromHead, isTrunkBranch, isChoreMode, planPathUnder, CHORE_PLAN_FILE, CHORE_DIR_MARK, GATE2_MARK } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -76,12 +75,14 @@ try {
   let mode = ""
   try { mode = readFileSync(join(root, ".agent", "planner", "mode"), "utf8") } catch { /* нет маркера */ }
   if (isChoreMode(mode)) {
-    const existsFn = (rel) => existsSync(join(root, rel))
-    const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
-    if (!hasChorePlan(choreDirsFn, existsFn) || !existsSync(gate1)) {
+    // План ТЕКУЩЕГО chore — по пойнтеру chore-dir (не глоб docs/chores/*: durable-план прошлой задачи не в счёт).
+    let choreDir = ""
+    try { choreDir = readFileSync(join(root, ".agent", "planner", "chore-dir"), "utf8") } catch { /* нет пойнтера */ }
+    const chorePlan = planPathUnder(choreDir, CHORE_PLAN_FILE)
+    if (!chorePlan || !existsSync(join(root, chorePlan)) || !existsSync(gate1)) {
       block(
-        "Gate #1 (chore) не пройден: нужны durable план docs/chores/<slug>/CHORE-PLAN.md и .agent/gates/gate1.approved " +
-        "перед делегированием реализации (" + normRole(role) + ").",
+        "Gate #1 (chore) не пройден: нужны durable план <chore-dir>/CHORE-PLAN.md (пойнтер .agent/planner/chore-dir) " +
+        "и .agent/gates/gate1.approved перед делегированием реализации (" + normRole(role) + ").",
       )
     }
     process.exit(0)
