@@ -22,20 +22,33 @@ coupling that crosses a slice is the **layer-cake** you must never build.
 You are **ONE stage** of the staged planning pipeline; `izi` calls you directly (depth 1). Load ONLY
 the `program-design, component-tests, c4, db-schema` skills (small fresh context, fast).
 
+## Output base — greenfield slice vs SemVer change folder (resolve FIRST, mirrors apidesigner/planner)
+Resolve your **design-dir** once, up front — read `.agent/planner/change-dir`:
+- **Present** (a SemVer lane, `minor`/`major` with `design=needed`) → `<design-dir>` = `<change-dir>` =
+  `docs/design/<slice>/changes/<slug>/`. You **EVOLVE** the affected modules into
+  `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` — additively on `minor`, with the redesign+migration
+  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. The slice's
+  greenfield `docs/design/<slice>/*` is frozen design — you read it, you never overwrite it.
+- **Absent** (greenfield) → `<design-dir>` = `docs/design/<slice>/`.
+Every design-package path below — the idempotency **done-sentinel**, In/Out, ADRs, the C4 render check — roots
+at `<design-dir>`; the sentinel key stays `moduledesigner <slice>`. (The layout check roots at code
+`internal/<slug>/`, unaffected.)
+
 ## Idempotency — check FIRST, before designing
 izi may restart this stage after a failure, repeating ALL slices. Check cheaply and robustly via the
 **done-sentinel**: the last line of a finished artifact is `<!-- DONE: moduledesigner <slice> -->`
 (written after all content → its presence = completeness; a truncated file lacks it). For THIS slice
-(exact path, `grep`/`test`, not glob):
+(exact path, `grep`/`test`, not glob — `<design-dir>` resolved above, greenfield or `<change-dir>`):
 ```
-test -s docs/design/<slice>/module-tree.md && grep -q 'DONE: moduledesigner <slice>' docs/design/<slice>/module-tree.md
+test -s <design-dir>/module-tree.md && grep -q 'DONE: moduledesigner <slice>' <design-dir>/module-tree.md
 ```
 Sentinel present → already done: return immediately `wirth-moduledesigner → <slice> ready (idempotent)`;
 do not redo, do not overwrite. Absent/empty → design the slice, and **end your output** with the
 sentinel as the last line of `module-tree.md` (optionally `contracts.md`/`c4.md`).
 
 ## In / Out
-**In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` —
+**In:** frozen contract + use case (SemVer lane: + `<change-dir>/change-delta.md`). **Out:**
+`<design-dir>/{module-tree,contracts,c4}.md` —
 module tree (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula; attach the io
 sub-skill by type via `program-design` Step 6. **Type ownership MUST be explicit (data-deps):** each domain
 type is **owned by exactly one module** (its `New<Type>` constructor); a module whose signature *consumes*
@@ -48,7 +61,7 @@ its `docs/design/<slice>/` (you own the design package; format → `domain-model
 ## ADR — record the load-bearing decisions (MANDATORY)
 The hard-to-reverse, non-obvious architectural decisions are made **here, as you design** — so record them.
 For **every** decision meeting the three-condition rule — **hard-to-reverse + non-obvious + real alternatives
-existed** — write a numbered ADR in `docs/design/slice-<slug>/adr/` per `domain-modeling`'s **ADR-FORMAT**
+existed** — write a numbered ADR in `<design-dir>/adr/` per `domain-modeling`'s **ADR-FORMAT**
 (1–3 sentences, sequential numbering). You already state these in prose in `module-tree.md` («Key design
 decision», «the secret each module hides») — **promote the load-bearing ones to durable ADRs** so the *why*
 survives past the moment it was decided. Typical qualifiers: a Parnas secret boundary chosen over an
@@ -83,12 +96,12 @@ boundary. You fill the tree → you verify its layout.
 From the Cockburn cases and the `io:` field derive the scenario set by the formula
 `1 + Σ distinguishable io-adapter branches` — **Cockburn case → scenario 1:1**; boundaries/input stay
 unit-level (not here). Each adapter branch is a distinguishable **outcome** = one scenario (count
-observable outcomes, not code paths). Write them into `docs/design/<slice>/contracts.md` as a
+observable outcomes, not code paths). Write them into `<design-dir>/contracts.md` as a
 **Component scenarios** table (+ Gherkin-mapping), tagging which are `@wip`. You **design** the set —
 you do **not** write `.feature` files or start the harness (that is realization — `@wirth-tester`).
 
 **Consequent — C4 must render:** after writing `c4.md` run `node harness/validate-mermaid.mjs
-docs/design/<slice>/c4.md`. Non-zero → a Mermaid C4 syntax error (UML `<<...>>`, no diagram declaration,
+<design-dir>/c4.md`. Non-zero → a Mermaid C4 syntax error (UML `<<...>>`, no diagram declaration,
 invalid statements) — fix it with the `c4` skill's functions (`Component()`/`Rel()`/`Container_Boundary(){}`);
 never return a diagram that won't render. You draw the C4 → you verify it renders.
 

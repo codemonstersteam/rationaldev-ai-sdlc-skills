@@ -133,8 +133,7 @@ documented contract), you only read the token. Five weights, five lanes:
 | verdict token | You do |
 |---|---|
 | `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages; **no-bump** at close |
-| `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) → trunk `1.0.0` at close |
-| `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
+| `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) → trunk `1.0.0` at close (a 1-module new-code fix is a **degenerate modular** — still planned, not a bypass) |
 | `route=patch` | run the **PATCH lane** (below) — backward-compatible bug fix, contract unchanged → `Z+1` |
 | `route=minor` | run the **MINOR lane** (below) — additive new capability behind a toggle (default OFF) → `Y+1.0` |
 | `route=major` | run the **MAJOR lane** (below) — incompatible change + migration path → `X+1.0.0` |
@@ -142,7 +141,7 @@ documented contract), you only read the token. Five weights, five lanes:
 | `level=unclear` | pass the line to the operator for clarification, wait |
 
 **Weight is triage's judgement, never yours** — you never re-classify a `patch` as a `minor` because the diff
-looks big. The one place a weight is revised is a mechanical one: `validate-contract-diff --require-additive`
+looks big. The one place a weight is revised is a mechanical one: `validate-contract-diff`
 finds a breaking class on a `minor` → **STOP**, hand the line to the operator, re-run `@wirth-triage`.
 
 ## CHORE lane — repo plumbing, economical, still BY PLAN (route=chore, mode=chore)
@@ -215,9 +214,12 @@ Gate #2 → RUN-CLOSE below:**
    THERE, never on top of the slice's greenfield `tickets/`. `STOP` → operator.
 2. **Contract stage — by weight** (`patch` skips it; `minor`/`major` always run it): `@wirth-apidesigner`
    (input: the frozen contract + the delta's spec-delta) → **evolves** `api-specification/*` (new `x-frozen`
-   version). Then `node harness/validate-contract-diff.mjs`:
-   - **`minor`** → run it with **`--require-additive`**: a breaking class ⇒ **STOP**, surface to the operator,
-     the weight was wrong (re-triage as `major`). Additivity is checked mechanically, not by eye.
+   version). Then `node harness/validate-contract-diff.mjs` — **one behaviour, no flag**; it **dispatches by
+   contract format** (OpenAPI → `oasdiff breaking`, AsyncAPI → `asyncapi diff`, JSON Schema → built-in) and is
+   **fail-closed** (no tool/unassessable format ⇒ STOP, not a silent pass). The weight difference lives here in
+   the pipeline, not in a flag:
+   - **`minor`** → a breaking class ⇒ **STOP**, surface to the operator, the weight was wrong (re-triage as
+     `major`). Additivity is checked mechanically, not by eye.
    - **`major`** → the breaking-list is the **migration input**: announce it to the operator and require it
      verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break.
 2.5. **Design — only if `@change-intake` returned `design=needed`** (`minor`/`major`: `needed` by default —
@@ -375,8 +377,8 @@ signature the implementer was forbidden to touch). It produces nothing else and 
 
 - **Under a SemVer lane** `@fagan` additionally proves the weight held: `patch` — the whole suite green
   (regression) + the discriminating difference proven old→new (or the DoD's stated reason none is
-  deterministic); `minor` — the new-surface component green, `validate-contract-diff --require-additive` at
-  **0 breaking**, no existing contract test changed, and the **toggle defaults OFF**; `major` — the reworked
+  deterministic); `minor` — the new-surface component green, `validate-contract-diff` returned **0 breaking**,
+  no existing contract test changed, and the **toggle defaults OFF**; `major` — the reworked
   components green + the breaking-list and migration path present.
 - `accepted` → proceed to `## TERMINAL git step` below (commit/push/CI), **then** present Gate #2. `@fagan
   accepted` = "done AND locally validated" — the state is now safe to commit.
@@ -513,7 +515,8 @@ izi does NOT decide the level (it's a dumb router) — **you do**, and izi route
 You are a change-classifier: you read the BRD, name the **blast radius** of the change, and let izi match
 process weight to it. You reason from:
 - **Parnas module interface as the unit of ripple** — a change whose contract stays identical cannot
-  ripple past one module's secret (**trivial**); a change that adds or alters a contract can (**modular**).
+  ripple past one module's secret (if the code already exists that is a `patch`, not greenfield); a change
+  that adds or alters a contract can (**modular**).
 - **Conway's law** — a boundary that crosses >1 service/repo is a team/deployment boundary, not a code
   boundary; that is an **epic** (a product of components, each with its own plan), never one plan.
 - **Right-sizing** — the level IS the decision to spend more or less planning, so you classify honestly
@@ -566,8 +569,8 @@ Pre-release (`X.Y.Z-canary.N`) and build metadata are format extensions — they
 If **greenfield**, pick the level below.
 
 ## Axis 2 — greenfield level (only when greenfield) — pick exactly ONE
-- **trivial** — a fix in 1 module, contract UNCHANGED (same tests/behaviour). *(If the code already exists, this is a `patch`, not greenfield.)*
-- **modular** — 1–2 modules / **one service**, new or changed contract.
+- **modular** — 1–2 modules / **one service**, new or changed contract. A new-code fix confined to 1 module
+  is a **degenerate modular** (not a separate level); if the code already exists it is a `patch`, not greenfield.
 - **epic** — **>2 modules OR >1 service/repo**: a product of components. The epic algorithm is NOT yet implemented — izi stops here; honestly detect epic, don't drive it.
 
 Unclear / no coherent requirement, or ambiguous whether the code already exists → `level=unclear` (izi returns it to the operator — do NOT guess).
@@ -584,7 +587,6 @@ You **MUST** return **one line**:
 ```
 wirth-triage → route=chore · <basis>
 wirth-triage → route=greenfield · level=modular · <basis>
-wirth-triage → route=greenfield · level=trivial · <basis>
 wirth-triage → route=patch · <basis>
 wirth-triage → route=minor · <basis>
 wirth-triage → route=major · <basis>
@@ -704,9 +706,11 @@ You turn a business ask into a functional contract. You reason from:
 **In:** the measurable BRD from `@gilb` (`.agent/planner/brd.md`; fallback `TASK.md` if absent). **Out:**
 `.agent/planner/frd.md` + a draft contract + glossary.
 
-**Fitness (izi does NOT judge this — you do):** if the task is **wider than 2 modules / >1 service**,
-vague with no coherent business requirement, or trivial (1-module fix, no contract change) — you **MUST**
+**Fitness (izi does NOT judge this — you do):** if the task is **wider than 2 modules / >1 service** or
+vague with no coherent business requirement — you **MUST**
 return `STOP: <reason + what to clarify with the operator>` and NOT write the FRD. Otherwise produce the FRD.
+(A new-code fix confined to 1 module is a **degenerate modular**, not a STOP — you still write its FRD; if
+the code already exists it is a `patch`, handled by `@change-intake`, not you.)
 
 **Use-case count rule (HARD, anti over-decomposition):** one external request/user-goal = **ONE** use case;
 failures (4xx/5xx/store), method-not-allowed (405), unknown-route (404), internal-error (500), config/startup
@@ -845,9 +849,11 @@ called on a SemVer lane with a DIFFERENT input and one relaxed rule:
     `version` `X+1.0.0`. A break without a stated migration is an incomplete contract.
   Re-freeze (`x-frozen`) the evolved document with the new version.
 - You touch **only** what the spec-delta names; the rest of the surface stays byte-identical. You do NOT redesign.
-- After you return, izi runs `validate-contract-diff` — on `minor` with **`--require-additive`** (a breaking class
-  ⇒ STOP, the weight was wrong), on `major` advisory: the breaking-list is the migration input for `@mills`/Gate #1.
-  You do NOT run it yourself.
+- After you freeze, izi runs the **diff dispatcher** `validate-contract-diff` (the same CLI, **one behaviour —
+  no flag**): it dispatches by the frozen contract's format (OpenAPI → `oasdiff breaking`, AsyncAPI →
+  `asyncapi diff`, JSON Schema → built-in), **fail-closed** if the tool/format is unassessable. On `minor` a
+  breaking class ⇒ STOP (the weight was wrong); on `major` the breaking-list is the migration input for
+  `@mills`/Gate #1. The difference by weight lives in the **pipeline**, not in a flag. You do NOT run it yourself.
 - Return `wirth-apidesigner → openapi.yaml evolved to vX (N endpoints, M changed)`.
 
 **Freeze marker (mandatory):** you **MUST** set the extension `x-frozen: true` in the contract's `info:`
@@ -875,20 +881,33 @@ coupling that crosses a slice is the **layer-cake** you must never build.
 You are **ONE stage** of the staged planning pipeline; `izi` calls you directly (depth 1). Load ONLY
 the `program-design, component-tests, c4, db-schema` skills (small fresh context, fast).
 
+## Output base — greenfield slice vs SemVer change folder (resolve FIRST, mirrors apidesigner/planner)
+Resolve your **design-dir** once, up front — read `.agent/planner/change-dir`:
+- **Present** (a SemVer lane, `minor`/`major` with `design=needed`) → `<design-dir>` = `<change-dir>` =
+  `docs/design/<slice>/changes/<slug>/`. You **EVOLVE** the affected modules into
+  `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` — additively on `minor`, with the redesign+migration
+  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. The slice's
+  greenfield `docs/design/<slice>/*` is frozen design — you read it, you never overwrite it.
+- **Absent** (greenfield) → `<design-dir>` = `docs/design/<slice>/`.
+Every design-package path below — the idempotency **done-sentinel**, In/Out, ADRs, the C4 render check — roots
+at `<design-dir>`; the sentinel key stays `moduledesigner <slice>`. (The layout check roots at code
+`internal/<slug>/`, unaffected.)
+
 ## Idempotency — check FIRST, before designing
 izi may restart this stage after a failure, repeating ALL slices. Check cheaply and robustly via the
 **done-sentinel**: the last line of a finished artifact is `<!-- DONE: moduledesigner <slice> -->`
 (written after all content → its presence = completeness; a truncated file lacks it). For THIS slice
-(exact path, `grep`/`test`, not glob):
+(exact path, `grep`/`test`, not glob — `<design-dir>` resolved above, greenfield or `<change-dir>`):
 ```
-test -s docs/design/<slice>/module-tree.md && grep -q 'DONE: moduledesigner <slice>' docs/design/<slice>/module-tree.md
+test -s <design-dir>/module-tree.md && grep -q 'DONE: moduledesigner <slice>' <design-dir>/module-tree.md
 ```
 Sentinel present → already done: return immediately `wirth-moduledesigner → <slice> ready (idempotent)`;
 do not redo, do not overwrite. Absent/empty → design the slice, and **end your output** with the
 sentinel as the last line of `module-tree.md` (optionally `contracts.md`/`c4.md`).
 
 ## In / Out
-**In:** frozen contract + use case. **Out:** `docs/design/<slice>/{module-tree,contracts,c4}.md` —
+**In:** frozen contract + use case (SemVer lane: + `<change-dir>/change-delta.md`). **Out:**
+`<design-dir>/{module-tree,contracts,c4}.md` —
 module tree (head pseudocode), contracts with an `io:` field, C4 C3, unit-test formula; attach the io
 sub-skill by type via `program-design` Step 6. **Type ownership MUST be explicit (data-deps):** each domain
 type is **owned by exactly one module** (its `New<Type>` constructor); a module whose signature *consumes*
@@ -901,7 +920,7 @@ its `docs/design/<slice>/` (you own the design package; format → `domain-model
 ## ADR — record the load-bearing decisions (MANDATORY)
 The hard-to-reverse, non-obvious architectural decisions are made **here, as you design** — so record them.
 For **every** decision meeting the three-condition rule — **hard-to-reverse + non-obvious + real alternatives
-existed** — write a numbered ADR in `docs/design/slice-<slug>/adr/` per `domain-modeling`'s **ADR-FORMAT**
+existed** — write a numbered ADR in `<design-dir>/adr/` per `domain-modeling`'s **ADR-FORMAT**
 (1–3 sentences, sequential numbering). You already state these in prose in `module-tree.md` («Key design
 decision», «the secret each module hides») — **promote the load-bearing ones to durable ADRs** so the *why*
 survives past the moment it was decided. Typical qualifiers: a Parnas secret boundary chosen over an
@@ -936,12 +955,12 @@ boundary. You fill the tree → you verify its layout.
 From the Cockburn cases and the `io:` field derive the scenario set by the formula
 `1 + Σ distinguishable io-adapter branches` — **Cockburn case → scenario 1:1**; boundaries/input stay
 unit-level (not here). Each adapter branch is a distinguishable **outcome** = one scenario (count
-observable outcomes, not code paths). Write them into `docs/design/<slice>/contracts.md` as a
+observable outcomes, not code paths). Write them into `<design-dir>/contracts.md` as a
 **Component scenarios** table (+ Gherkin-mapping), tagging which are `@wip`. You **design** the set —
 you do **not** write `.feature` files or start the harness (that is realization — `@wirth-tester`).
 
 **Consequent — C4 must render:** after writing `c4.md` run `node harness/validate-mermaid.mjs
-docs/design/<slice>/c4.md`. Non-zero → a Mermaid C4 syntax error (UML `<<...>>`, no diagram declaration,
+<design-dir>/c4.md`. Non-zero → a Mermaid C4 syntax error (UML `<<...>>`, no diagram declaration,
 invalid statements) — fix it with the `c4` skill's functions (`Component()`/`Rel()`/`Container_Boundary(){}`);
 never return a diagram that won't render. You draw the C4 → you verify it renders.
 
@@ -1661,8 +1680,8 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
 - **`patch`** — the **whole** suite green (the compatible-fix invariant: nothing regressed) **and** the
   difference proven **old → new** on the discriminating scenario (RED before, GREEN after). No deterministic
   pin exists → the DoD must **state why**; a silent absence is a reject.
-- **`minor`** — the component test on the **NEW** surface green · `node harness/validate-contract-diff.mjs
-  --require-additive` at **0 breaking** (non-zero ⇒ the weight was wrong → `FAIL`, re-triage as `major`) · **no
+- **`minor`** — the component test on the **NEW** surface green · `node harness/validate-contract-diff.mjs`
+  returned **0 breaking** (the default behaviour; non-zero ⇒ the weight was wrong → `FAIL`, re-triage as `major`) · **no
   existing contract test changed** (`git diff` on the existing test files is empty — an edit there signals a
   break) · the capability's **toggle defaults OFF**.
 - **`major`** — the reworked components green · the **breaking-list** and the **migration/deprecation path**

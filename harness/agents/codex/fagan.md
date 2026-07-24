@@ -46,8 +46,8 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
 - **`patch`** — the **whole** suite green (the compatible-fix invariant: nothing regressed) **and** the
   difference proven **old → new** on the discriminating scenario (RED before, GREEN after). No deterministic
   pin exists → the DoD must **state why**; a silent absence is a reject.
-- **`minor`** — the component test on the **NEW** surface green · `node harness/validate-contract-diff.mjs
-  --require-additive` at **0 breaking** (non-zero ⇒ the weight was wrong → `FAIL`, re-triage as `major`) · **no
+- **`minor`** — the component test on the **NEW** surface green · `node harness/validate-contract-diff.mjs`
+  returned **0 breaking** (the default behaviour; non-zero ⇒ the weight was wrong → `FAIL`, re-triage as `major`) · **no
   existing contract test changed** (`git diff` on the existing test files is empty — an edit there signals a
   break) · the capability's **toggle defaults OFF**.
 - **`major`** — the reworked components green · the **breaking-list** and the **migration/deprecation path**

@@ -55,9 +55,11 @@ You turn a business ask into a functional contract. You reason from:
 **In:** the measurable BRD from `@gilb` (`.agent/planner/brd.md`; fallback `TASK.md` if absent). **Out:**
 `.agent/planner/frd.md` + a draft contract + glossary.
 
-**Fitness (izi does NOT judge this — you do):** if the task is **wider than 2 modules / >1 service**,
-vague with no coherent business requirement, or trivial (1-module fix, no contract change) — you **MUST**
+**Fitness (izi does NOT judge this — you do):** if the task is **wider than 2 modules / >1 service** or
+vague with no coherent business requirement — you **MUST**
 return `STOP: <reason + what to clarify with the operator>` and NOT write the FRD. Otherwise produce the FRD.
+(A new-code fix confined to 1 module is a **degenerate modular**, not a STOP — you still write its FRD; if
+the code already exists it is a `patch`, handled by `@change-intake`, not you.)
 
 **Use-case count rule (HARD, anti over-decomposition):** one external request/user-goal = **ONE** use case;
 failures (4xx/5xx/store), method-not-allowed (405), unknown-route (404), internal-error (500), config/startup

@@ -77,9 +77,11 @@ called on a SemVer lane with a DIFFERENT input and one relaxed rule:
     `version` `X+1.0.0`. A break without a stated migration is an incomplete contract.
   Re-freeze (`x-frozen`) the evolved document with the new version.
 - You touch **only** what the spec-delta names; the rest of the surface stays byte-identical. You do NOT redesign.
-- After you return, izi runs `validate-contract-diff` — on `minor` with **`--require-additive`** (a breaking class
-  ⇒ STOP, the weight was wrong), on `major` advisory: the breaking-list is the migration input for `@mills`/Gate #1.
-  You do NOT run it yourself.
+- After you freeze, izi runs the **diff dispatcher** `validate-contract-diff` (the same CLI, **one behaviour —
+  no flag**): it dispatches by the frozen contract's format (OpenAPI → `oasdiff breaking`, AsyncAPI →
+  `asyncapi diff`, JSON Schema → built-in), **fail-closed** if the tool/format is unassessable. On `minor` a
+  breaking class ⇒ STOP (the weight was wrong); on `major` the breaking-list is the migration input for
+  `@mills`/Gate #1. The difference by weight lives in the **pipeline**, not in a flag. You do NOT run it yourself.
 - Return `wirth-apidesigner → openapi.yaml evolved to vX (N endpoints, M changed)`.
 
 **Freeze marker (mandatory):** you **MUST** set the extension `x-frozen: true` in the contract's `info:`
