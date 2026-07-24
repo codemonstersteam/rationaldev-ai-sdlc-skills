@@ -258,7 +258,10 @@ Gate #2 → RUN-CLOSE below:**
    - **`minor`** → a breaking class ⇒ **STOP**, surface to the operator, the weight was wrong (re-triage as
      `major`). Additivity is checked mechanically, not by eye.
    - **`major`** → the breaking-list is the **migration input**: announce it to the operator and require it
-     verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break.
+     verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break. The
+     **decision on the compatibility switch / migration window is pinned in an ADR** (`<change-dir>/adr/`,
+     authored by `@wirth-moduledesigner` at step 2.5) and `@fagan` verifies it at acceptance — a major that
+     changed compatibility without that ADR is incomplete.
 2.5. **Design — only if `@change-intake` returned `design=needed`** (`minor`/`major`: `needed` by default —
    a new or changed surface is a decision): `@wirth-moduledesigner` (input: `change-delta` + the affected
    design package) → `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` for the rippled modules only.
@@ -405,6 +408,16 @@ finished: proceed to `## DoD-closure` below. Do NOT stop, do NOT run the tests y
 is clean. Implementation is done — but YOU are not: one imperative step remains. You MUST NOT run the
 tests yourself and MUST NOT idle here.
 
+**SemVer README refresh — `minor`/`major` only, NARROW trigger (runs BEFORE `@fagan`).** On
+`mode=minor|major`, read the change and decide by ONE test: does the delta touch the **documented surface**
+— a new/changed API or command, or a **new failure mode** (a row of the README's `## Карта режимов отказа`)?
+**Yes** → delegate **`@dijkstra` in change-mode** (input: `<change-dir>/change-delta.md` + the evolved frozen
+contract + the existing `README.md`) to actualize the affected README sections + the failure-mode map — it
+stays the **sole** README author (`@hughes-rework` never writes README). **Purely internal edit** (no
+README-visible surface, no new failure mode) → **do NOT call `@dijkstra`**. `patch`/`chore`/`onboard` never
+call it. If `@fagan` later returns `FAIL: README stale`, re-delegate **`@dijkstra` change-mode** (NOT
+`@linger` — README is `@dijkstra`'s exclusive artifact), then re-run `@fagan`.
+
 **Delegate `@fagan` — the terminal acceptance inspector** (NOT `@linger`; the acceptor is never the
 author or the fixer — separation of duties). Input = slice path + slug. `@fagan` inspects and returns
 `accepted | FAIL: <item>`: it runs the deterministic DoD gate (`validate-component-tests` re-check +
@@ -448,6 +461,13 @@ git yourself. It commits the working tree (git-conventions message), pushes the 
 **Trigger:** the operator issued `GATE2 APPROVE` (marker `.agent/gates/gate2.approved` present, set by the
 hook) and merged the PR. A run is closed **explicitly**: without this step the finished task's `.agent/`
 state would masquerade as the next task's (a stale `gate1.approved` waving it through the gate).
+
+**Design-package consolidation (SemVer with design — ASSUMPTION-owner, do FIRST).** On `mode=minor|major`
+(and `patch` with `design=needed`) whose change produced a design package, **before** `@ledger`, fold the
+change's `<change-dir>/{module-tree,contracts,c4}.md` (+ `adr/`) into the **canonical** slice package
+`docs/design/<slice>/` — else the next task reads a stale map (drift). **Default owner is
+`@wirth-moduledesigner`** (it owns the design package); **this owner is an ASSUMPTION — the operator may
+reassign it.** `design=skip`/`chore`/`greenfield`/`onboard` → nothing to fold, skip straight to `@ledger`.
 
 **Delegate `@ledger` (Rochkind)** with the PR number. It invokes the deterministic
 `node "$(readlink harness)/close-run.mjs" --pr <N>` (the repo's `harness/` is a symlink into the clone;
@@ -1122,6 +1142,17 @@ you do **not** write `.feature` files or start the harness (that is realization 
 invalid statements) — fix it with the `c4` skill's functions (`Component()`/`Rel()`/`Container_Boundary(){}`);
 never return a diagram that won't render. You draw the C4 → you verify it renders.
 
+## Acceptance sub-step — fold the change package into the canonical slice (ASSUMPTION-owner)
+On a SemVer lane where you produced a change design package (`minor`/`major`, or `patch` with
+`design=needed`), a **second, acceptance-time** call (izi, before run-close) folds your
+`<change-dir>/{module-tree,contracts,c4}.md` (+ any `adr/`) into the **canonical** slice package
+`docs/design/<slice>/`, so the next task reads the current map, not a stale one (drift). Merge the changed
+modules into the slice's `module-tree.md`/`contracts.md`/`c4.md` — **additively** on `minor`, **replacing** the
+reworked modules on `major` — preserving the done-sentinel; the `<change-dir>` copy stays as the immutable
+per-change record. **This ownership is an ASSUMPTION — `@wirth-moduledesigner` is the default owner because it
+owns the design package, but the operator may reassign it.** Return
+`wirth-moduledesigner → <slice> package consolidated` or `STOP: <reason>`.
+
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or
 `STOP: <reason>`. Do **not** do other stages or write code.
 
@@ -1149,6 +1180,19 @@ concept pointer · **Can / Cannot** · **pipe-description of each API/command** 
 data-flow pipe: «how it works and where it breaks» — NOT HTTP-only) · failure table with **every
 `error.code`** · run + `component-tests/` link · retrievability **links ladder** (design → architecture →
 ADR, as links). Multi-slice → one repo README aggregates them. `node harness/validate-readme.mjs .` = floor.
+
+## Change-mode — actualize an EXISTING README from a change-delta (SemVer `minor`/`major`)
+When `.agent/planner/change-dir` is present **and** `.agent/planner/mode` is `minor`/`major`, `izi` calls you
+**after the code is accepted-green, before Gate #2** to **actualize** the existing `README.md` — NOT to re-run
+Procedure A from scratch. **In:** `<change-dir>/change-delta.md` + the evolved frozen contract + the current
+`README.md`. Edit **only the sections the delta changed** — the affected API/command block, its failure rows,
+and the **`## Карта режимов отказа`** (a new failure mode = a new row); leave every unaffected section
+byte-for-byte. You remain the **sole** README author (`@hughes-rework` never writes README) — this is a
+surgical edit, not a rewrite. **Change-mode overrides the idempotency shortcut below:** an existing +
+`validate-readme`-green README does **NOT** mean done here (it may be stale) — done means the delta's new
+surface / failure mode is now documented; check *that* specifically. Self-check `validate-readme` green, then
+return `dijkstra → README actualized (<change-dir>, N sections)` or `STOP: <reason>`. `izi` calls you only
+when the delta touches the README / failure-mode map — a purely internal change never reaches you.
 
 ## Contract with izi
 - **In:** the frozen contract + all `docs/design/<slice>/*`. **Out:** root `README.md` — **NO git**,
@@ -1208,7 +1252,7 @@ tickets from the **change-delta's affected-modules table**, not from a fresh tre
   **`<change-dir>/tickets/ticket-N.md`** (read `<change-dir>` from `.agent/planner/change-dir`), NOT
   `docs/design/<slice>/tickets/`. The slice's greenfield `tickets/` is the immutable record of how it was built;
   overwriting it destroys per-change traceability. `mkdir -p <change-dir>/tickets` first.
-- **NO scaffold ticket** — the project already exists (a scaffold ticket under `patch|minor|major` is an error; `validate-tickets` requires **zero** scaffolds there). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
+- **NO scaffold ticket** — the project already exists (a scaffold ticket under `patch|minor|major` is an error; `validate-tickets` requires **zero** scaffolds there). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact — its **actualization on `minor`/`major` is `@dijkstra` in change-mode**, an izi acceptance sub-step, **never a ticket** and never `@hughes-rework`).
 - Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module` on a SemVer lane → `@hughes-rework`).
 - **Coverage BY WEIGHT** — the test follows where the difference is observable:
   - **`patch`** — the difference reaches the endpoint → **ONE `type: component` ticket** for the discriminating
@@ -1843,7 +1887,14 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
   existing contract test changed** (`git diff` on the existing test files is empty — an edit there signals a
   break) · the capability's **toggle defaults OFF**.
 - **`major`** — the reworked components green · the **breaking-list** and the **migration/deprecation path**
-  present in the change folder and carried into the PR body (`BREAKING CHANGE`).
+  present in the change folder and carried into the PR body (`BREAKING CHANGE`) · the **compatibility-switch /
+  migration-window decision pinned in an ADR** (`<change-dir>/adr/`) — a major that changed compatibility
+  with no such ADR → `FAIL`.
+- **`minor`/`major` — the README reflects THIS change (not the pre-change README).** `validate-readme`
+  (Move 1.3) checks the skeleton's *structure*; **you** check the *content*: the delta's new surface / new
+  failure mode is now documented (the affected API/command block + a matching row in `## Карта режимов
+  отказа`). A stale README on a surface-changing delta → `FAIL: README stale` — izi routes the fix to
+  `@dijkstra` change-mode (the sole README author), **not** `@linger`.
 Where the contract is not machine-readable, `validate-contract-diff` cannot prove additivity — then **you** are
 the proof: existing tests untouched + the whole suite green. Any missing item → `FAIL: <item>`, never a soft pass.
 
