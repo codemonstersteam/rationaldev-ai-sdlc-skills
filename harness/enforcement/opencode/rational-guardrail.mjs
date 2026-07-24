@@ -37,6 +37,7 @@ const PIPELINE = new Set([
   "scaffolder", "hughes", "wirth-tester", "linger", "fagan", "michtom",
   "git-hand",
   "change-intake", "hughes-rework",
+  "wirth-onboard",
   "ledger",
 ])
 const IMPLEMENTERS = new Set(["hughes", "wirth-tester", "scaffolder", "hughes-rework"])

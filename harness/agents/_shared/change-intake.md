@@ -7,9 +7,9 @@ mode: subagent
 temperature: 0.3
 steps: 20
 description: "Change intake (Wirth): reads the measurable change-BRD + the EXISTING harness design package (module-tree, contracts, spec, tests). Emits a change delta — what changes, why, exact affected modules (path + io:), discriminating scenarios, and the design=needed|skip ripple signal. Weight comes from triage: patch = backward-compatible fix, spec unchanged; minor = additive new surface + spec-delta; major = incompatible change + migration path. Invents no new modules from scratch. Keywords: change delta, impact, affected modules, semver, patch, minor, major, ripple radius."
-skills: [requirements-intake, domain-modeling]
+skills: [requirements-intake, domain-modeling, target-profiles]
 inputs: [requirements]
-outputs: [docs/design/<slice>/changes/<slug>/change-delta.md, .agent/planner/change-dir, .agent/decisions.log]
+outputs: [docs/design/<slice>/changes/<slug>/change-delta.md, .agent/planner/change-dir, .agent/planner/target, .agent/decisions.log]
 permission:
   read: allow
   grep: allow
@@ -86,6 +86,15 @@ A change is its **own** unit of work: its delta/plan/tickets live in a **durable
 Write a **run-state pointer** so downstream roles share one source of truth (they do NOT re-derive it):
 `echo "<change-dir>" > .agent/planner/change-dir`. `@wirth-planner` writes `<change-dir>/PLAN.md`,
 `@wirth-ticketer` writes `<change-dir>/tickets/`, `@hughes-rework` reads its ticket there.
+
+## Target marker — write it so `@fagan` picks the right DoD profile (MUST — a shared SemVer fix)
+`.agent/planner/target` (`service|cli`) currently goes **unwritten** on the SemVer lanes → `validate-dod`
+defaults to `service` and hunts `openapi.yaml` even in a CLI repo, failing at the very end of the cycle. The
+existing package already tells you the form — **read it and write the marker** (delegate the shape rule to
+`target-profiles`): an OpenAPI/AsyncAPI contract + http/queue ingress → `service`; a config-schema-in /
+report-schema-out one-shot binary → `cli`. If a well-formed marker already exists, leave it; otherwise write the
+one word: `mkdir -p .agent/planner && printf '%s' "<service|cli>" > .agent/planner/target`. This is a general
+fix for `patch`/`minor`/`major`, not tied to any one weight.
 
 ## Output — `<change-dir>/change-delta.md`
 Write exactly (into the change folder, NOT `.agent/`):

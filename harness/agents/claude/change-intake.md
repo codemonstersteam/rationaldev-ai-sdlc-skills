@@ -58,6 +58,15 @@ Write a **run-state pointer** so downstream roles share one source of truth (the
 `echo "<change-dir>" > .agent/planner/change-dir`. `@wirth-planner` writes `<change-dir>/PLAN.md`,
 `@wirth-ticketer` writes `<change-dir>/tickets/`, `@hughes-rework` reads its ticket there.
 
+## Target marker — write it so `@fagan` picks the right DoD profile (MUST — a shared SemVer fix)
+`.agent/planner/target` (`service|cli`) currently goes **unwritten** on the SemVer lanes → `validate-dod`
+defaults to `service` and hunts `openapi.yaml` even in a CLI repo, failing at the very end of the cycle. The
+existing package already tells you the form — **read it and write the marker** (delegate the shape rule to
+`target-profiles`): an OpenAPI/AsyncAPI contract + http/queue ingress → `service`; a config-schema-in /
+report-schema-out one-shot binary → `cli`. If a well-formed marker already exists, leave it; otherwise write the
+one word: `mkdir -p .agent/planner && printf '%s' "<service|cli>" > .agent/planner/target`. This is a general
+fix for `patch`/`minor`/`major`, not tied to any one weight.
+
 ## Output — `<change-dir>/change-delta.md`
 Write exactly (into the change folder, NOT `.agent/`):
 1. **Change statement + rationale** — one paragraph: what changes and *why* (the load-bearing reason).
