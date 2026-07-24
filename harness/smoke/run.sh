@@ -123,4 +123,39 @@ node "$REPO/component-tests/model-distribution/run.mjs" >/dev/null || fail "mode
 # self-update: `rationaldev update` (T3 — ff-pull, up-to-date, pristine-abort)
 __ro="$(sh "$REPO/harness/smoke/rationaldev.smoke.sh" 2>&1)" || { printf '%s\n' "$__ro"; fail "rationaldev update smoke упал"; }; ok
 
-echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update)"
+# === P4: реальная установка через override НЕ пачкает клон + settings merge + doctor ===
+# Регресс: configure-models писал модели В КЛОН → 38 файлов dirty → `rationaldev update` отказывал.
+# Проверяем РЕАЛЬНЫЙ путь (git-клон + override-файл + gen-agents), а не синтетический dirt.txt.
+# Нужен git-клон (в worktree .git = файл → pristine-блок install.sh не сработал бы). file-протокол — как в
+# rationaldev.smoke (CI хардит CVE-2022-39253); только на локальные тест-репо смоука.
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
+P4C="$TMP/p4-clone"; P4P="$TMP/p4-proj"; P4H="$TMP/p4-home"
+git clone -q "$REPO" "$P4C" 2>/dev/null || fail "P4: клон репо не удался"
+mkdir -p "$P4P" "$P4H/.config/rationaldev"
+printf '{"claude":{"tiers":{"large":"acme-frontier","medium":"acme-mini","small":"acme-mini"}}}\n' > "$P4H/.config/rationaldev/models.json"
+RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" XDG_DATA_HOME="$P4H/.local/share" \
+  sh "$P4C/install.sh" claude "$P4P" --hard --no-input >/dev/null 2>&1
+[ -z "$(git -C "$P4C" status --porcelain)" ] || fail "P4: клон грязный после install с override-моделями (pristine нарушен)"; ok
+grep -q '^model: acme-frontier' "$P4P/.claude/agents/gilb.md" || fail "P4: override-модель не доехала до раннера"; ok
+node "$P4C/harness/merge-claude-settings.mjs" check "$P4P/.claude/settings.json" >/dev/null 2>&1 || fail "P4: settings.json без управляемой проводки"; ok
+# повторная установка — идемпотентный merge (управляемый хук не дублируется, клон снова pristine)
+RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" XDG_DATA_HOME="$P4H/.local/share" \
+  sh "$P4C/install.sh" claude "$P4P" --hard --no-input >/dev/null 2>&1
+# считаем ТОЛЬКО команду-хук (абсолютный путь .../hooks/gate-check.mjs), не bare-имя в маркере managedFiles
+[ "$(grep -c '/hooks/gate-check.mjs' "$P4P/.claude/settings.json")" = 1 ] || fail "P4: повторный install продублировал управляемый хук"; ok
+[ -z "$(git -C "$P4C" status --porcelain)" ] || fail "P4: клон грязный после повторного install"; ok
+# merge не теряет пользовательские добавления (хук + permission)
+node -e 'const fs=require("fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p));s.permissions.allow.push("Bash(mytool *)");s.hooks.PreToolUse.push({matcher:"Write",hooks:[{type:"command",command:"node /u/h.mjs"}]});fs.writeFileSync(p,JSON.stringify(s,null,2))' "$P4P/.claude/settings.json"
+RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" XDG_DATA_HOME="$P4H/.local/share" \
+  sh "$P4C/install.sh" claude "$P4P" --hard --no-input >/dev/null 2>&1
+grep -q 'Bash(mytool ' "$P4P/.claude/settings.json" || fail "P4: merge потерял пользовательский permission"; ok
+grep -q '/u/h.mjs' "$P4P/.claude/settings.json" || fail "P4: merge потерял пользовательский хук"; ok
+# rationaldev doctor — зелёный на здоровой установке (exit 0)
+RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" RATIONALDEV_HOME="$P4C" \
+  sh "$P4C/rationaldev" doctor "$P4P" >/dev/null 2>&1 || fail "P4: doctor не зелёный на здоровой установке"; ok
+# doctor краснеет и даёт ненулевой код на грязном клоне
+echo dirt > "$P4C/DIRT.txt"
+if RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" RATIONALDEV_HOME="$P4C" sh "$P4C/rationaldev" doctor "$P4P" >/dev/null 2>&1; then fail "P4: doctor зелёный на грязном клоне"; fi; ok
+rm -f "$P4C/DIRT.txt"
+
+echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update + P4 override/doctor)"
