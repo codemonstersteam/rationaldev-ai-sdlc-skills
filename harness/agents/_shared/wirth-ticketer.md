@@ -74,7 +74,7 @@ tickets from the **change-delta's affected-modules table**, not from a fresh tre
   **`<change-dir>/tickets/ticket-N.md`** (read `<change-dir>` from `.agent/planner/change-dir`), NOT
   `docs/design/<slice>/tickets/`. The slice's greenfield `tickets/` is the immutable record of how it was built;
   overwriting it destroys per-change traceability. `mkdir -p <change-dir>/tickets` first.
-- **NO scaffold ticket** — the project already exists (a scaffold ticket under `patch|minor|major` is an error; `validate-tickets` requires **zero** scaffolds there). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact).
+- **NO scaffold ticket** — the project already exists (a scaffold ticket under `patch|minor|major` is an error; `validate-tickets` requires **zero** scaffolds there). No README ticket either (`@dijkstra`'s artifact already exists; a behavior change may touch it, but README stays a design artifact — its **actualization on `minor`/`major` is `@dijkstra` in change-mode**, an izi acceptance sub-step, **never a ticket** and never `@hughes-rework`).
 - Cut **one `type: module` ticket per affected module** (from the table), `outputs` = the **existing** paths being edited (e.g. `internal/<slug>/<module>/adapter.go`), `io:` = the module's **existing** `io:` from the delta, `blocked_by` among themselves by real dependency. The implementer is `@hughes-rework` (izi routes `module` on a SemVer lane → `@hughes-rework`).
 - **Coverage BY WEIGHT** — the test follows where the difference is observable:
   - **`patch`** — the difference reaches the endpoint → **ONE `type: component` ticket** for the discriminating

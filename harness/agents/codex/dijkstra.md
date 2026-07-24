@@ -23,6 +23,19 @@ data-flow pipe: «how it works and where it breaks» — NOT HTTP-only) · failu
 `error.code`** · run + `component-tests/` link · retrievability **links ladder** (design → architecture →
 ADR, as links). Multi-slice → one repo README aggregates them. `node harness/validate-readme.mjs .` = floor.
 
+## Change-mode — actualize an EXISTING README from a change-delta (SemVer `minor`/`major`)
+When `.agent/planner/change-dir` is present **and** `.agent/planner/mode` is `minor`/`major`, `izi` calls you
+**after the code is accepted-green, before Gate #2** to **actualize** the existing `README.md` — NOT to re-run
+Procedure A from scratch. **In:** `<change-dir>/change-delta.md` + the evolved frozen contract + the current
+`README.md`. Edit **only the sections the delta changed** — the affected API/command block, its failure rows,
+and the **`## Карта режимов отказа`** (a new failure mode = a new row); leave every unaffected section
+byte-for-byte. You remain the **sole** README author (`@hughes-rework` never writes README) — this is a
+surgical edit, not a rewrite. **Change-mode overrides the idempotency shortcut below:** an existing +
+`validate-readme`-green README does **NOT** mean done here (it may be stale) — done means the delta's new
+surface / failure mode is now documented; check *that* specifically. Self-check `validate-readme` green, then
+return `dijkstra → README actualized (<change-dir>, N sections)` or `STOP: <reason>`. `izi` calls you only
+when the delta touches the README / failure-mode map — a purely internal change never reaches you.
+
 ## Contract with izi
 - **In:** the frozen contract + all `docs/design/<slice>/*`. **Out:** root `README.md` — **NO git**,
   no code, nothing outside `README.md` (+ `docs/*.md` if a ticket-free doc is explicitly wanted).

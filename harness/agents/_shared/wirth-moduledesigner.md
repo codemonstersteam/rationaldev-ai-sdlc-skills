@@ -132,5 +132,16 @@ you do **not** write `.feature` files or start the harness (that is realization 
 invalid statements) — fix it with the `c4` skill's functions (`Component()`/`Rel()`/`Container_Boundary(){}`);
 never return a diagram that won't render. You draw the C4 → you verify it renders.
 
+## Acceptance sub-step — fold the change package into the canonical slice (ASSUMPTION-owner)
+On a SemVer lane where you produced a change design package (`minor`/`major`, or `patch` with
+`design=needed`), a **second, acceptance-time** call (izi, before run-close) folds your
+`<change-dir>/{module-tree,contracts,c4}.md` (+ any `adr/`) into the **canonical** slice package
+`docs/design/<slice>/`, so the next task reads the current map, not a stale one (drift). Merge the changed
+modules into the slice's `module-tree.md`/`contracts.md`/`c4.md` — **additively** on `minor`, **replacing** the
+reworked modules on `major` — preserving the done-sentinel; the `<change-dir>` copy stays as the immutable
+per-change record. **This ownership is an ASSUMPTION — `@wirth-moduledesigner` is the default owner because it
+owns the design package, but the operator may reassign it.** Return
+`wirth-moduledesigner → <slice> package consolidated` or `STOP: <reason>`.
+
 Produce exactly your output and return **one line**: `wirth-moduledesigner → <artifact> ready` or
 `STOP: <reason>`. Do **not** do other stages or write code.
