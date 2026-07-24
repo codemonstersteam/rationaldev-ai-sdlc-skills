@@ -7,7 +7,7 @@
 // Вход: JSON на stdin (tool_input{command}). Выход: exit 2 → Claude блокирует. Fail-open на инфра-сбое.
 import { existsSync, readFileSync, statSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { writtenGateMarker, doneGreenTicketId, parseTicketOutputs } from "../shared.mjs"
+import { writtenGateMarker, doneGreenTicketId, doneGreenWrite, parseTicketOutputs, choreOutputs, isChoreMode, planPathUnder, CHORE_PLAN_FILE } from "../shared.mjs"
 
 async function readStdin() {
   const chunks = []
@@ -38,6 +38,25 @@ function missingOutputs(root, id) {
   return missing
 }
 
+// C3 poka-yoke (chore): у chore тикетов нет → берём объявленные файлы из <chore-dir>/CHORE-PLAN.md
+// (пойнтер .agent/planner/chore-dir, не глоб). Блок ТОЛЬКО когда файлы объявлены И НИ ОДНОГО реального
+// (все отсутствуют/пусты) — прозаичное извлечение консервативно: один настоящий выход = chore что-то
+// произвёл. Нет плана/выходов → null (fail-open). → объявленные пути к блоку | null.
+function choreGreenGap(root) {
+  let choreDir = ""
+  try { choreDir = readFileSync(join(root, ".agent", "planner", "chore-dir"), "utf8") } catch { return null }
+  const rel = planPathUnder(choreDir, CHORE_PLAN_FILE)
+  if (!rel) return null
+  let text
+  try { text = readFileSync(join(root, rel), "utf8") } catch { return null }
+  const declared = choreOutputs(text)
+  if (!declared.length) return null
+  for (const p of declared) {
+    try { const st = statSync(join(root, p)); if (!(st.isFile() && st.size === 0)) return null } catch { /* нет файла */ }
+  }
+  return declared
+}
+
 try {
   const raw = await readStdin()
   let input = {}
@@ -57,7 +76,7 @@ try {
     )
   }
 
-  // (2) poka-yoke: green-маркер без непустых outputs
+  // (2) poka-yoke: green-маркер без непустых outputs (greenfield/SemVer — по тикету)
   const greenId = doneGreenTicketId(cmd)
   if (greenId) {
     const miss = missingOutputs(root, greenId)
@@ -66,6 +85,19 @@ try {
         "poka-yoke: ticket-" + greenId + " помечается `green`, но его объявленные `outputs` отсутствуют/пусты: " +
         miss.join(", ") + ". Маркер НЕ записан — доведи артефакт(ы) до непустого состояния или не пиши `green`.",
       )
+    }
+  } else if (doneGreenWrite(cmd)) {
+    // (3) poka-yoke (chore): green без ticket-NN под mode=chore — объявленные в CHORE-PLAN.md файлы должны быть.
+    let mode = ""
+    try { mode = readFileSync(join(root, ".agent", "planner", "mode"), "utf8") } catch { /* нет маркера */ }
+    if (isChoreMode(mode)) {
+      const gap = choreGreenGap(root)
+      if (gap) {
+        block(
+          "poka-yoke (chore): `green` в done.log, но НИ ОДИН объявленный в CHORE-PLAN.md файл не существует/непуст: " +
+          gap.join(", ") + ". Маркер НЕ записан — доведи правку до реального артефакта или не пиши `green`.",
+        )
+      }
     }
   }
   process.exit(0)

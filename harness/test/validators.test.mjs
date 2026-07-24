@@ -1,7 +1,12 @@
 // Юнит-тесты чистых ядер валидаторов (io: none). Формула: 1 happy + по ветке-blocker.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests } from "../lib/validators.mjs"
+import { execFileSync } from "node:child_process"
+import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join, dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+import { validateFrd, validateContractFrozen, validateTicketHeaders, expectedTicketSkills, validateLayout, validateSliceDeclarations, validateContextMap, validateComponentTests, nextDebtNumber, emitLayoutDebt, layoutDebtBody } from "../lib/validators.mjs"
 import { contractDiff } from "../validate-contract-diff.mjs"
 
 // --- validateFrd ---
@@ -341,6 +346,47 @@ test("validateLayout: internal/shared/ разрешён всегда", () => {
 })
 test("validateLayout: markdown-токены с кавычками/backtick чистятся", () => {
   assert.deepEqual(validateLayout(["`internal/list-services/io.go`", "./internal/list-services/head.go"], ["list-services"]), [])
+})
+
+// --- Тикет-долг раскладки (/debt/, layout-non-standard) — чистое ядро + идемпотентность ---
+test("nextDebtNumber: пусто → 001; берёт МАКС+1, игнорирует не-task", () => {
+  assert.equal(nextDebtNumber([]), "001")
+  assert.equal(nextDebtNumber(["task-001.md", "task-004.md", "README.md"]), "005")
+})
+test("emitLayoutDebt: пустой /debt/ → task-001.md с телом (что не так · что сделать · критерий готовности)", () => {
+  const e = emitLayoutDebt([], "layout-non-standard")
+  assert.equal(e.name, "task-001.md")
+  assert.match(e.body, /Что не так/)
+  assert.match(e.body, /Что сделать/)
+  assert.match(e.body, /Критерий готовности/)
+  assert.match(e.body, /internal\/<slug>\//)
+})
+test("emitLayoutDebt: ИДЕМПОТЕНТНО — долг за ту же причину уже есть → null (второй файл не плодит)", () => {
+  const existing = [{ name: "task-001.md", content: layoutDebtBody("layout-non-standard") }]
+  assert.equal(emitLayoutDebt(existing, "layout-non-standard"), null)
+})
+test("emitLayoutDebt: чужой долг (иная причина) не мешает — выпускает следующий номер", () => {
+  const existing = [{ name: "task-001.md", content: "<!-- debt-reason: something-else -->" }]
+  const e = emitLayoutDebt(existing, "layout-non-standard")
+  assert.equal(e.name, "task-002.md")
+})
+
+// --- validate-layout.mjs → /debt/ (сквозной: неприменимость инварианта, идемпотентность прогона) ---
+const LAYOUT_CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "validate-layout.mjs")
+test("validate-layout CLI: репо без internal/ → печатает «инвариант не действует», пишет /debt/task-001.md, exit 0; второй прогон не плодит второй файл", () => {
+  const dir = mkdtempSync(join(tmpdir(), "layout-debt-"))
+  mkdirSync(join(dir, "docs"))
+  const run = () => execFileSync(process.execPath, [LAYOUT_CLI, dir], { encoding: "utf8" }) // exit 0 → без throw
+  const out1 = run()
+  assert.match(out1, /инвариант раскладки не действует/)
+  assert.match(out1, /\/debt\/task-001\.md/)
+  const after1 = readdirSync(join(dir, "debt")).filter((f) => /^task-\d+\.md$/.test(f))
+  assert.deepEqual(after1, ["task-001.md"])
+  const out2 = run()
+  assert.match(out2, /уже есть|не дублирую/)
+  const after2 = readdirSync(join(dir, "debt")).filter((f) => /^task-\d+\.md$/.test(f))
+  assert.deepEqual(after2, ["task-001.md"], "второй прогон не плодит второй файл-долг")
+  rmSync(dir, { recursive: true, force: true })
 })
 
 // --- validateSliceDeclarations (рунг 1: граница объявлена до дизайна) ---

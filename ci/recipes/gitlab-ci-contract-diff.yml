@@ -1,0 +1,30 @@
+# P9-D2 — contract-diff на MR для GitLab CI. Тот же инструмент harness/validate-contract-diff.mjs,
+# другой форж. Подключение: include этот файл в .gitlab-ci.yml целевого репозитория.
+#
+# ПОЧЕМУ на MR: ловит слом контракта, сделанный руками мимо харнеса, и показывает его человеку в MR.
+# Инструмент однорежимный: breaking → exit 2 → job красный. Разрешение по весу — забота ревьюера.
+#
+# КАК берётся база: валидатор диффит контракт из рабочего дерева vs `git show HEAD:<contract>`, поэтому
+# HEAD сдвигаем на target-ветку MR (`git reset --soft`), а рабочее дерево остаётся от source (новая спека).
+# OpenAPI → oasdiff, AsyncAPI → @asyncapi/cli; JSON-Schema диффит сам харнес (dependency-free).
+
+contract-diff:
+  stage: test
+  image: node:20-bullseye        # нужен git + возможность поставить go/oasdiff
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - api-specification/**/*
+  variables:
+    GIT_DEPTH: 0                  # полная история: нужна база MR
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git golang-go
+    - go install github.com/oasdiff/oasdiff@latest && export PATH="$HOME/go/bin:$PATH"
+    - npm install -g @asyncapi/cli
+  script:
+    - set -eu
+    - git config user.email ci@local && git config user.name ci
+    - git fetch -q origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    # HEAD → target-ветка MR (база), рабочее дерево остаётся от source (новая спека).
+    - git reset --soft "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - node harness/validate-contract-diff.mjs .   # breaking → exit 2 → job красный

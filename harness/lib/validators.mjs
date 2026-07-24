@@ -447,6 +447,55 @@ export function validateLayout(paths, slugs = []) {
   return errors
 }
 
+// --- Тикет-долг раскладки (/debt/, layout-non-standard) ------------------------
+// Инвариант раскладки (internal/<slug>/) на репо БЕЗ internal/ не действует. Вместо тихого зелёного
+// («нечего валидировать» → exit 0 = ложное «всё в порядке») харнес выпускает ТИКЕТ-ДОЛГ рядом с кодом,
+// в /debt/, и продолжает прогон (exit 0, не блокирует). Долг — «доказательство преступления» на ревью.
+// Инвариант: /debt/ пустой = чисто; закрытый долг close-run удаляет, история — в LEDGER. Чисто (io: none).
+
+const DEBT_MARKER = (reason) => `debt-reason: ${reason}` // машинный маркер идемпотентности внутри файла
+
+// nextDebtNumber :: (filenames) -> "NNN" — следующий свободный сквозной номер (локальный, без трекера).
+export function nextDebtNumber(filenames) {
+  let max = 0
+  for (const f of filenames || []) {
+    const m = /^task-(\d+)\.md$/.exec(String(f))
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return String(max + 1).padStart(3, "0")
+}
+
+// Тело тикета-долга: что не так · что сделать · критерий готовности + машинный маркер причины.
+export function layoutDebtBody(reason = "layout-non-standard") {
+  return `# Тикет-долг: раскладка не по стандарту
+
+<!-- ${DEBT_MARKER(reason)} -->
+
+## Что не так
+Репозиторий не держит инвариант slice-aligned-раскладки: нет каталога \`internal/\` со срез-пакетами
+\`internal/<slug>/\`. Гейт раскладки (\`harness/validate-layout.mjs\`) на таком репо не действует —
+вертикальная граница среза не выражена в коде.
+
+## Что сделать
+Привести раскладку к стандарту: код каждого среза → \`internal/<slug>/\` (\`<slug>\` = имя объявленного
+среза), общее для ≥2 срезов → \`internal/shared/\`. Никаких layer-keyed корней (\`internal/io\`,
+\`internal/handlers\`, …) — это техническая роль, а не срез.
+
+## Критерий готовности
+\`node harness/validate-layout.mjs\` печатает \`OK — slice-aligned\` (инвариант действует и держится),
+этот тикет-долг удалён из \`/debt/\`; запись «что было должно, когда закрыто» — в \`docs/changes/LEDGER.md\`.
+`
+}
+
+// emitLayoutDebt :: (existing, reason) -> {name, body} | null
+//   existing: [{name, content}] — текущие /debt/-файлы. null → долг за ЭТУ причину уже есть (идемпотентно,
+//   второй прогон не плодит второй файл). Иначе — имя следующего свободного task-NNN.md + тело.
+export function emitLayoutDebt(existing = [], reason = "layout-non-standard") {
+  const marker = DEBT_MARKER(reason)
+  if (existing.some((f) => String(f.content || "").includes(marker))) return null
+  return { name: `task-${nextDebtNumber(existing.map((f) => f.name))}.md`, body: layoutDebtBody(reason) }
+}
+
 // Declaration-mode (рунг 1 shift-left): слайсер ОБЯЗАН объявить границу пакета КАЖДОГО среза
 // (`Owns package: internal/<slug>/`) ещё до дизайна — тогда moduledesigner входит в стадию с уже
 // названной границей и не сваливается в layer-keyed по умолчанию. Проверяет НАЛИЧИЕ + форму поля,

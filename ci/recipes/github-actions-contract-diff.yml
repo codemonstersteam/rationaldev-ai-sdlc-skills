@@ -1,0 +1,48 @@
+# P9-D2 — contract-diff на PR. Каждый PR, трогающий контракт, диффится ПРОТИВ БАЗЫ; слом → red.
+#
+# ПОЧЕМУ на PR, а не только «сразу после заморозки контракта» внутри харнеса: этот рубеж ловит слом,
+# сделанный РУКАМИ мимо харнеса, и показывает его ЧЕЛОВЕКУ прямо в PR. Инструмент однорежимный:
+# breaking → exit 2 → job красный. Разрешение по весу (minor = STOP/ре-триаж; major = ожидаемый
+# BREAKING CHANGE в теле PR) — забота ревьюера на Gate #1/#2, не CI.
+#
+# КАК валидатор берёт базу: harness/validate-contract-diff.mjs сравнивает контракт из рабочего дерева
+# с его версией из `git show HEAD:<contract>`. Значит HEAD должен указывать на БАЗУ PR, а рабочее дерево
+# нести НОВУЮ спеку. Достигается `git reset --soft <base>` после checkout PR-head: HEAD → база,
+# индекс и файлы остаются от PR-head.
+#
+# Образец для репо БЕЗ харнеса. OpenAPI → oasdiff, AsyncAPI → @asyncapi/cli (JSON-Schema диффит сам
+# харнес, dependency-free). Спека без нужного тула в PATH = fail-closed STOP (exit 2) — тул ставим ниже.
+name: contract-diff
+
+on:
+  pull_request:
+    paths:
+      - 'api-specification/**'
+
+jobs:
+  contract-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}   # PR-head, не merge-ref
+          fetch-depth: 0                                    # нужна база PR в истории
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      # Отраслевые дифферы под форматы, которые встроенный JSON-дифф не покрывает.
+      - name: Поставить отраслевые дифферы (oasdiff / asyncapi)
+        run: |
+          set -euo pipefail
+          go install github.com/oasdiff/oasdiff@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          npm install -g @asyncapi/cli
+
+      - name: contract-diff против базы PR
+        run: |
+          set -euo pipefail
+          git config user.email ci@local && git config user.name ci
+          # HEAD → база PR, рабочее дерево остаётся от PR-head (новая спека).
+          git reset --soft "${{ github.event.pull_request.base.sha }}"
+          node harness/validate-contract-diff.mjs .   # breaking → exit 2 → job красный

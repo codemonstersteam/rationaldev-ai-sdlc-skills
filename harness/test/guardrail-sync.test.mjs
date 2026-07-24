@@ -43,9 +43,10 @@ const INLINED = [
   "GATE_MARK", "GATE2_MARK", "GATE_MARKS", "PIPELINE", "IMPLEMENTERS", "RUN_CLOSERS", "requiresFrontDoor",
   "TRUNK_BRANCHES", "branchFromHead",
   "isTrunkBranch", "PLAN_REVIEW_MARK", "DESIGN_DIR", "CHORES_DIR", "CHORE_PLAN_FILE", "isChoreMode",
-  "hasChorePlan", "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
+  "MODE_MARK", "CHANGE_DIR_MARK", "CHORE_DIR_MARK", "SLICES_MARK", "planPathUnder", "currentGreenfieldSlices",
+  "planReadyForApproval", "ROLE_KEYS", "pickRole", "normRole", "isImplementer",
   "isRunCloser", "inPipeline", "writtenGateMarker", "writesGateMarker", "gateMarkerInPath",
-  "doneGreenTicketId", "parseTicketOutputs", "isOperatorApproval", "isGate2Approval",
+  "doneGreenTicketId", "doneGreenWrite", "parseTicketOutputs", "choreOutputs", "isOperatorApproval", "isGate2Approval",
   "VCS_BRANCH_MARK", "mergeReadyForApproval", "prRefFromText",
   "gateMarkerContent", "answerTextFromEvent", "toolCallSignature", "detectLoop",
 ]

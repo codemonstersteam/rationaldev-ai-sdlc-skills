@@ -6,16 +6,17 @@
 // Discipline (in → out → verify):
 //   guard : .agent/gates/gate2.approved present · work branch merged into trunk        else STOP
 //   1 tag : weight←.agent/planner/mode · title/files←forge · tags←`git ls-remote origin`
-//           → ci/semver-bump.mjs decides · git tag+push on trunk merge-sha · verify on the FORGE
-//   2 led : append a self-sufficient entry → docs/changes/LEDGER.md · verify grep hits
-//   3 wipe: rm .agent run-state (keep decisions.log) · verify .agent/gates empty
+//           → ci/semver-bump.mjs decides · TAG_EXISTS ⇒ STOP (не перезаписываем историю версий) ·
+//             git tag+push on trunk merge-sha · verify on the FORGE · release-археология best-effort
+//   2 led : append a self-sufficient entry → docs/changes/LEDGER.md · verify grep hits · снятие долга
+//   3 wipe: сносим .agent/ ЦЕЛИКОМ, сохраняя лишь белый список (decisions.log) · verify .agent/gates empty
 //   Order is causal: 1 and 2 READ what 3 erases, so wipe is last.
 //
 // Usage: node harness/close-run.mjs --pr <N> [--repo <dir>] [--json]
 // Exit 0 = closed (tag may be null — plumbing no-bump is normal). Exit 2 = STOP (guard failed / act failed).
 
 import { execFileSync } from "node:child_process"
-import { readFileSync, writeFileSync, existsSync, rmSync, appendFileSync, mkdirSync, readlinkSync, lstatSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, rmSync, appendFileSync, mkdirSync, readdirSync, readlinkSync, lstatSync } from "node:fs"
 import { join, dirname } from "node:path"
 
 // ── pure core (io injected → unit-testable without git/forge) ────────────────────
@@ -43,9 +44,43 @@ export function ledgerEntry({ ts, slug, weight, pr, mergeSha, tag, reason, task 
   ].join("\n")
 }
 
-// Run-state to erase (keep decisions.log — that is the trace, not state).
-export const WIPE = [".agent/gates", ".agent/planner/mode", ".agent/planner/change-dir",
-  ".agent/planner/chore-dir", ".agent/planner/brd.md", ".agent/planner/done.log", ".agent/vcs"]
+// B1 — вайп-инверсия. Раньше WIPE перечислял, что стирать, и отставал от новых папок ролей
+// (plan-reviewer/, release-health/, planner/{frd,slices,target,…}). Теперь принцип обратный: сносим
+// .agent/ ЦЕЛИКОМ, сохраняя лишь явный БЕЛЫЙ СПИСОК. Единственный переживший — decisions.log: сквозная
+// трасса (README/05_REPO_STRUCTURE: «переживает вайп»). memory.md в список НЕ входит — рабочая память
+// цикла, по контракту скилла memory удаляется на мерже (не долгоживущий артефакт). `/debt/` вне .agent/,
+// поэтому вайп его и не касается.
+export const WIPE_KEEP = [".agent/decisions.log"]
+
+// Чистое ядро вайпа: из фактических записей верхнего уровня .agent/ вернуть те, что сносим (всё, кроме
+// белого списка). Новые папки ролей подметаются сами — их не нужно перечислять.
+export function wipeTargets(entries, keep = WIPE_KEEP) {
+  const keepSet = new Set(keep.map((p) => p.replace(/^\.agent\//, "")))
+  return entries.filter((e) => !keepSet.has(e)).map((e) => `.agent/${e}`)
+}
+
+// B2 — уже существующий тег = отказ. Историю версий не перезаписываем: тег на форже ⇒ STOP до записи в
+// LEDGER (patch-flow.md: TAG_EXISTS → отказ). no-bump (tag=null) — нормальный исход, ставить нечего.
+export function tagPlan({ tag, existsOnForge }) {
+  if (!tag) return { push: false }
+  if (existsOnForge) return { stop: `tag ${tag} уже на форже — отказ, не перезаписываю историю версий` }
+  return { push: true }
+}
+
+// B3 — тело GitHub Release для археологии (best-effort). Самодостаточно: причина бампа + ссылка на PR.
+export function releaseNotes({ tag, reason, prUrl }) {
+  return `${tag} — ${reason}\n\nPR: ${prUrl}`
+}
+
+// B4 — снятие долга при закрытии. Прогон закрывает долг ТОЛЬКО если нёс маркер resolves-debt=task-NNN
+// И мерж подтверждён: исчезновение /debt/task-NNN.md = доказательство оплаты (факт остаётся в LEDGER).
+// Без маркера/битый маркер → долги не трогаем. Возвращает rel-путь файла долга или null.
+export function debtToRemove({ resolvesDebt, merged }) {
+  if (!merged) return null
+  const id = String(resolvesDebt || "").trim()
+  if (!/^task-\d{3,}$/.test(id)) return null
+  return `debt/${id}.md`
+}
 
 // ── side-effecting shell (only reached via CLI) ──────────────────────────────────
 const isMain = process.argv[1] && process.argv[1].endsWith("close-run.mjs")
@@ -119,14 +154,14 @@ if (isMain) {
   const mergeSha = Rq("git", "rev-parse", `origin/${trunk}`)
 
   if (tag) {
+    // B2: тег уже на форже ⇒ ОТКАЗ (не молчаливое продолжение) — историю версий не перезаписываем.
     const exists = Rq("git", "ls-remote", "--tags", "origin", `refs/tags/${tag}`)
-    if (exists) { /* keep — never overwrite version history */ }
-    else {
-      R("git", "tag", "-a", tag, "-m", `${tag} — ${reason} (PR #${PR})`, mergeSha)
-      R("git", "push", "origin", tag)
-      const onForge = Rq("git", "ls-remote", "--tags", "origin", `refs/tags/${tag}`)
-      if (!onForge) stop(`tag ${tag} push did not land on the forge (branch/tag protection? token scope?)`)
-    }
+    const plan = tagPlan({ tag, existsOnForge: !!exists })
+    if (plan.stop) stop(plan.stop)
+    R("git", "tag", "-a", tag, "-m", `${tag} — ${reason} (PR #${PR})`, mergeSha)
+    R("git", "push", "origin", tag)
+    const onForge = Rq("git", "ls-remote", "--tags", "origin", `refs/tags/${tag}`)
+    if (!onForge) stop(`tag ${tag} push did not land on the forge (branch/tag protection? token scope?)`)
   }
 
   // ACT 2 — ledger (after the tag is real)
@@ -151,13 +186,37 @@ if (isMain) {
     console.error(`WARN: ledger commit/push failed (${String((e && e.message) || e).slice(0, 120)}) — запись осталась в рабочем дереве`)
   }
 
-  // ACT 3 — wipe (last: acts 1–2 read what this erases)
-  for (const p of WIPE) rmSync(join(ROOT, p), { recursive: true, force: true })
+  // B3 — археология релиза (best-effort, после реального тега): GitHub Release от тега + комментарий
+  // «released as <tag>» в PR. Тег и LEDGER уже стоят; провал здесь (нет прав/`gh`) закрытие НЕ рушит —
+  // как ledgerPushed, называем исход в строке результата (`released`).
+  let released = false
+  if (tag) {
+    try {
+      const repo = forgeRepo(ROOT, Rq)
+      R("gh", "release", "create", tag, "--repo", repo, "--title", tag,
+        "--notes", releaseNotes({ tag, reason, prUrl: prUrl(ROOT, PR, provider, Rq) }))
+      Rq("gh", "pr", "comment", PR, "--repo", repo, "--body", `released as \`${tag}\``)
+      released = true
+    } catch (e) {
+      console.error(`WARN: release archaeology failed (${String((e && e.message) || e).slice(0, 120)}) — тег/LEDGER на месте`)
+    }
+  }
+
+  // B4 — снятие долга (после записи в LEDGER, вместе с вайпом). Мерж здесь уже доказан гардами/форжем.
+  const debtRel = debtToRemove({ resolvesDebt: read(".agent/planner/resolves-debt").trim(), merged: true })
+  if (debtRel && existsSync(join(ROOT, debtRel))) rmSync(join(ROOT, debtRel), { force: true })
+
+  // ACT 3 — wipe (last: acts 1–2 read what this erases). B1-инверсия: сносим .agent/ ЦЕЛИКОМ, кроме
+  // белого списка (wipeTargets по фактическим записям — новые папки роли подметаются без правки списка).
+  const agentDir = join(ROOT, ".agent")
+  if (existsSync(agentDir)) {
+    for (const rel of wipeTargets(readdirSync(agentDir))) rmSync(join(ROOT, rel), { recursive: true, force: true })
+  }
   if (existsSync(join(ROOT, ".agent/gates"))) stop("run-state wipe incomplete")
 
-  const out = { closed: true, tag: tag || null, reason, ledger: "docs/changes/LEDGER.md", ledgerPushed, wiped: true, slug }
+  const out = { closed: true, tag: tag || null, reason, ledger: "docs/changes/LEDGER.md", ledgerPushed, released, debtCleared: !!debtRel, wiped: true, slug }
   if (has("--json")) console.log(JSON.stringify(out))
-  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger ${ledgerPushed ? "committed to trunk" : "written (NOT pushed)"}, run-state wiped`)
+  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger ${ledgerPushed ? "committed to trunk" : "written (NOT pushed)"}, release ${released ? "published" : "skipped"}${debtRel ? `, debt ${debtRel} cleared` : ""}, run-state wiped`)
   process.exit(0)
 }
 

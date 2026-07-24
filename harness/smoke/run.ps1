@@ -98,8 +98,14 @@ Push-Location $D
 if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "chore: gate пропустил без CHORE-PLAN.md" }; Ok
 New-Item -ItemType Directory -Force -Path "$D/docs/chores/001-ci-on-pr" | Out-Null
 New-Item -ItemType File -Force -Path "$D/docs/chores/001-ci-on-pr/CHORE-PLAN.md" | Out-Null
+# План текущего chore локализуется по пойнтеру chore-dir (не глоб docs/chores/*): его пишет @wirth-planner.
+[System.IO.File]::WriteAllText((Join-Path $D '.agent/planner/chore-dir'), 'docs/chores/001-ci-on-pr')
 '{"tool_input":{"subagent_type":"hughes"}}' | node $GC
 if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "chore: gate заблокировал при durable CHORE-PLAN.md + gate1" }; Ok
+# Без пойнтера durable-план прошлой задачи не считается планом текущего chore → gate блокирует.
+Remove-Item -Force (Join-Path $D '.agent/planner/chore-dir')
+'{"tool_input":{"subagent_type":"hughes"}}' | node $GC 2>$null
+if ($LASTEXITCODE -eq 0) { Pop-Location; Fail "chore: gate пропустил durable CHORE-PLAN.md без пойнтера chore-dir" }; Ok
 Pop-Location
 
 # gate-check: не-implementer после фронтдора (brd.md есть) проходит

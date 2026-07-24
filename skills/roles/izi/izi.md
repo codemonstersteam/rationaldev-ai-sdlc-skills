@@ -131,8 +131,7 @@ documented contract), you only read the token. Five weights, five lanes:
 | verdict token | You do |
 |---|---|
 | `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages; **no-bump** at close |
-| `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) → trunk `1.0.0` at close |
-| `route=greenfield · level=trivial` | straight to `@hughes` (new-code fix, contract unchanged), skipping planning |
+| `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) → trunk `1.0.0` at close (a 1-module new-code fix is a **degenerate modular** — still planned, not a bypass) |
 | `route=patch` | run the **PATCH lane** (below) — backward-compatible bug fix, contract unchanged → `Z+1` |
 | `route=minor` | run the **MINOR lane** (below) — additive new capability behind a toggle (default OFF) → `Y+1.0` |
 | `route=major` | run the **MAJOR lane** (below) — incompatible change + migration path → `X+1.0.0` |
@@ -140,7 +139,7 @@ documented contract), you only read the token. Five weights, five lanes:
 | `level=unclear` | pass the line to the operator for clarification, wait |
 
 **Weight is triage's judgement, never yours** — you never re-classify a `patch` as a `minor` because the diff
-looks big. The one place a weight is revised is a mechanical one: `validate-contract-diff --require-additive`
+looks big. The one place a weight is revised is a mechanical one: `validate-contract-diff`
 finds a breaking class on a `minor` → **STOP**, hand the line to the operator, re-run `@wirth-triage`.
 
 ## CHORE lane — repo plumbing, economical, still BY PLAN (route=chore, mode=chore)
@@ -213,9 +212,12 @@ Gate #2 → RUN-CLOSE below:**
    THERE, never on top of the slice's greenfield `tickets/`. `STOP` → operator.
 2. **Contract stage — by weight** (`patch` skips it; `minor`/`major` always run it): `@wirth-apidesigner`
    (input: the frozen contract + the delta's spec-delta) → **evolves** `api-specification/*` (new `x-frozen`
-   version). Then `node harness/validate-contract-diff.mjs`:
-   - **`minor`** → run it with **`--require-additive`**: a breaking class ⇒ **STOP**, surface to the operator,
-     the weight was wrong (re-triage as `major`). Additivity is checked mechanically, not by eye.
+   version). Then `node harness/validate-contract-diff.mjs` — **one behaviour, no flag**; it **dispatches by
+   contract format** (OpenAPI → `oasdiff breaking`, AsyncAPI → `asyncapi diff`, JSON Schema → built-in) and is
+   **fail-closed** (no tool/unassessable format ⇒ STOP, not a silent pass). The weight difference lives here in
+   the pipeline, not in a flag:
+   - **`minor`** → a breaking class ⇒ **STOP**, surface to the operator, the weight was wrong (re-triage as
+     `major`). Additivity is checked mechanically, not by eye.
    - **`major`** → the breaking-list is the **migration input**: announce it to the operator and require it
      verbatim in the PR body (`BREAKING CHANGE`). It does not block — a major is an accepted break.
 2.5. **Design — only if `@change-intake` returned `design=needed`** (`minor`/`major`: `needed` by default —
@@ -373,8 +375,8 @@ signature the implementer was forbidden to touch). It produces nothing else and 
 
 - **Under a SemVer lane** `@fagan` additionally proves the weight held: `patch` — the whole suite green
   (regression) + the discriminating difference proven old→new (or the DoD's stated reason none is
-  deterministic); `minor` — the new-surface component green, `validate-contract-diff --require-additive` at
-  **0 breaking**, no existing contract test changed, and the **toggle defaults OFF**; `major` — the reworked
+  deterministic); `minor` — the new-surface component green, `validate-contract-diff` returned **0 breaking**,
+  no existing contract test changed, and the **toggle defaults OFF**; `major` — the reworked
   components green + the breaking-list and migration path present.
 - `accepted` → proceed to `## TERMINAL git step` below (commit/push/CI), **then** present Gate #2. `@fagan
   accepted` = "done AND locally validated" — the state is now safe to commit.
