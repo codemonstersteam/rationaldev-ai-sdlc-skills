@@ -12,6 +12,7 @@
 
 | # | Тикет | Приоритет | Статус | Деталь |
 |---|-------|-----------|--------|--------|
+| **#95** | **Починка блокеров + установка + онбординг чужого репо (P0–P9)** | 🔴 P0 | ⏳ **принят оператором, не начат** | [harness-hardening-and-onboarding.md](./harness-hardening-and-onboarding.md) |
 | #40 | Progressive disclosure скиллов (тела по требованию) | 🔴 P0 (флагман 1) | ✅ **закрыт** по осн. критерию — встраивание −34.6% | [progressive-disclosure-skills.md](./progressive-disclosure-skills.md) |
 | #39 | `expectedTicketSkills` — валидатор `skills:` тикета | 🔴 P0 | ✅ по сути готов (`harness/lib/validators.mjs:13`) | — |
 | **#42** | **Trajectory / eval-слой (LLM-as-judge поверх `run-summary`)** | 🔴 P0 (флагман 2) | ✅ **закрыт по ядру** — детекторы+судья+RUNBOOK/CI; хвост (live-прогон) общий с #40/#43 | [eval-trajectory-layer.md](./eval-trajectory-layer.md) |
