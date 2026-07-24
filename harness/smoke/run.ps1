@@ -51,6 +51,15 @@ $P = Join-Path $Tmp 'cl-hard'; New-Item -ItemType Directory -Force -Path $P | Ou
 if (-not (Test-Path "$P/.claude/hooks/gate-check.mjs")) { Fail "claude --hard: нет хука gate-check.mjs" }; Ok
 if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'PreToolUse' -Quiet)) { Fail "settings без хуков" }; Ok
 if (-not (Select-String -Path "$P/.claude/settings.json" -Pattern 'gate-check.mjs' -Quiet)) { Fail "settings не ссылается на .mjs" }; Ok
+# settings.json слит (управляемый блок с маркером), не «положен рядом»
+node "$Repo/harness/merge-claude-settings.mjs" check "$P/.claude/settings.json" | Out-Null
+if ($LASTEXITCODE -ne 0) { Fail "claude --hard: settings.json без управляемой проводки (merge не сработал)" }; Ok
+
+# OpenCode --hard: гардрейл — .mjs (регресс: install.ps1 копировал .ts, которого нет → плагин не ставился)
+$P = Join-Path $Tmp 'oc-hard'; New-Item -ItemType Directory -Force -Path $P | Out-Null
+& pwsh -File "$Repo/install.ps1" opencode -Project $P -Hard -NoInput | Out-Null
+if (-not (Test-Path "$P/.opencode/plugins/rational-guardrail.mjs")) { Fail "opencode --hard: нет .mjs-плагина (Windows-баг .ts)" }; Ok
+if (Test-Path "$P/.opencode/plugins/rational-guardrail.ts") { Fail "opencode --hard: остался устаревший .ts-плагин" }; Ok
 
 $GC = "$Repo/harness/enforcement/claude/gate-check.mjs"
 $LD = "$Repo/harness/enforcement/claude/log-decision.mjs"

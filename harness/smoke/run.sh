@@ -141,7 +141,8 @@ node "$P4C/harness/merge-claude-settings.mjs" check "$P4P/.claude/settings.json"
 # повторная установка — идемпотентный merge (управляемый хук не дублируется, клон снова pristine)
 RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" XDG_DATA_HOME="$P4H/.local/share" \
   sh "$P4C/install.sh" claude "$P4P" --hard --no-input >/dev/null 2>&1
-[ "$(grep -c 'gate-check.mjs' "$P4P/.claude/settings.json")" = 1 ] || fail "P4: повторный install продублировал управляемый хук"; ok
+# считаем ТОЛЬКО команду-хук (абсолютный путь .../hooks/gate-check.mjs), не bare-имя в маркере managedFiles
+[ "$(grep -c '/hooks/gate-check.mjs' "$P4P/.claude/settings.json")" = 1 ] || fail "P4: повторный install продублировал управляемый хук"; ok
 [ -z "$(git -C "$P4C" status --porcelain)" ] || fail "P4: клон грязный после повторного install"; ok
 # merge не теряет пользовательские добавления (хук + permission)
 node -e 'const fs=require("fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p));s.permissions.allow.push("Bash(mytool *)");s.hooks.PreToolUse.push({matcher:"Write",hooks:[{type:"command",command:"node /u/h.mjs"}]});fs.writeFileSync(p,JSON.stringify(s,null,2))' "$P4P/.claude/settings.json"
