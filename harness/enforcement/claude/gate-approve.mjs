@@ -9,8 +9,9 @@ import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from 
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 import {
-  isOperatorApproval, isGate2Approval, planReadyForApproval, mergeReadyForApproval, prRefFromText,
-  gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR,
+  isOperatorApproval, isGate2Approval, planReadyForApproval, currentGreenfieldSlices, mergeReadyForApproval,
+  prRefFromText, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR,
+  SLICES_MARK, CHANGE_DIR_MARK, CHORE_DIR_MARK, MODE_MARK,
 } from "../shared.mjs"
 
 // Хеш снимка плана НА МОМЕНТ акцепта (аудит): greenfield docs/design/*/PLAN.md + change-папки
@@ -72,9 +73,17 @@ try {
   // Акцепт валиден ТОЛЬКО когда план СОБРАН (есть PLAN.md/plan-review.md) — иначе «go ahead» на
   // ранней фазе ложно ставит маркер и обнуляет человеческий Gate #1. Нет плана → игнорируем акцепт.
   if (gate1) {
-    const sliceDirsFn = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
-    const choreDirsFn = () => { try { return readdirSync(join(root, CHORES_DIR)) } catch { return [] } }
-    if (planReadyForApproval(existsFn, sliceDirsFn, choreDirsFn)) {
+    const readMaybe = (rel) => { try { return readFileSync(join(root, rel), "utf8") } catch { return "" } }
+    const designDirs = () => { try { return readdirSync(join(root, DESIGN_DIR)) } catch { return [] } }
+    // greenfield-срезы учитываем ТОЛЬКО в greenfield-полосе — иначе stale slices.md прошлого прогона
+    // (он вне текущего WIPE-списка close-run) ложно «подтвердил» бы план в patch/chore-полосе.
+    const greenfield = readMaybe(MODE_MARK).replace(/^﻿/, "").trim() === "greenfield"
+    const planReady = planReadyForApproval(existsFn, {
+      changeDir: readMaybe(CHANGE_DIR_MARK),
+      choreDir: readMaybe(CHORE_DIR_MARK),
+      sliceDirs: greenfield ? currentGreenfieldSlices(readMaybe(SLICES_MARK), designDirs()) : [],
+    })
+    if (planReady) {
       put("gate1.approved", gateMarkerContent({
         timestamp: new Date().toISOString(),
         source: "operator-approval-via-prompt",
