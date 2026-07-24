@@ -96,10 +96,78 @@ install_repo() {
   sh "$HOME_DIR/install.sh" "$runner" "$target" --hard --no-input
 }
 
+# --- doctor: диагностика здоровья установки (как `brew doctor`) — печатает, НЕ чинит ------------------------
+# `rationaldev doctor [project-dir]` (дефолт — cwd). Зелёный/красный по каждому пункту; красный → точная
+# команда починки. Ненулевой код выхода, если хоть один красный (для CI/смоука).
+doctor() {
+  proj="${1:-$(pwd)}"; red=0
+  if [ -t 1 ]; then G="$(printf '\033[32m')"; R="$(printf '\033[31m')"; Z="$(printf '\033[0m')"; else G=""; R=""; Z=""; fi
+  ok()   { printf '  %s✓%s %s\n' "$G" "$Z" "$1"; }
+  bad()  { red=$((red+1)); printf '  %s✗%s %s\n' "$R" "$Z" "$1"; printf '      починка: %s\n' "$2"; }
+
+  echo "rationaldev doctor — клон $HOME_DIR · проект $proj"
+
+  # node / git присутствуют
+  if command -v node >/dev/null 2>&1; then ok "node: $(node -v 2>/dev/null)"; else bad "node не найден" "установи Node >= 18 (https://nodejs.org)"; fi
+  if command -v git  >/dev/null 2>&1; then ok "git: $(git --version 2>/dev/null | awk '{print $3}')"; else bad "git не найден" "установи git"; fi
+
+  # клон чист (иначе `rationaldev update` откажет)
+  if [ -d "$HOME_DIR/.git" ]; then
+    if [ -z "$(git -C "$HOME_DIR" status --porcelain 2>/dev/null)" ]; then ok "клон pristine — update пройдёт"
+    else bad "клон $HOME_DIR НЕ чист — update откажет (pristine-guard)" "git -C \"$HOME_DIR\" checkout -- harness/agents skills/roles harness/models.config.json  (кастомные модели держи в RATIONALDEV_MODELS вне клона)"; fi
+  else bad "нет git-клона в $HOME_DIR" "bootstrap: sh -c \"\$(curl -fsSL <repo-raw>/bootstrap.sh)\""; fi
+
+  # override моделей на месте и резолвится
+  ov="${RATIONALDEV_MODELS:-}"
+  if [ -n "$ov" ] && [ -f "$ov" ]; then
+    if node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$ov" 2>/dev/null; then
+      ok "override моделей резолвится ($ov)"
+    else bad "override моделей — битый JSON ($ov)" "почини JSON или удали файл (харнес вернётся к клон-дефолту)"; fi
+  elif [ -n "$ov" ]; then bad "RATIONALDEV_MODELS указывает на несуществующий файл ($ov)" "создай его (configure-models) или сними переменную — будет клон-дефолт"
+  else ok "override не задан — клон-дефолт моделей (ok)"; fi
+
+  # runner проекта + живость симлинков + settings
+  if [ -d "$proj/.claude" ]; then rn=claude; adir="$proj/.claude/agents"; sdir="$proj/.claude/skills"
+  elif [ -d "$proj/.opencode" ]; then rn=opencode; adir="$proj/.opencode/agent"; sdir="$proj/.opencode/skills"
+  elif [ -d "$proj/.agents" ]; then rn=codex; adir="$proj/.agents/roles"; sdir="$proj/.agents/skills"
+  else rn=""; fi
+
+  if [ -z "$rn" ]; then
+    echo "  · в $proj харнес не установлен (.claude/.opencode/.agents нет) — проектные проверки пропущены"
+  else
+    # binding (только opencode: у claude/codex модели без провайдер-префикса — валидатор к ним не применим)
+    if [ "$rn" = opencode ] && [ -f "$HOME_DIR/harness/validate-model-binding.mjs" ]; then
+      b="$(node "$HOME_DIR/harness/validate-model-binding.mjs" opencode --brief 2>/dev/null | grep '^BINDING:')"
+      case "$b" in
+        "BINDING: ok") ok "модель-биндинг opencode: связка тир→провайдер цела" ;;
+        "BINDING: fail"*) bad "модель-биндинг opencode: висячие ссылки (${b#BINDING: fail })" "node \"$HOME_DIR/harness/configure-models.mjs\" opencode  (или настрой провайдера в ~/.config/opencode)" ;;
+      esac
+    fi
+    # симлинки проекта живые (не висячие)
+    dead=""
+    for d in "$adir" "$sdir" "$proj/harness"; do
+      [ -L "$d" ] && [ ! -e "$d" ] && dead="$dead $d"
+    done
+    if [ -n "$dead" ]; then bad "висячие симлинки проекта:$dead" "переустанови: rationaldev install \"$proj\" $rn"
+    else ok "симлинки проекта ($rn) живые (agents/skills/harness ведут в клон/проекции)"; fi
+    # .claude/settings.json не разошёлся с эталоном (по маркеру управляемого блока)
+    if [ "$rn" = claude ]; then
+      sj="$proj/.claude/settings.json"
+      if [ ! -f "$sj" ]; then echo "  · $sj нет (enforcement не установлен --hard?) — проверка проводки пропущена"
+      elif node "$HOME_DIR/harness/merge-claude-settings.mjs" check "$sj" 2>/dev/null; then ok "settings.json: харнес-проводка на месте, не разошлась с эталоном"
+      else bad "settings.json: проводка хуков разошлась/отсутствует" "переустанови --hard: rationaldev install \"$proj\" claude"; fi
+    fi
+  fi
+
+  echo
+  if [ "$red" -eq 0 ]; then echo "doctor: всё зелёное."; else echo "doctor: $red красных пункт(ов) — см. команды починки выше."; exit 1; fi
+}
+
 case "${1:-help}" in
   update)              update ;;
   autocheck)           autocheck ;;
   install)             install_repo "${2:-}" "${3:-}" ;;
-  help|-h|--help|"")   echo "usage: rationaldev <install <path> [runner] | update | autocheck>   # клон $HOME_DIR, канал $CHANNEL" ;;
-  *)                   echo "rationaldev: неизвестная команда '$1' (есть: install, update, autocheck)"; exit 1 ;;
+  doctor)              doctor "${2:-}" ;;
+  help|-h|--help|"")   echo "usage: rationaldev <install <path> [runner] | update | autocheck | doctor [project-dir]>   # клон $HOME_DIR, канал $CHANNEL" ;;
+  *)                   echo "rationaldev: неизвестная команда '$1' (есть: install, update, autocheck, doctor)"; exit 1 ;;
 esac

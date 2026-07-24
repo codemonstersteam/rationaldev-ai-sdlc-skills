@@ -68,6 +68,28 @@ node harness/gen-skill-index.mjs --check   # CI: реестр актуален �
 **Вручную.** Правишь `models.config.json` (в т.ч. пер-ролевые оверрайды в `roles`,
 которые диалог не трогает) → `node harness/gen-agents.mjs` → переустанавливаешь.
 
+### Локальный override моделей (`RATIONALDEV_MODELS`) — клон остаётся pristine
+
+Канонический клон (`~/.rationaldev`) потребляется **read-only**: `rationaldev update` — это
+`git pull --ff-only` с pristine-инвариантом (любая локальная правка клона → апдейт отменяется).
+Поэтому свои модели держат **не** в клон-файле `models.config.json`, а в **локальном override
+ВНЕ клона** — `$RATIONALDEV_MODELS` (по умолчанию `${XDG_CONFIG_HOME:-~/.config}/rationaldev/models.json`,
+**один файл на все раннеры**: структура раннер-агностична — top-level ключ = раннер). При установке
+override **дефолтится автоматически для всех раннеров** (`install.sh`/`install.ps1`): интерактивный
+`configure-models` и авто-дерив тиров пишут туда, клон-`models.config.json` не трогается.
+
+`loadModelsConfig` в рантайме сливает override **поверх** клон-дефолта (`mergeModelsConfig`: override
+выигрывает на листьях), и `gen-agents` рендерит проекции ролей с реальными моделями. Так как проекции
+(`agents/{claude,opencode,codex}/*.md`) трекаются в git, при кастомных моделях установщик **выносит их
+из клона** (claude/codex — копия в `${XDG_DATA_HOME:-~/.local/share}/rationaldev/projections/<runner>`
++ перецеленный симлинк; Windows — копия сразу в проект) и **восстанавливает клон из git** — так клон
+остаётся чистым и `rationaldev update` проходит. Дефолтные модели (проекции == коммит) → прямой
+dir-symlink на клон (обновление проекта = `git pull`, без переустановки).
+
+Свой путь override — `export RATIONALDEV_MODELS=/path/models.json` до установки. Проверить здоровье
+установки (клон чист · override резолвится · симлинки живые · `settings.json` не разошёлся) —
+`rationaldev doctor [project-dir]`.
+
 ## Различия проекций
 
 - **Claude:** frontmatter `name`/`description`/`model` (модель из `models.config.json`; пусто → опущена).

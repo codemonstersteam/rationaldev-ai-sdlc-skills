@@ -24,6 +24,16 @@ $ErrorActionPreference = 'Stop'
 $Bundle = $PSScriptRoot
 $Lib = Join-Path $Bundle 'skills/lib'
 
+# --- модели: дефолтный override-путь ВНЕ клона (клон pristine для `rationaldev update`) — для ВСЕХ раннеров ---
+# Правки моделей (configure-models) пишутся в override, а не в клон-дефолт. Один файл на все раннеры (конфиг
+# раннер-агностичен: top-level ключ = раннер). Оператор задал RATIONALDEV_MODELS сам — уважаем. Зеркало install.sh.
+$RdModelsDefaulted = $false
+if (-not $env:RATIONALDEV_MODELS) {
+  $cfgBase = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME '.config' }
+  $env:RATIONALDEV_MODELS = Join-Path $cfgBase 'rationaldev/models.json'
+  $RdModelsDefaulted = $true
+}
+
 # --- модели: интерактивная настройка тиров + перегенерация проекций ---
 # configure-models сам молчит, если stdin не TTY; gen-agents идемпотентен.
 if (Get-Command node -ErrorAction SilentlyContinue) {
@@ -113,10 +123,13 @@ if (-not $Soft) {
     'opencode' {
       $pdir = if ($Global) { Join-Path $env:APPDATA 'opencode/plugins' } else { Join-Path $Project '.opencode/plugins' }
       New-Item -ItemType Directory -Force -Path $pdir | Out-Null
-      Copy-Item (Join-Path $adapter 'rational-guardrail.ts') (Join-Path $pdir 'rational-guardrail.ts') -Force
+      # Плагин — self-contained .mjs (НЕ .ts): opencode грузит напрямую. Чистим старую .ts-копию (был баг:
+      # копировали rational-guardrail.ts, которого нет → Copy-Item падал, гардрейл на Windows не ставился).
+      Copy-Item (Join-Path $adapter 'rational-guardrail.mjs') (Join-Path $pdir 'rational-guardrail.mjs') -Force
+      Remove-Item (Join-Path $pdir 'rational-guardrail.ts') -Force -ErrorAction SilentlyContinue
       # общая enforcement-логика (../shared.mjs, plugin импортит её) — рядом (copy → нужен реальный файл в destination)
       Copy-Item (Join-Path $Bundle 'harness/enforcement/shared.mjs') (Join-Path (Split-Path $pdir) 'shared.mjs') -Force
-      $hardMsg = "on → OpenCode-плагин ($pdir/rational-guardrail.ts)"
+      $hardMsg = "on → OpenCode-плагин ($pdir/rational-guardrail.mjs, self-contained)"
     }
     'claude' {
       $cbase = if ($Global) { Join-Path $HOME '.claude' } else { Join-Path $Project '.claude' }
@@ -150,9 +163,19 @@ if (-not $Soft) {
       } }
       $json = $settings | ConvertTo-Json -Depth 8
       $sjPath = Join-Path $cbase 'settings.json'
-      if (Test-Path $sjPath) {
-        $json | Set-Content -Encoding UTF8 (Join-Path $cbase 'settings.harness.json')
-        $hardMsg = "on → хуки в $hooks; settings.json есть → слей $cbase/settings.harness.json вручную"
+      $harnessPath = Join-Path $cbase 'settings.harness.json'
+      # Управляемый шаблон → settings.harness.json (эталон merge/doctor), затем СЛИВАЕМ в реальный settings.json
+      # (hooks + permissions), не затирая пользовательские добавления. Идемпотентно. Зеркало install.sh.
+      $json | Set-Content -Encoding UTF8 $harnessPath
+      $merged = $false
+      if (Get-Command node -ErrorAction SilentlyContinue) {
+        node (Join-Path $Bundle 'harness/merge-claude-settings.mjs') merge $sjPath $harnessPath 2>$null
+        if ($LASTEXITCODE -eq 0) { $merged = $true }
+      }
+      if ($merged) {
+        $hardMsg = "on → Claude-хуки слиты в $sjPath (управляемый блок; пользовательское сохранено)"
+      } elseif (Test-Path $sjPath) {
+        $hardMsg = "on → хуки в $hooks; node нет для merge → слей $harnessPath вручную"
       } else {
         $json | Set-Content -Encoding UTF8 $sjPath
         $hardMsg = "on → Claude-хуки ($sjPath)"
@@ -162,18 +185,37 @@ if (-not $Soft) {
   }
 }
 
+# --- pristine-клон: восстановить сгенерённую грязь при активном override ------------------------------------
+# gen-agents перегенерил проекции В КЛОНЕ; при override (кастомные модели) их `model:` расходится с коммитом →
+# клон грязный → `rationaldev update` откажет. На Windows Copy-Agents УЖЕ скопировал кастомные проекции в
+# проект, так что клон нужно лишь ВЕРНУТЬ в чистое (git checkout сгенерённых путей). Дефолт (override-файла
+# нет/пуст) → проекции == коммит → no-op. Не git → нечего восстанавливать. Зеркало install.sh.
+$modelsPristineNote = ''
+if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $Bundle '.git') -PathType Container) -and
+    $env:RATIONALDEV_MODELS -and (Test-Path $env:RATIONALDEV_MODELS) -and ((Get-Item $env:RATIONALDEV_MODELS).Length -gt 0)) {
+  $dirty = git -C $Bundle status --porcelain -- harness/agents skills/roles 2>$null
+  if ($dirty) {
+    git -C $Bundle checkout -- harness/agents skills/roles 2>$null
+    $modelsPristineNote = "override-модели скопированы в проект; клон восстановлен pristine"
+  }
+}
+
 $skCount = (Get-ChildItem $skillsDst -ErrorAction SilentlyContinue | Measure-Object).Count
 $agCount = (Get-ChildItem $agentsDst -ErrorAction SilentlyContinue | Measure-Object).Count
 $modelsMsg = 'см. harness/models.config.json'
 try {
-  $t = (Get-Content (Join-Path $Bundle 'harness/models.config.json') -Raw | ConvertFrom-Json).$Runner.tiers
-  $f = { param($v) if ($v) { $v } else { '(наследует)' } }
-  $modelsMsg = "large=$(& $f $t.large) medium=$(& $f $t.medium) small=$(& $f $t.small)"
+  # override-merged (loadModelsConfig учитывает RATIONALDEV_MODELS) — реальные модели, не клон-дефолт.
+  $modelsMsg = node -e 'import(process.argv[1]).then(m=>{const c=m.loadModelsConfig(process.argv[2])[process.argv[3]]||{};const t=c.tiers||{};const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} medium=${f(t.medium)} small=${f(t.small)}`)})' (Join-Path $Bundle 'harness/lib/models-config.mjs') (Join-Path $Bundle 'harness') $Runner
 } catch {}
 Write-Host "rationaldev harness -> $Runner ($(if ($Global) {'global'} else {'project'}))"
 Write-Host "  agents/roles: $agentsDst ($agCount)"
 Write-Host "  skills:       $skillsDst ($skCount)"
 Write-Host "  models:       $modelsMsg"
+if ($env:RATIONALDEV_MODELS) {
+  Write-Host "  models-override: $env:RATIONALDEV_MODELS (клон pristine)"
+  if ($modelsPristineNote) { Write-Host "                → $modelsPristineNote" }
+  if ($RdModelsDefaulted) { Write-Host "                → добавь в профиль: `$env:RATIONALDEV_MODELS=$env:RATIONALDEV_MODELS" }
+}
 Write-Host "  instructions: $instrNote"
 Write-Host "  hard mode:    $hardMsg"
 Write-Host ''

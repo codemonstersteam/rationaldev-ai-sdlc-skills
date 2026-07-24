@@ -32,14 +32,15 @@ for arg in "$@"; do
   esac
 done
 
-# opencode: дефолтный override-путь ВНЕ клона (клон остаётся pristine для `rationaldev update`). Дерив тиров
-# и правки моделей пишутся ТУДА, а не в клон-дефолт openrouter/*. Если оператор задал RATIONALDEV_MODELS сам —
-# уважаем. loadModelsConfig мерджит override поверх клон-дефолта в рантайме (gen-agents + валидатор).
+# Дефолтный override-путь ВНЕ клона (клон остаётся pristine для `rationaldev update`) — для ВСЕХ раннеров
+# (claude/codex/opencode единообразно). Дерив тиров и правки моделей (configure-models) пишутся ТУДА, а не в
+# клон-дефолт (openrouter/opus/...). Если оператор задал RATIONALDEV_MODELS сам — уважаем. loadModelsConfig
+# мерджит override поверх клон-дефолта в рантайме (gen-agents + валидатор). ОДИН файл на все раннеры: конфиг
+# раннер-агностичен (top-level ключ = раннер), mergeModelsConfig/loadModelsConfig сливают его целиком, а
+# configure-models пишет весь merged cfg — per-runner дробление лишнее.
 RD_MODELS_DEFAULTED=""
-if [ "$RUNNER" = opencode ] && [ -z "${RATIONALDEV_MODELS:-}" ]; then
-  # тот же base, что у global opencode-конфига (XDG_CONFIG_HOME | ~/.config) — иначе дерив читает провайдера
-  # из одного места, а override пишет в другое.
-  RATIONALDEV_MODELS="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/rationaldev-models.json"; export RATIONALDEV_MODELS; RD_MODELS_DEFAULTED=1
+if [ -z "${RATIONALDEV_MODELS:-}" ]; then
+  RATIONALDEV_MODELS="${XDG_CONFIG_HOME:-$HOME/.config}/rationaldev/models.json"; export RATIONALDEV_MODELS; RD_MODELS_DEFAULTED=1
 fi
 
 # --- модели: интерактивная настройка тиров + перегенерация проекций ---
@@ -176,12 +177,20 @@ if [ "$HARD" = yes ]; then
     "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
   }
 }'
-      if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then
-        printf '%s\n' "$sjson" > "$cbase/settings.harness.json"
-        HARDMSG="on → хуки в $cbase/hooks; settings.json есть → слей $cbase/settings.harness.json вручную"
+      # Управляемый шаблон проводки всегда пишем в settings.harness.json (эталон для merge/doctor),
+      # затем СЛИВАЕМ его в реальный settings.json (hooks + permissions), не затирая пользовательские
+      # добавления. Идемпотентно: повторная установка обновляет управляемый блок, остальное не трогает.
+      printf '%s\n' "$sjson" > "$cbase/settings.harness.json"
+      if command -v node >/dev/null 2>&1 && node "$BUNDLE/harness/merge-claude-settings.mjs" merge "$cbase/settings.json" "$cbase/settings.harness.json" 2>/dev/null; then
+        HARDMSG="on → Claude-хуки слиты в $cbase/settings.json (управляемый блок; пользовательское сохранено)"
       else
-        printf '%s\n' "$sjson" > "$cbase/settings.json"
-        HARDMSG="on → Claude-хуки ($cbase/settings.json)"
+        # node нет — деградация: если settings.json уже есть, оставляем шаблон рядом; иначе кладём как есть.
+        if [ -e "$cbase/settings.json" ] && [ ! -L "$cbase/settings.json" ]; then
+          HARDMSG="on → хуки в $cbase/hooks; node нет для merge → слей $cbase/settings.harness.json вручную"
+        else
+          printf '%s\n' "$sjson" > "$cbase/settings.json"
+          HARDMSG="on → Claude-хуки ($cbase/settings.json)"
+        fi
       fi
       ;;
     codex)
@@ -207,6 +216,28 @@ if [ "$RUNNER" = opencode ] && [ "$SCOPE" != global ] && command -v node >/dev/n
   [ -e "$PROJ/AGENTS.harness.md" ] && INSTR_NOTE="$(basename "$PROJ")/AGENTS.md (твой) + AGENTS.harness.md — авто через opencode.jsonc instructions"
 fi
 
+# --- pristine-клон: проекции моделей ВНЕ клона при активном override -------------------------------------
+# gen-agents перегенерил проекции ролей В КЛОНЕ (harness/agents/<runner>/*.md, skills/roles/*) — они трекаются
+# в git. При НЕПУСТОМ override (кастомные модели ≠ клон-дефолт) `model:`-строки проекций расходятся с коммитом
+# → клон грязный → `rationaldev update` откажет (pristine-guard). Держим клон read-only: копируем проекции
+# раннера ВНЕ клона, перецеливаем симлинк раннера туда, восстанавливаем сгенерённые пути клона из git.
+# Дефолт (override-файла нет/пуст) → проекции == коммит → блок пропущен: dir-symlink на клон = мгновенное
+# обновление проекта на `git pull` (T2). $BUNDLE не git → нечего сверять/восстанавливать.
+MODELS_PRISTINE_NOTE=""
+if [ -d "$BUNDLE/.git" ] && [ -s "${RATIONALDEV_MODELS:-/nonexistent-override}" ]; then
+  if [ -n "$(git -C "$BUNDLE" status --porcelain -- "harness/agents/$RUNNER" 2>/dev/null)" ]; then
+    OUTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/rationaldev/projections/$RUNNER"
+    rm -rf "$OUTDIR"; mkdir -p "$(dirname "$OUTDIR")"
+    cp -R "$BUNDLE/harness/agents/$RUNNER" "$OUTDIR"
+    [ -L "$AGENTS_DST" ] && rm -f "$AGENTS_DST"
+    { [ -d "$AGENTS_DST" ] && [ ! -L "$AGENTS_DST" ]; } && rm -rf "$AGENTS_DST"
+    mkdir -p "$(dirname "$AGENTS_DST")"; ln -sfn "$OUTDIR" "$AGENTS_DST"
+    MODELS_PRISTINE_NOTE="проекции '$RUNNER' с override-моделями → $OUTDIR (клон pristine, симлинк перецелен)"
+  fi
+  # Восстановить ЛЮБУЮ генерённую грязь (проекции всех раннеров + контракт skills/roles) → клон снова pristine.
+  git -C "$BUNDLE" checkout -- harness/agents skills/roles 2>/dev/null || true
+fi
+
 MODELS_MSG="(node не найден)"
 if command -v node >/dev/null 2>&1; then
   # binding-валидация (opencode): резолвятся ли модели тиров/ролей к провайдеру в global. TIERS/BINDING —
@@ -220,7 +251,8 @@ if command -v node >/dev/null 2>&1; then
       "BINDING: fail"*) n="$(printf '%s' "$BIND" | sed -n 's/^BINDING: fail //p')"; MODELS_MSG="$MODELS_MSG · binding: ✗ ($n висячих — см. выше; настрой провайдера/модели в ~/.config/opencode)" ;;
     esac
   else
-    MODELS_MSG="$(node -e 'const fs=require("fs");const c=(JSON.parse(fs.readFileSync(process.argv[1],"utf8"))[process.argv[2]]||{});const t=(c.tiers||{});const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)' "$BUNDLE/harness/models.config.json" "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
+    # override-merged (loadModelsConfig учитывает RATIONALDEV_MODELS) — показываем РЕАЛЬНЫЕ модели, не клон-дефолт.
+    MODELS_MSG="$(node -e 'import("'"$BUNDLE"'/harness/lib/models-config.mjs").then(({loadModelsConfig})=>{const c=loadModelsConfig("'"$BUNDLE"'/harness")[process.argv[1]]||{};const t=c.tiers||{};const f=v=>v||"(наследует)";process.stdout.write(`large=${f(t.large)} small=${f(t.small)}`)})' "$RUNNER" 2>/dev/null || echo "см. harness/models.config.json")"
   fi
 fi
 
@@ -228,9 +260,10 @@ echo "rationaldev harness → $RUNNER ($SCOPE)"
 echo "  agents/roles: $AGENTS_DST ($(count "$AGENTS_DST"))"
 echo "  skills:       $SKILLS_DST ($(count "$SKILLS_DST"))"
 echo "  models:       $MODELS_MSG (2 тира: large=суждение · small=исполнение)"
-if [ "$RUNNER" = opencode ] && [ -n "${RATIONALDEV_MODELS:-}" ]; then
+if [ -n "${RATIONALDEV_MODELS:-}" ]; then
   echo "  models-override: $RATIONALDEV_MODELS (клон pristine)"
-  [ -n "$RD_MODELS_DEFAULTED" ] && echo "                → добавь в профиль, чтобы opencode/rationaldev update его видели: export RATIONALDEV_MODELS=$RATIONALDEV_MODELS"
+  [ -n "$MODELS_PRISTINE_NOTE" ] && echo "                → $MODELS_PRISTINE_NOTE"
+  [ -n "$RD_MODELS_DEFAULTED" ] && echo "                → добавь в профиль, чтобы раннер/rationaldev update его видели: export RATIONALDEV_MODELS=$RATIONALDEV_MODELS"
 fi
 echo "  instructions: $INSTR_NOTE"
 echo "  hard mode:    $HARDMSG"
