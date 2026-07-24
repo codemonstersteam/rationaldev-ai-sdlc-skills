@@ -14,9 +14,9 @@
 //   --declarations (рунг 1, у wirth-slicer) — проверить, что КАЖДЫЙ срез объявил `Owns package:
 //                  internal/<slug>/` (не layer-keyed); paths-режим (рунг 2/3, moduledesigner/mills) — по умолчанию.
 // exit 0 = slice-aligned; exit 1 = layer-keyed протечка / необъявленная граница (stderr).
-import { readFileSync, readdirSync, existsSync, statSync } from "node:fs"
+import { readFileSync, readdirSync, existsSync, statSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { validateLayout, validateSliceDeclarations } from "./lib/validators.mjs"
+import { validateLayout, validateSliceDeclarations, emitLayoutDebt } from "./lib/validators.mjs"
 
 const argv = process.argv.slice(2)
 const declMode = argv.includes("--declarations") || argv.includes("--decl")
@@ -70,6 +70,25 @@ if (existsSync(internalDir))
   }
 
 if (!paths.size) {
+  // Инвариант НЕ действует, когда репозиторий не по стандарту — нет ни каталога internal/, ни
+  // internal-путей. Тихий exit 0 здесь = ложное «всё в порядке»; вместо него — явная печать и
+  // тикет-долг в /debt/ (идемпотентно), прогон продолжается (не блокируем).
+  if (!existsSync(internalDir)) {
+    console.log("validate-layout: инвариант раскладки не действует — репозиторий не по стандарту (нет internal/<slug>/)")
+    const debtDir = join(root, "debt")
+    const existing = existsSync(debtDir)
+      ? readdirSync(debtDir).filter((f) => /^task-\d+\.md$/.test(f)).map((f) => ({ name: f, content: readFileSync(join(debtDir, f), "utf8") }))
+      : []
+    const emit = emitLayoutDebt(existing, "layout-non-standard")
+    if (emit) {
+      if (!existsSync(debtDir)) mkdirSync(debtDir, { recursive: true })
+      writeFileSync(join(debtDir, emit.name), emit.body)
+      console.log(`validate-layout: выпущен тикет-долг /debt/${emit.name} — привести раскладку к internal/<slug>/`)
+    } else {
+      console.log("validate-layout: тикет-долг раскладки уже есть в /debt/ — не дублирую (идемпотентно)")
+    }
+    process.exit(0) // долг записан, прогон не заложник чужой раскладки
+  }
   console.log("validate-layout: нет code-путей internal/… для проверки (нечего валидировать)")
   process.exit(0)
 }
