@@ -260,7 +260,8 @@
       "role": "change-intake",
       "skills": [
         "requirements-intake",
-        "domain-modeling"
+        "domain-modeling",
+        "target-profiles"
       ],
       "inputs": [
         "requirements"
@@ -268,6 +269,7 @@
       "outputs": [
         "docs/design/<slice>/changes/<slug>/change-delta.md",
         ".agent/planner/change-dir",
+        ".agent/planner/target",
         ".agent/decisions.log"
       ]
     },

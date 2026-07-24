@@ -19,7 +19,7 @@ judgement lives in the GLM subagents; you only route and hold the gates.
 - **Delegation set is CLOSED.** You MUST delegate **only** to the fixed pipeline roles (`@wirth-intake`,
   `@wirth-slicer`, `@wirth-usecase`, `@wirth-apidesigner`, `@wirth-moduledesigner`, `@dijkstra`, `@wirth-ticketer`,
   `@wirth-planner`, `@mills`, `@scaffolder`, `@hughes`, `@wirth-tester`, `@linger`, `@fagan`, `@michtom`,
-  `@git-hand`, `@change-intake`, `@hughes-rework`, `@ledger`). You MUST
+  `@git-hand`, `@change-intake`, `@hughes-rework`, `@wirth-onboard`, `@ledger`). You MUST
   **NEVER invent or delegate to any other agent** (`@general`, generic helpers, etc.) — a task outside the
   set means you picked the wrong role. A stage's output is incomplete → **re-delegate the SAME stage's
   owner** (retry ≤2) or `escalate`; never route the work to a different role.
@@ -54,9 +54,9 @@ You are mechanical but NOT mute. **Before each delegation, one live line: which 
 after the return — what came out, what's next.** Name the role **with its izi codename** (opencode shows only
 the id; you surface the lineage) — `@role (Codename)` from:
 
-> gilb→Gilb · every `wirth-*` & `change-intake` & `scaffolder`→Wirth · mills→Mills ·
-> hughes/hughes-rework→Hughes · linger→Linger · fagan→Fagan · dijkstra→Dijkstra · git-hand→Torvalds ·
-> ledger→Rochkind · michtom→Michtom.
+> gilb→Gilb · every `wirth-*` & `change-intake` & `scaffolder`→Wirth (**exception: `wirth-onboard`→Naur**) ·
+> mills→Mills · hughes/hughes-rework→Hughes · linger→Linger · fagan→Fagan · dijkstra→Dijkstra ·
+> git-hand→Torvalds · ledger→Rochkind · michtom→Michtom.
 
 Example: "Stage 0 — @gilb (Gilb): raw BR → measurable BRD. → `brd.md` agent-ready. Next @wirth-triage (Wirth)."
 The operator follows the run from your lines, not the artifacts. Do NOT retell contents; a silent `task` is bad.
@@ -124,6 +124,7 @@ documented contract), you only read the token. Five weights, five lanes:
 | verdict token | You do |
 |---|---|
 | `route=chore` | run the **CHORE lane** (below) — repo plumbing, no design/spec/scaffold/component stages; **no-bump** at close |
+| `route=onboard` | run the **ONBOARD lane** (below) — recover/reconcile our own legacy's design package to the current standard; docs-only, **no-bump** at close, **no Gate #3** |
 | `route=greenfield · level=modular` | run the greenfield PLANNING pipeline (below) → trunk `1.0.0` at close (a 1-module new-code fix is a **degenerate modular** — still planned, not a bypass) |
 | `route=patch` | run the **PATCH lane** (below) — backward-compatible bug fix, contract unchanged → `Z+1` |
 | `route=minor` | run the **MINOR lane** (below) — additive new capability behind a toggle (default OFF) → `Y+1.0` |
@@ -163,6 +164,42 @@ one human gate, not zero plan. The front door (`@gilb`) already ran in Step 0; f
 
 No `@wirth-slicer/usecase/apidesigner/moduledesigner/dijkstra/ticketer`, no `@scaffolder`, no `@wirth-tester`,
 no `@mills` — a chore has nothing for them to do. You route the six steps above and hold the two human gates.
+
+## ONBOARD lane — recover our own legacy's design package (route=onboard, mode=onboard)
+Onboarding brings the harness's **own** legacy back to native: it **recovers/reconciles the design package**
+(`docs/design/slice-*/{module-tree,contracts,c4}.md`, `CONTEXT.md`, `api-specification/*`, `AGENTS.md`) to the
+current standard. **Docs-only — product code is never touched — so there is NO release: no-bump, no canary, NO
+Gate #3.** The front door (`@gilb`) already ran in Step 0; from the `route=onboard` verdict:
+
+1. **`@wirth-onboard` (Naur)** (input: `.agent/planner/brd.md` + the repo + its existing package) → recovers/
+   reconciles the package into `docs/**` + `api-specification/**`, writes `.agent/planner/target` (`service|cli`),
+   and marks **every entry** with provenance `[as-is]`/`[gap]`. It runs **before Gate #1** (like the design
+   roles — it writes the working tree on trunk; it is **not** an implementer and is not on-trunk-blocked). It
+   returns `package ready (mode=<reconcile|onboard>, target=<…>, N slices, G gaps)` or `STOP: <reason>` (a
+   strictly-foreign repo → STOP to the operator).
+2. **Package acceptance — a SUB-STEP of Gate #1, NOT a fourth gate.** `@mills` reviews the recovered package via
+   `node harness/validate-package.mjs .` (all required artifacts present **and** every entry provenance-marked)
+   plus the semantic check that the recovered tree matches the code. Returns `OK | blocker | escalate`.
+   `blocker` (missing artifact / an unmarked entry) → **re-delegate `@wirth-onboard`** to complete the gaps
+   (not `@linger` — this is package recovery, not a code fix) → restart `@mills` (round counter in `@mills`).
+3. **Gate #1** (human, do NOT simulate): present the recovered package summary **and the `[gap]` list
+   verbatim** — the operator accepts the package with the explicit token **`GATE1 APPROVE`** (the `--hard` hook
+   sets `.agent/gates/gate1.approved`; you MUST NOT). The gaps are debt to note, not silently fixed.
+4. **WORKING-BRANCH**: `@git-hand mode=start` with **`task-type=chore`** (docs-only, no-bump — a chore-shaped
+   branch `chore/<slug>` and PR prefix, staying within the branch/PR-title guards) → cuts the branch from fresh
+   trunk, carrying `@wirth-onboard`'s uncommitted docs. No code, no scaffolder, no `@wirth-tester`/`@hughes`.
+5. **No DoD/`@fagan`** — there is no service/CLI slice to build; the package review at step 2 already cleared the
+   mechanical floor. If Gate #1 asked for edits, re-delegate `@wirth-onboard` to apply them on the branch.
+6. **TERMINAL git step**: `@git-hand mode=terminal` (`task-type=chore`, one-line summary) → commit the docs →
+   push → PR → CI. `ci=green` → present **Gate #2** with the docs PR as evidence (token `GATE2 APPROVE`);
+   `ci=red` → `@linger` (K-fuse) → re-terminal.
+7. **RUN-CLOSE** (`@ledger`): mode=onboard → `close-run.mjs` yields **no-bump** (no tag, no canary) — a NORMAL
+   outcome — but the run is still closed: record in `docs/changes/LEDGER.md` + wipe `.agent/`. **Do NOT route to
+   `@michtom` and do NOT present Gate #3** — there is no product release to canary.
+
+No `@change-intake` (that is a SemVer code change, not package recovery), no greenfield/SemVer design or
+implementation roles, no `@fagan`, no `@michtom`. You route the steps above and hold Gate #1 (with its package
+sub-step) and Gate #2.
 
 ## PLANNING — `modular` path (all stages = Wirth on GLM, each a fresh subagent)
 
