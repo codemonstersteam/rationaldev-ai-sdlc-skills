@@ -14,6 +14,9 @@ const runHook = (file, payload, env = {}) => {
   const r = spawnSync("node", [join(HOOKS, file)], { input: JSON.stringify(payload), env: { ...process.env, ...env } })
   return r.status
 }
+// stdout хука (диагностика оператору) — отдельным помощником: runHook отдаёт только код возврата.
+const hookOut = (file, payload, env = {}) =>
+  spawnSync("node", [join(HOOKS, file)], { input: JSON.stringify(payload), env: { ...process.env, ...env }, encoding: "utf8" }).stdout || ""
 const task = (role) => ({ tool_input: { subagent_type: role } })
 const bash = (command) => ({ tool_input: { command } })
 
@@ -144,6 +147,11 @@ const adir2 = await mkdtemp(join(tmpdir(), "claude-approve2-"))
 const marker2 = join(adir2, ".agent", "gates", "gate1.approved")
 runHook("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir2 })
 assert.ok(!existsSync(marker2), "токен без PLAN.md → маркера нет (план не готов)"); pass++
+// МОЛЧАНИЕ — БАГ (прогон pinout-asyncapi): токен принят, маркера нет, причина не названа — оператор
+// расследует руками. Хук обязан назвать недостающий артефакт.
+const quiet = hookOut("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir2 })
+assert.match(quiet, /GATE1 APPROVE принят/, "хук объясняет, почему маркера нет"); pass++
+assert.match(quiet, /plan-review\.md/, "и называет недостающий артефакт"); pass++
 await rm(adir2, { recursive: true, force: true })
 // токен + готовый план → маркер создан
 runHook("gate-approve.mjs", { prompt: "GATE1 APPROVE slice-x" }, { CLAUDE_PROJECT_DIR: adir })
@@ -161,6 +169,8 @@ const g2dir = await mkdtemp(join(tmpdir(), "claude-gate2-"))
 const m2 = join(g2dir, ".agent", "gates", "gate2.approved")
 runHook("gate-approve.mjs", { prompt: "GATE2 APPROVE #42" }, { CLAUDE_PROJECT_DIR: g2dir })
 assert.ok(!existsSync(m2), "токен без gate1/ветки → маркера нет (мержить нечего)"); pass++
+assert.match(hookOut("gate-approve.mjs", { prompt: "GATE2 APPROVE #42" }, { CLAUDE_PROJECT_DIR: g2dir }),
+  /GATE2 APPROVE принят.*маркер не поставлен/s, "и здесь причина названа вслух"); pass++
 await mkdir(join(g2dir, ".agent", "gates"), { recursive: true })
 await writeFile(join(g2dir, ".agent", "gates", "gate1.approved"), "ok\n")
 await mkdir(join(g2dir, ".agent", "vcs"), { recursive: true })
@@ -206,4 +216,4 @@ assert.ok(existsSync(join(qdir, ".agent", "gates", "gate2.approved")), "выбо
 await rm(qdir, { recursive: true, force: true })
 
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/47 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore[dir-pointer] + poka-yoke[ticket+chore] + gate-write + GATE1/GATE2-APPROVE-токены[чат+меню] + provenance + @ledger/Gate #2)`)
+console.log(`PASS ${pass}/50 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore[dir-pointer] + poka-yoke[ticket+chore] + gate-write + GATE1/GATE2-APPROVE-токены[чат+меню] + provenance + @ledger/Gate #2)`)

@@ -46,6 +46,27 @@ for item in "$TMP"/* "$TMP"/.[!.]*; do
   if [ "$n" = "README.md" ] && [ -s "$DEST/README.md" ]; then
     echo "scaffold: сохраняю README.md дизайна (не перезаписываю шаблонной заглушкой)"; continue
   fi
+  # .gitignore — СЛИВАЕМ, не перезаписываем. Шаблонный игнор знает про свою форму (бинарники, go),
+  # но не знает про правила ПРОЕКТА. Перезапись сносила строки харнеса (.agent/, .claude/, harness,
+  # CLAUDE.md) — и состояние прогона с симлинками установки уезжало в PR через `git add -A`
+  # (наблюдение живого прогона pinout-asyncapi). Порядок: правила проекта сверху, шаблонные добавки снизу.
+  if [ "$n" = ".gitignore" ] && [ -s "$DEST/.gitignore" ]; then
+    NEW="$(mktemp)"
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -n "$line" ] || continue
+      case "$line" in \#*) continue ;; esac
+      grep -qxF "$line" "$DEST/.gitignore" || printf '%s\n' "$line" >> "$NEW"
+    done < "$item"
+    if [ -s "$NEW" ]; then
+      printf '\n# --- из шаблона (scaffold) ---\n' >> "$DEST/.gitignore"
+      cat "$NEW" >> "$DEST/.gitignore"
+      echo "scaffold: .gitignore слит (+$(wc -l < "$NEW" | tr -d ' ') строк шаблона; правила проекта сохранены)"
+    else
+      echo "scaffold: .gitignore проекта уже покрывает шаблонный — не трогаю"
+    fi
+    rm -f "$NEW"
+    continue
+  fi
   cp -R "$item" "$DEST/"
 done
 rm -rf "$TMP"
