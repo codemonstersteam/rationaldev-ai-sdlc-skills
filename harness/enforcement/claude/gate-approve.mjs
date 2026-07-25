@@ -15,6 +15,7 @@ import { join } from "node:path"
 import {
   isOperatorApproval, isGate2Approval, planReadyForApproval, currentGreenfieldSlices, mergeReadyForApproval,
   prRefFromText, gateMarkerContent, answerTextFromToolResponse, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR,
+  GATE_MARK, VCS_BRANCH_MARK,
   SLICES_MARK, CHANGE_DIR_MARK, CHORE_DIR_MARK, MODE_MARK,
 } from "../shared.mjs"
 
@@ -103,18 +104,29 @@ try {
         prompt,
         planHash: planHash(root),
       }))
+    } else {
+      // МОЛЧАНИЕ ЗДЕСЬ — БАГ. Оператор дал токен (нажал кнопку/напечатал), маркера нет, причина не
+      // названа: живой прогон встал, пока человек вручную не выяснил, что @mills положил вердикт мимо
+      // канонического пути. Говорим вслух — строка уходит в контекст (UserPromptSubmit) и в транскрипт.
+      console.log(`[rational] ${gate1 ? "GATE1" : "GATE2"} APPROVE принят, но план НЕ собран — маркер не поставлен. `
+        + `Нужен ${PLAN_REVIEW_MARK} (или PLAN.md/CHORE-PLAN.md текущей полосы). Повтори акцепт, когда артефакт на месте.`)
     }
   }
 
   // Gate #2 (мерж): валиден только когда работа дошла до мержа — Gate #1 пройден и ветка прогона есть.
   // Provenance — PR-референс из реплики оператора (вместо plan_hash).
-  if (gate2 && mergeReadyForApproval(existsFn)) {
-    put("gate2.approved", gateMarkerContent({
-      timestamp: new Date().toISOString(),
-      source,
-      prompt,
-      ref: prRefFromText(prompt),
-    }))
+  if (gate2) {
+    if (mergeReadyForApproval(existsFn)) {
+      put("gate2.approved", gateMarkerContent({
+        timestamp: new Date().toISOString(),
+        source,
+        prompt,
+        ref: prRefFromText(prompt),
+      }))
+    } else {
+      console.log("[rational] GATE2 APPROVE принят, но работа до мержа не дошла — маркер не поставлен. "
+        + `Нужны ${GATE_MARK} и ${VCS_BRANCH_MARK}.`)
+    }
   }
   process.exit(0)
 } catch {
