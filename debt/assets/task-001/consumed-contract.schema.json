@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codemonsters.team/pinout-asyncapi/consumed-contract.schema.json",
+  "title": "pinout-asyncapi consumed-contract (consumer-side input artifact)",
+  "description": "The consumer's captured usage of a provider: which channels it talks on, and per direction which message fields it actually SENDS and READS — typed from the provider spec at capture time — plus a provenance stamp. Produced by the E-harness `component-tests` skill from the consumer's stubs and tests; consumed by `pinout-asyncapi validate` via config.consumer.consumed_contract_path. This is NOT an AsyncAPI document and NOT a raw stub: it is a schema-shaped projection. Owned by pinout-asyncapi because the async form (channel x direction) does not follow from the sync twin's form (path+method). FROZEN: this is the consumer-side input contract of the service.",
+  "x-frozen": "2026-07-25",
+  "x-producer": "E-harness skill `component-tests` (see pinout/docs/CONCEPT.md §7)",
+  "x-consumer": "pinout-asyncapi validate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "consumer", "provenance", "channels"],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Contract-schema semver."
+    },
+    "consumer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Consumer service name. Must equal config.consumer.name; mismatch -> PARSE_ERROR (exit 3)."
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Which provider spec this contract was captured from. Echoed verbatim into report.provenance so pinout-netlist can track freshness and re-check when the provider changes. Stamped at generation time — never hand-written.",
+      "additionalProperties": false,
+      "required": ["provider", "provider_version", "captured_hash"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1, "description": "Provider name at capture time." },
+        "provider_version": { "type": "string", "minLength": 1, "description": "Version stamp of the source spec (AsyncAPI info.version or the commit that produced it)." },
+        "captured_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "sha256 of the captured provider spec bytes." }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per channel the consumer talks on. Every address listed in config.consumer.channels must appear here.",
+      "items": { "$ref": "#/$defs/channel" }
+    }
+  },
+  "$defs": {
+    "channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "protocol"],
+      "description": "A channel the consumer uses. At least one of `sends` / `receives` must be non-empty — a channel with neither direction is meaningless and is a CONFIG-side defect of the generator. The communication pattern is DERIVED, never declared: sends+receives = request-reply (rule R9 applies per message), sends only = fire-and-forget, receives only = publish-subscribe (docs/concept.md §2).",
+      "properties": {
+        "address": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Channel identity: the AsyncAPI `channel.address` of the provider channel, or the channel key when the spec omits `address`. Matched against the provider spec by rule R1."
+        },
+        "protocol": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Transport protocol as captured from the provider's `channel.servers -> server.protocol`, e.g. `kafka`, `amqp`, `mqtt`, `ws`, `ibmmq`, `http`. Compared by rule R2: a kafka topic and an amqp queue at the same address are not the same channel."
+        },
+        "sends": {
+          "type": "array",
+          "description": "Messages the consumer PUBLISHES to this channel. Checked CONTRAVARIANTLY against the provider's `action: receive` operation on the same channel: required(provider) subset-of fields(sends) — rule R5.",
+          "items": { "$ref": "#/$defs/message" }
+        },
+        "receives": {
+          "type": "array",
+          "description": "Messages the consumer CONSUMES from this channel. Checked COVARIANTLY against the provider's `action: send` operation on the same channel: fields(receives) subset-of properties(provider) — rule R6. This is the direction that catches provider field removal.",
+          "items": { "$ref": "#/$defs/message" }
+        }
+      },
+      "anyOf": [
+        { "required": ["sends"] },
+        { "required": ["receives"] }
+      ]
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "description": "One message on one direction of one channel.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pairing key: the key of this message in the provider CHANNEL's `messages` map (e.g. `getBalanceRequest`), NOT the message `name` field and NOT the components.messages key. Rationale: the parser overwrites Message.Name with a codegen identifier during Process(), so the map key is the only stable spec-authored identifier (docs/concept.md D8). Consumer names a message absent from the provider direction -> MESSAGE_NOT_IN_PROVIDER (rule R4). Printed in report `location`."
+        },
+        "content_type": {
+          "type": "string",
+          "description": "Effective content type at capture time (message.contentType, else the spec's defaultContentType). Compared by rule R8, and ONLY when the consumer declares it: a provider content type the consumer never pinned is not a violation. Absent here -> not checked."
+        },
+        "correlation_id_location": {
+          "type": "string",
+          "description": "Runtime expression of the AsyncAPI `correlationId.location`, e.g. `$message.header#/correlationId`. Compared by rule R9, and ONLY when the consumer declares it (the consumer actually correlates); then the provider message must declare an equal `correlationId.location`. Absent here -> not checked, because a provider correlationId the consumer ignores is a legal superset. NOT gated on the communication pattern: AsyncAPI 3.0 request-reply usually spans two different channel addresses, so a per-channel both-directions test would never fire (docs/concept.md D9)."
+        },
+        "payload": {
+          "$ref": "#/$defs/schema",
+          "description": "The message body surface the consumer actually uses: for `sends` — the fields it populates; for `receives` — the fields it reads. Not the provider's full schema."
+        },
+        "headers": {
+          "$ref": "#/$defs/schema",
+          "description": "The message header surface the consumer actually uses. Compared by exactly the same rules as `payload`."
+        }
+      }
+    },
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Captured field surface — a deliberately small subset of JSON Schema. NOTE the absence of `required`: a consumed-contract states what the consumer SENDS and READS, not what it demands. `properties` IS the used-field set, and that set is what rules R5/R6 compare; types come from the provider spec at capture time and feed rule R7. Adding `required` here would create a field no rule reads.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["object", "array", "string", "integer", "number", "boolean", "null"],
+          "description": "JSON Schema type. Compared by rule R7."
+        },
+        "format": {
+          "type": "string",
+          "description": "JSON Schema format as typed from the provider spec, e.g. `int64`, `date-time`. Compared by rule R7 alongside `type`."
+        },
+        "enum": {
+          "type": "array",
+          "description": "Captured enum values, when the provider field was an enum. Informational in MVP — not compared (docs/concept.md §6)."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Used fields of an object, recursively. Present when type == object.",
+          "additionalProperties": { "$ref": "#/$defs/schema" }
+        },
+        "items": {
+          "$ref": "#/$defs/schema",
+          "description": "Element schema of an array, recursively. Present when type == array."
+        }
+      }
+    }
+  }
+}

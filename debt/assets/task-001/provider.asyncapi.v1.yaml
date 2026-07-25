@@ -1,0 +1,215 @@
+asyncapi: 3.0.0
+info:
+  title: wallet-balance
+  version: 1.4.0
+  description: |
+    Базовая (master) спека ПОСТАВЩИКА для сухой трассировки алгоритма — см. ../EMULATION.md.
+    Намеренно БОГАЧЕ, чем consumed-contract потребителя: несёт поля, которых потребитель не шлёт и
+    не читает. Совместимый прогон на этой паре доказывает, что легальное расширение поставщика не
+    ломает потребителя — то, на чём ложно срабатывала v1 с идентичностью множеств.
+defaultContentType: application/json
+
+servers:
+  broker:
+    host: kafka:9092
+    protocol: kafka
+    description: Основная шина
+
+channels:
+  balanceRequest:
+    address: WALLET.BALANCE.REQUEST
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      getBalanceRequest:
+        $ref: '#/components/messages/GetBalanceRequest'
+
+  balanceResponse:
+    address: WALLET.BALANCE.RESPONSE
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      getBalanceResponse:
+        $ref: '#/components/messages/GetBalanceResponse'
+
+  auditLog:
+    address: WALLET.AUDIT
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      auditEvent:
+        $ref: '#/components/messages/AuditEvent'
+
+  ledgerEvents:
+    address: WALLET.LEDGER.EVENTS
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      ledgerPosted:
+        $ref: '#/components/messages/LedgerPosted'
+
+  fxRates:
+    address: WALLET.FX.RATES
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      fxRateChanged:
+        $ref: '#/components/messages/FxRateChanged'
+
+operations:
+  # Потребитель ШЛЁТ запрос -> у поставщика это action: receive (инверсия направлений)
+  receiveBalanceRequest:
+    action: receive
+    channel:
+      $ref: '#/channels/balanceRequest'
+    reply:
+      channel:
+        $ref: '#/channels/balanceResponse'
+      messages:
+        - $ref: '#/components/messages/GetBalanceResponse'
+
+  # Потребитель ЧИТАЕТ ответ -> у поставщика это action: send
+  sendBalanceResponse:
+    action: send
+    channel:
+      $ref: '#/channels/balanceResponse'
+
+  # Fire-and-forget: потребитель шлёт аудит, ответа нет.
+  # Операция БЕЗ messages — по AsyncAPI 3.0 это «все сообщения канала» (concept.md D3).
+  receiveAudit:
+    action: receive
+    channel:
+      $ref: '#/channels/auditLog'
+
+  # Publish-subscribe: поставщик вещает, потребитель только читает
+  sendLedgerPosted:
+    action: send
+    channel:
+      $ref: '#/channels/ledgerEvents'
+
+  # Канал вне consumer.channels -> попадёт в uncovered_channels[], на вердикт не влияет
+  sendFxRates:
+    action: send
+    channel:
+      $ref: '#/channels/fxRates'
+
+components:
+  messages:
+    GetBalanceRequest:
+      name: GetBalanceRequest
+      contentType: application/json
+      correlationId:
+        location: $message.header#/correlationId
+      headers:
+        type: object
+        required: [correlationId]
+        properties:
+          correlationId:
+            type: string
+          traceparent:
+            type: string
+      payload:
+        $ref: '#/components/schemas/BalanceRequestPayload'
+
+    GetBalanceResponse:
+      name: GetBalanceResponse
+      contentType: application/json
+      correlationId:
+        location: $message.header#/correlationId
+      headers:
+        type: object
+        required: [correlationId]
+        properties:
+          correlationId:
+            type: string
+      payload:
+        $ref: '#/components/schemas/BalanceResponsePayload'
+
+    AuditEvent:
+      name: AuditEvent
+      contentType: application/json
+      payload:
+        type: object
+        required: [eventId, actor]
+        properties:
+          eventId:
+            type: string
+          actor:
+            type: string
+          occurredAt:
+            type: integer
+            format: int64
+
+    LedgerPosted:
+      name: LedgerPosted
+      contentType: application/json
+      payload:
+        type: object
+        required: [entryId, amount]
+        properties:
+          entryId:
+            type: string
+          amount:
+            type: number
+            format: double
+          tags:
+            type: array
+            items:
+              type: string
+          # поле, которого потребитель не читает — легальное расширение поставщика
+          postedBy:
+            type: string
+
+    FxRateChanged:
+      name: FxRateChanged
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          pair:
+            type: string
+          rate:
+            type: number
+
+  schemas:
+    BalanceRequestPayload:
+      type: object
+      required: [clientId, requestId]
+      properties:
+        clientId:
+          type: string
+        requestId:
+          type: string
+        # необязательное поле: потребитель его не шлёт — контравариантность это разрешает
+        locale:
+          type: string
+
+    BalanceResponsePayload:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/BalanceData'
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    BalanceData:
+      type: object
+      required: [balance, currency]
+      properties:
+        balance:
+          type: number
+          format: double
+        currency:
+          type: string
+        # поле, которого потребитель не читает — легальное расширение поставщика
+        updatedAt:
+          type: integer
+          format: int64
