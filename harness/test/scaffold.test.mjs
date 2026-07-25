@@ -25,11 +25,13 @@ function template(ignoreLines, { placeholder = null } = {}) {
     mkdirSync(join(dir, "internal", placeholder, "io"), { recursive: true })
     mkdirSync(join(dir, "internal", "shared", "config"), { recursive: true })
     mkdirSync(join(dir, "cmd", "app"), { recursive: true })
-    writeFileSync(join(dir, "internal", placeholder, "run.go"), `package ${placeholder}\n`)
+    writeFileSync(join(dir, "internal", placeholder, "run.go"),
+      `package ${placeholder}\n\n// Док: https://${placeholder}.com/pkg — строчная, слепой заменой её ломать нельзя.\ntype Result struct{ Code int }\n\nfunc Head() Result { return Result{} }\n`)
     writeFileSync(join(dir, "internal", placeholder, "io", "io.go"), "package io\n")
     writeFileSync(join(dir, "internal", "shared", "config", "config.go"), "package config\n")
     writeFileSync(join(dir, "cmd", "app", "main.go"),
-      `package main\n\nimport (\n\t"tpl/internal/${placeholder}"\n\txio "tpl/internal/${placeholder}/io"\n\t"tpl/internal/shared/config"\n)\n`)
+      `package main\n\nimport (\n\t"tpl/internal/${placeholder}"\n\txio "tpl/internal/${placeholder}/io"\n\t"tpl/internal/shared/config"\n)\n\n`
+      + `// см. https://${placeholder}.com/docs\nfunc main() { _ = ${placeholder}.Head() }\n`)
   }
   git("init", "--quiet")
   git("config", "user.email", "t@t"); git("config", "user.name", "t")
@@ -122,5 +124,32 @@ test("scaffold: пакет уже названный срезом не трог�
   run(dest, tpl)
   assert.ok(existsSync(join(dest, "internal", "validate", "io")))
   assert.match(readFileSync(join(dest, "cmd", "app", "main.go"), "utf8"), /internal\/validate"/)
+  rmSync(tpl, { recursive: true, force: true }); rmSync(dest, { recursive: true, force: true })
+})
+
+test("scaffold: имя пакета едет вместе с каталогом (package <ph> → package <slug>)", () => {
+  const tpl = template(["*.test"], { placeholder: "example" })
+  const dest = mkdtempSync(join(tmpdir(), "scaffold-pkg-"))
+  slices(dest, ["validate"])
+
+  run(dest, tpl)
+  const moved = readFileSync(join(dest, "internal", "validate", "run.go"), "utf8")
+  const main = readFileSync(join(dest, "cmd", "app", "main.go"), "utf8")
+  assert.match(moved, /^package validate$/m, "каталог internal/validate/ с `package example` внутри читается криво")
+  assert.match(main, /validate\.Head\(\)/, "квалифицированные обращения переписаны — иначе не соберётся")
+  assert.doesNotMatch(main, /\bexample\.Head/)
+  // 🔴 ловушка слепой замены: строчная `example.com` — не идентификатор Go, трогать нельзя
+  assert.match(moved, /https:\/\/example\.com\/pkg/, "URL в комментарии не должен пострадать")
+  assert.match(main, /https:\/\/example\.com\/docs/)
+  rmSync(tpl, { recursive: true, force: true }); rmSync(dest, { recursive: true, force: true })
+})
+
+test("scaffold: подпакеты (io/logic/...) сохраняют свои имена — переименовывается только верхний", () => {
+  const tpl = template(["*.test"], { placeholder: "example" })
+  const dest = mkdtempSync(join(tmpdir(), "scaffold-pkg2-"))
+  slices(dest, ["validate"])
+
+  run(dest, tpl)
+  assert.match(readFileSync(join(dest, "internal", "validate", "io", "io.go"), "utf8"), /^package io$/m)
   rmSync(tpl, { recursive: true, force: true }); rmSync(dest, { recursive: true, force: true })
 })

@@ -98,8 +98,16 @@ if [ -d "$DEST/internal" ] && [ -f "$SLICES" ]; then
         continue
       fi
       mv "$DEST/internal/$ph" "$DEST/internal/$SLUG"
+      # Путь импорта + САМО ИМЯ ПАКЕТА: каталог `internal/<slug>/` с `package <ph>` внутри собирается
+      # (Go не требует совпадения), но читается криво и ловит замечания линтеров. Правим и обращения
+      # `<ph>.Идентификатор` — ТОЛЬКО с заглавной: это экспорт Go, а `example.com` в комментарии/URL
+      # (строчная) остаётся нетронутым. Переименование каталога — механика, не суждение.
       find "$DEST" \( -path "$DEST/.git" -o -path "$DEST/harness" \) -prune -o -name '*.go' -print 2>/dev/null | while IFS= read -r f; do
-        perl -i -pe "s#internal/\Q$ph\E#internal/$SLUG#g" "$f" 2>/dev/null || true
+        perl -i -pe "s#internal/\Q$ph\E#internal/$SLUG#g; s#\b\Q$ph\E\.([A-Z])#$SLUG.\$1#g" "$f" 2>/dev/null || true
+      done
+      for f in "$DEST/internal/$SLUG"/*.go; do
+        [ -f "$f" ] || continue
+        perl -i -pe "s#^package \Q$ph\E\s*\$#package $SLUG#" "$f" 2>/dev/null || true
       done
       echo "scaffold: плейсхолдер internal/$ph/ → internal/$SLUG/ (закон раскладки: internal/<slug>/ | internal/shared/)"
     else
