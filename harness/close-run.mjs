@@ -83,13 +83,16 @@ export function releaseNotes({ tag, reason, prUrl }) {
 }
 
 // B4 — снятие долга при закрытии. Прогон закрывает долг ТОЛЬКО если нёс маркер resolves-debt=task-NNN
-// И мерж подтверждён: исчезновение /debt/task-NNN.md = доказательство оплаты (факт остаётся в LEDGER).
-// Без маркера/битый маркер → долги не трогаем. Возвращает rel-путь файла долга или null.
+// И мерж подтверждён: исчезновение долга = доказательство оплаты (факт остаётся в журнале).
+// Без маркера/битый маркер → долги не трогаем. Возвращает СПИСОК rel-путей (пустой = не трогаем):
+// сам тикет `debt/<id>.md` И его вендоренные ассеты `debt/assets/<id>/` — приёмочный вход тикета
+// (замороженные схемы, эталоны). Раньше возвращался один путь, и ассеты оставались сиротами:
+// долг «оплачен», а его килобайты входа висят в репо навсегда.
 export function debtToRemove({ resolvesDebt, merged }) {
-  if (!merged) return null
+  if (!merged) return []
   const id = String(resolvesDebt || "").trim()
-  if (!/^task-\d{3,}$/.test(id)) return null
-  return `debt/${id}.md`
+  if (!/^task-\d{3,}$/.test(id)) return []
+  return [`debt/${id}.md`, `debt/assets/${id}`]
 }
 
 // ── side-effecting shell (only reached via CLI) ──────────────────────────────────
@@ -212,8 +215,9 @@ if (isMain) {
   }
 
   // B4 — снятие долга (после записи в LEDGER, вместе с вайпом). Мерж здесь уже доказан гардами/форжем.
-  const debtRel = debtToRemove({ resolvesDebt: read(".agent/planner/resolves-debt").trim(), merged: true })
-  if (debtRel && existsSync(join(ROOT, debtRel))) rmSync(join(ROOT, debtRel), { force: true })
+  const debtPaths = debtToRemove({ resolvesDebt: read(".agent/planner/resolves-debt").trim(), merged: true })
+    .filter((rel) => existsSync(join(ROOT, rel)))
+  for (const rel of debtPaths) rmSync(join(ROOT, rel), { recursive: true, force: true })
 
   // ACT 3 — wipe (last: acts 1–2 read what this erases). B1-инверсия: сносим .agent/ ЦЕЛИКОМ, кроме
   // белого списка (wipeTargets по фактическим записям — новые папки роли подметаются без правки списка).
@@ -223,9 +227,9 @@ if (isMain) {
   }
   if (existsSync(join(ROOT, ".agent/gates"))) stop("run-state wipe incomplete")
 
-  const out = { closed: true, tag: tag || null, reason, ledger: `refs/notes/${LEDGER_NOTES_REF}@${mergeSha.slice(0, 12)}`, ledgerPushed, released, debtCleared: !!debtRel, wiped: true, slug }
+  const out = { closed: true, tag: tag || null, reason, ledger: `refs/notes/${LEDGER_NOTES_REF}@${mergeSha.slice(0, 12)}`, ledgerPushed, released, debtCleared: debtPaths, wiped: true, slug }
   if (has("--json")) console.log(JSON.stringify(out))
-  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger note ${ledgerPushed ? "pushed" : "local only (NOT pushed)"}, release ${released ? "published" : "skipped"}${debtRel ? `, debt ${debtRel} cleared` : ""}, run-state wiped`)
+  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger note ${ledgerPushed ? "pushed" : "local only (NOT pushed)"}, release ${released ? "published" : "skipped"}${debtPaths.length ? `, debt ${debtPaths.join(" + ")} cleared` : ""}, run-state wiped`)
   process.exit(0)
 }
 

@@ -95,22 +95,24 @@ test("B3 releaseNotes: причина бампа + ссылка на PR", () => 
 })
 
 // ── B4 · снятие долга при закрытии ────────────────────────────────────────────────
-test("B4 debtToRemove: маркер resolves-debt + мерж → путь /debt/task-NNN.md", () => {
-  assert.equal(debtToRemove({ resolvesDebt: "task-042", merged: true }), "debt/task-042.md")
+test("B4 debtToRemove: маркер resolves-debt + мерж → тикет И его вендоренные ассеты", () => {
+  assert.deepEqual(debtToRemove({ resolvesDebt: "task-042", merged: true }),
+    ["debt/task-042.md", "debt/assets/task-042"],
+    "ассеты (замороженный вход приёмки) — часть долга; иначе они остаются сиротами после оплаты")
 })
 
 test("B4 debtToRemove: без маркера → долги не трогаем (null)", () => {
-  assert.equal(debtToRemove({ resolvesDebt: "", merged: true }), null)
-  assert.equal(debtToRemove({ merged: true }), null)
+  assert.deepEqual(debtToRemove({ resolvesDebt: "", merged: true }), [])
+  assert.deepEqual(debtToRemove({ merged: true }), [])
 })
 
 test("B4 debtToRemove: битый маркер → null (не гадаем путь)", () => {
-  assert.equal(debtToRemove({ resolvesDebt: "task-x", merged: true }), null)
-  assert.equal(debtToRemove({ resolvesDebt: "../etc/passwd", merged: true }), null)
+  assert.deepEqual(debtToRemove({ resolvesDebt: "task-x", merged: true }), [])
+  assert.deepEqual(debtToRemove({ resolvesDebt: "../etc/passwd", merged: true }), [])
 })
 
 test("B4 debtToRemove: мерж не подтверждён → долг цел даже с маркером", () => {
-  assert.equal(debtToRemove({ resolvesDebt: "task-042", merged: false }), null)
+  assert.deepEqual(debtToRemove({ resolvesDebt: "task-042", merged: false }), [])
 })
 
 // ── ACT 2 больше НЕ коммитит в транк: запись — заметка на merge-SHA ───────────────
