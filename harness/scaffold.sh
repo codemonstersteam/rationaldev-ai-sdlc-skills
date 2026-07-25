@@ -77,6 +77,38 @@ find "$DEST" \( -path "$DEST/.opencode" -o -path "$DEST/harness" -o -path "$DEST
   perl -i -pe "s/\Q$OLDMOD\E/$SVC/g" "$f" 2>/dev/null || true
 done
 
+# 3b) Плейсхолдер-пакеты шаблона → пакет ОБЪЯВЛЕННОГО среза. Шаблон универсален и про закон раскладки
+# харнеса не знает: `internal/example/` для validate-layout — layer-keyed протечка. Но он ЖИВОЙ: main.go
+# его импортирует, смоук @scaffolder на нём зелёный. Удалить = уронить смоук; оставить = гейт раскладки
+# красный на КАЖДОМ тикете до финальной сборки (наблюдение прогона pinout-asyncapi, @linger → escalate).
+# Поэтому переименовываем: дерево законно с первой минуты, поведение не меняется, тикеты наполняют уже
+# правильный пакет. Имя среза берём из `Owns package: internal/<slug>/` — источник тот же, что у валидатора.
+SLICES="$DEST/.agent/planner/slices.md"
+if [ -d "$DEST/internal" ] && [ -f "$SLICES" ]; then
+  SLUGS="$(grep -oE 'Owns package:[[:space:]]*.?[[:space:]]*internal/[a-z0-9_-]+' "$SLICES" 2>/dev/null | sed -E 's#.*internal/##' | sort -u || true)"
+  NSLUG="$(printf '%s' "$SLUGS" | grep -c . || true)"
+  for ph in $(ls "$DEST/internal" 2>/dev/null || true); do
+    [ -d "$DEST/internal/$ph" ] || continue
+    [ "$ph" = "shared" ] && continue
+    printf '%s\n' "$SLUGS" | grep -qx "$ph" && continue          # уже пакет объявленного среза
+    if [ "$NSLUG" = "1" ]; then
+      SLUG="$(printf '%s\n' "$SLUGS" | head -1)"
+      if [ -e "$DEST/internal/$SLUG" ]; then
+        echo "scaffold: ВНИМАНИЕ — плейсхолдер internal/$ph/ и уже существующий internal/$SLUG/; не сливаю, разбирайся вручную"
+        continue
+      fi
+      mv "$DEST/internal/$ph" "$DEST/internal/$SLUG"
+      find "$DEST" \( -path "$DEST/.git" -o -path "$DEST/harness" \) -prune -o -name '*.go' -print 2>/dev/null | while IFS= read -r f; do
+        perl -i -pe "s#internal/\Q$ph\E#internal/$SLUG#g" "$f" 2>/dev/null || true
+      done
+      echo "scaffold: плейсхолдер internal/$ph/ → internal/$SLUG/ (закон раскладки: internal/<slug>/ | internal/shared/)"
+    else
+      echo "scaffold: ВНИМАНИЕ — плейсхолдер internal/$ph/ вне объявленных срезов (объявлено: ${NSLUG:-0})."
+      echo "  validate-layout будет красным. Переименуй его в internal/<slug>/ объявленного среза или удали вместе с импортами."
+    fi
+  done
+fi
+
 # 4) Билд-проверка.
 cd "$DEST"
 if go build ./... 2>/tmp/scaffold-build.log; then
