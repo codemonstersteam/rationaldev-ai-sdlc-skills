@@ -14,6 +14,24 @@ elif [ -d "$SELF/.git" ]; then HOME_DIR="$SELF"
 else HOME_DIR="$HOME/.rationaldev"; fi
 CHANNEL="${RATIONALDEV_CHANNEL:-main}"
 
+# Детект логин-оболочки → ровно один из zsh|bash|fish|other (дублируется с bootstrap.sh — норма для двух sh-скриптов).
+# Приоритет: $RATIONALDEV_SHELL override > basename $SHELL > `ps -p $PPID -o comm=` (снять ведущий '-') > sh.
+rd_detect_shell() {
+  _sh="${RATIONALDEV_SHELL:-}"
+  if [ -z "$_sh" ] && [ -n "${SHELL:-}" ]; then _sh="$(basename "$SHELL")"; fi
+  if [ -z "$_sh" ]; then
+    _c="$(ps -p "$PPID" -o comm= 2>/dev/null | sed 's/^-//' || true)"
+    [ -n "$_c" ] && _sh="$(basename "$_c")"
+  fi
+  [ -z "$_sh" ] && _sh="sh"
+  case "$_sh" in
+    zsh)  echo zsh ;;
+    bash) echo bash ;;
+    fish) echo fish ;;
+    *)    echo other ;;
+  esac
+}
+
 update() {
   [ -d "$HOME_DIR/.git" ] || { echo "rationaldev: нет git-клона в $HOME_DIR (сначала bootstrap — см. backlog T1)"; exit 1; }
   # pristine: любые локальные правки (в т.ч. незакоммиченный models.config) → abort, чтобы ff-pull не конфликтовал
@@ -158,6 +176,23 @@ doctor() {
       else bad "settings.json: проводка хуков разошлась/отсутствует" "переустанови --hard: rationaldev install \"$proj\" claude"; fi
     fi
   fi
+
+  # PATH-проводка: rc обнаружённой оболочки содержит маркер (fish → fish_add_path) И `rationaldev` резолвится
+  dsh="$(rd_detect_shell)"
+  case "$dsh" in
+    zsh)   rcs="${ZDOTDIR:-$HOME}/.zshrc"; pat="# rationaldev bin (bootstrap)" ;;
+    bash)  rcs="$HOME/.bashrc $HOME/.bash_profile"; pat="# rationaldev bin (bootstrap)" ;;
+    fish)  rcs="$HOME/.config/fish/config.fish"; pat="fish_add_path" ;;
+    *)     rcs="$HOME/.profile"; pat="# rationaldev bin (bootstrap)" ;;
+  esac
+  found=0
+  for rc in $rcs; do
+    [ -f "$rc" ] && grep -qF "$pat" "$rc" 2>/dev/null && found=1
+  done
+  if [ "$found" = 1 ]; then ok "PATH-проводка ($dsh): маркер найден в rc"
+  else bad "PATH-проводка ($dsh): маркера нет в rc ($rcs)" "перезапусти bootstrap: RATIONALDEV_SHELL=$dsh sh \"$HOME_DIR/bootstrap.sh\""; fi
+  if command -v rationaldev >/dev/null 2>&1; then ok "команда rationaldev резолвится в PATH"
+  else bad "rationaldev не резолвится в PATH (проводка есть, сессия не перечитала rc?)" "перезапусти оболочку ($dsh) или открой новый терминал"; fi
 
   echo
   if [ "$red" -eq 0 ]; then echo "doctor: всё зелёное."; else echo "doctor: $red красных пункт(ов) — см. команды починки выше."; exit 1; fi

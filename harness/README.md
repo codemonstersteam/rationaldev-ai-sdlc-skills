@@ -87,8 +87,27 @@ override **дефолтится автоматически для всех ра�
 dir-symlink на клон (обновление проекта = `git pull`, без переустановки).
 
 Свой путь override — `export RATIONALDEV_MODELS=/path/models.json` до установки. Проверить здоровье
-установки (клон чист · override резолвится · симлинки живые · `settings.json` не разошёлся) —
-`rationaldev doctor [project-dir]`.
+установки (клон чист · override резолвится · симлинки живые · `settings.json` не разошёлся ·
+PATH-проводка на месте) — `rationaldev doctor [project-dir]`.
+
+### Авто-детект оболочки (`bootstrap.sh` прописывает PATH сам)
+
+`bootstrap.sh` определяет вашу оболочку и дописывает `~/.local/bin` в PATH **только** в rc-файл(ы)
+обнаружённой оболочки — ручная правка профиля не нужна. Порядок детекта: `$RATIONALDEV_SHELL`
+(override) → `basename $SHELL` → родительский процесс (`ps -p $PPID`) → `sh`. Карта:
+
+| Оболочка | Куда пишет | Строка |
+|---|---|---|
+| **zsh** | `${ZDOTDIR:-$HOME}/.zshrc` | `export PATH="$HOME/.local/bin:$PATH"` |
+| **bash** | `~/.bashrc` **и** `~/.bash_profile` (macOS-логин читает второй) | `export PATH=…` |
+| **fish** | `~/.config/fish/config.fish` | `fish_add_path "$HOME/.local/bin"` |
+| **other** | `~/.profile` | POSIX `export PATH=…` |
+
+Файл создаётся, если его нет; проводка идемпотентна по маркеру `# rationaldev bin (bootstrap)`
+(повторный `bootstrap.sh` не дублирует). В чужие оболочки НЕ пишет. Оболочку можно навязать —
+`RATIONALDEV_SHELL=fish sh bootstrap.sh` (полезно на CI/в контейнере, где `$SHELL` пуст). После
+установки `rationaldev doctor` проверяет, что маркер в rc обнаружённой оболочки есть и команда
+`rationaldev` резолвится; красный пункт печатает точную команду починки.
 
 ## Различия проекций
 

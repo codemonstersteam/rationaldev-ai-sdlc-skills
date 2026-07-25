@@ -150,12 +150,20 @@ RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" XDG_DATA_HOME="$P4H/.l
   sh "$P4C/install.sh" claude "$P4P" --hard --no-input >/dev/null 2>&1
 grep -q 'Bash(mytool ' "$P4P/.claude/settings.json" || fail "P4: merge потерял пользовательский permission"; ok
 grep -q '/u/h.mjs' "$P4P/.claude/settings.json" || fail "P4: merge потерял пользовательский хук"; ok
-# rationaldev doctor — зелёный на здоровой установке (exit 0)
+# rationaldev doctor — зелёный на здоровой установке (exit 0).
+# P4-песочница НЕ прогоняла bootstrap → PATH-проводки в реальном HOME нет; подставляем фейковый HOME
+# с маркером в rc + rationaldev на PATH, чтобы проверка проводки прошла (это её и тестирует).
+mkdir -p "$P4H/bin"; ln -sf "$P4C/rationaldev" "$P4H/bin/rationaldev"
+printf '\n# rationaldev bin (bootstrap)\nexport PATH="$HOME/.local/bin:$PATH"\n' > "$P4H/.zshrc"
 RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" RATIONALDEV_HOME="$P4C" \
+  RATIONALDEV_SHELL=zsh HOME="$P4H" PATH="$P4H/bin:$PATH" \
   sh "$P4C/rationaldev" doctor "$P4P" >/dev/null 2>&1 || fail "P4: doctor не зелёный на здоровой установке"; ok
 # doctor краснеет и даёт ненулевой код на грязном клоне
 echo dirt > "$P4C/DIRT.txt"
 if RATIONALDEV_MODELS="$P4H/.config/rationaldev/models.json" RATIONALDEV_HOME="$P4C" sh "$P4C/rationaldev" doctor "$P4P" >/dev/null 2>&1; then fail "P4: doctor зелёный на грязном клоне"; fi; ok
 rm -f "$P4C/DIRT.txt"
 
-echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update + P4 override/doctor)"
+# === Авто-детект оболочки в bootstrap.sh (проводка PATH → rc ТОЛЬКО обнаружённой оболочки) ===
+__bs="$(sh "$REPO/harness/smoke/bootstrap-shell.smoke.sh" 2>&1)" || { printf '%s\n' "$__bs"; fail "bootstrap shell-detect smoke упал"; }; ok
+
+echo "PASS $pass — harness smoke (установка + enforcement + модели + self-update + P4 override/doctor + shell-detect)"
