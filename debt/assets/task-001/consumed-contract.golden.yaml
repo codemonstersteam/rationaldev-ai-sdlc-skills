@@ -1,0 +1,101 @@
+# consumed-contract потребителя mq-rest-sync-adapter — базовый (совместимый) вариант.
+# Схема: ../../api-specification/consumed-contract.schema.json
+#
+# Читается так: «вот каналы, на которых я говорю, и вот РОВНО ТЕ поля, которые я шлю и читаю».
+# Артефакт захвачен из компонентных заглушек потребителя и типизирован из спеки поставщика
+# wallet-balance@1.4.0 — отсюда provenance.
+#
+# Обрати внимание: контракт УЖЕ, чем спека поставщика. Потребитель не шлёт `locale`, не читает
+# `data.updatedAt` и `postedBy`. На базовой паре это даёт compatible — доказательство, что легальное
+# расширение поставщика не ломает потребителя (v1 здесь ложно срабатывала).
+
+schema_version: "1.0"
+consumer: mq-rest-sync-adapter
+
+provenance:
+  provider: wallet-balance
+  provider_version: 1.4.0
+  captured_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+# ВАЖНО: `name` сообщения — это КЛЮЧ в `channel.messages` спеки поставщика (getBalanceRequest),
+# а не поле `name` сообщения и не ключ в components.messages. Причина — D8 в concept.md.
+
+channels:
+  # --- request-reply: запрос уходит здесь ---
+  - address: WALLET.BALANCE.REQUEST
+    protocol: kafka
+    sends:
+      - name: getBalanceRequest
+        content_type: application/json
+        correlation_id_location: $message.header#/correlationId
+        headers:
+          type: object
+          properties:
+            correlationId:
+              type: string
+        payload:
+          type: object
+          properties:
+            clientId:
+              type: string
+            requestId:
+              type: string
+
+  # --- request-reply: ответ приходит здесь ---
+  - address: WALLET.BALANCE.RESPONSE
+    protocol: kafka
+    receives:
+      - name: getBalanceResponse
+        content_type: application/json
+        correlation_id_location: $message.header#/correlationId
+        headers:
+          type: object
+          properties:
+            correlationId:
+              type: string
+        payload:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+              properties:
+                balance:
+                  type: number
+                  format: double
+                currency:
+                  type: string
+
+  # --- fire-and-forget: только шлём ---
+  - address: WALLET.AUDIT
+    protocol: kafka
+    sends:
+      - name: auditEvent
+        content_type: application/json
+        payload:
+          type: object
+          properties:
+            eventId:
+              type: string
+            actor:
+              type: string
+
+  # --- publish-subscribe: только читаем ---
+  - address: WALLET.LEDGER.EVENTS
+    protocol: kafka
+    receives:
+      - name: ledgerPosted
+        content_type: application/json
+        payload:
+          type: object
+          properties:
+            entryId:
+              type: string
+            amount:
+              type: number
+              format: double
+            tags:
+              type: array
+              items:
+                type: string
