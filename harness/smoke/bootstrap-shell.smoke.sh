@@ -10,7 +10,15 @@ MARKER="# rationaldev bin (bootstrap)"
 pass=0; fail() { echo "FAIL: $1"; exit 1; }; ok() { pass=$((pass+1)); }
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-CANON="$T/canon"   # общий канонический клон (первый прогон клонирует, дальше — update). Экономит клоны.
+CANON="$T/canon"   # общий канонический «клон».
+# Тестируем ТОЛЬКО PATH-проводку, не git-клон. Пред-сид без единого branch/сеть-зависимого git-вызова:
+# фейкуем «клон уже есть» (bootstrap проверяет [ -d $HOME/.git ]) + кладём сам скрипт rationaldev, чтобы
+# bootstrap пошёл веткой «клон есть → update||true» и НЕ делал `git clone --branch main` (тот падал на CI,
+# где checkout — PR-ветка без ref main). update внутри git-фейлит на фейковом .git и глотается `|| true`;
+# затем отрабатывает step 2 (wiring), который и проверяем.
+mkdir -p "$CANON/.git"
+cp "$REPO/rationaldev" "$CANON/rationaldev"
+export RATIONALDEV_UPDATE=off   # без autocheck-сети
 
 # Прогнать bootstrap с фейковым HOME и заданным override оболочки. _ov="" ⇒ RATIONALDEV_SHELL НЕ задан:
 # детект падает на $SHELL, который мы ставим в нераспознанный /bin/sh → ветка other (детерминированно).
@@ -18,10 +26,10 @@ run_bootstrap() {
   _h="$1"; _ov="$2"; mkdir -p "$_h"
   if [ -n "$_ov" ]; then
     RATIONALDEV_SHELL="$_ov" HOME="$_h" RATIONALDEV_REPO="$REPO" RATIONALDEV_HOME="$CANON" \
-      RATIONALDEV_CHANNEL=main sh "$REPO/bootstrap.sh" >/dev/null 2>&1
+      sh "$REPO/bootstrap.sh" >/dev/null 2>&1
   else
     SHELL=/bin/sh HOME="$_h" RATIONALDEV_REPO="$REPO" RATIONALDEV_HOME="$CANON" \
-      RATIONALDEV_CHANNEL=main sh "$REPO/bootstrap.sh" >/dev/null 2>&1
+      sh "$REPO/bootstrap.sh" >/dev/null 2>&1
   fi
 }
 has()  { [ -f "$1" ] && grep -qF "$2" "$1"; }
