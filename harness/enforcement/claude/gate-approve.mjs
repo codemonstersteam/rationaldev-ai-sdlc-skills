@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-// Claude Code UserPromptSubmit-хук — паритет с opencode chat.message. Ловит явные ТОКЕНЫ оператора:
+// Claude Code хук акцепта — паритет с opencode (chat.message + question.replied). Ловит явные ТОКЕНЫ оператора:
 //   «GATE1 APPROVE» → .agent/gates/gate1.approved (акцепт плана),
 //   «GATE2 APPROVE» → .agent/gates/gate2.approved (акцепт мержа PR; открывает @ledger).
-// Это сообщение оператора (не агента) — агенту self-accept по-прежнему запрещён (gate-bash). Общая
+// ДВА канала оператора, один хук:
+//   UserPromptSubmit — токен напечатан в чат ({prompt,…});
+//   PostToolUse[AskUserQuestion] — токен ВЫБРАН пунктом меню ({tool_name,tool_response,…}): выбор опции
+//     промпта не порождает, и без этого канала «нажал кнопку» гейт не открывал.
+// Это реплика оператора (не агента) — агенту self-accept по-прежнему запрещён (gate-bash). Общая
 // логика распознавания — ../shared.mjs (isOperatorApproval/isGate2Approval), единая с плагином.
-// Вход: JSON на stdin ({prompt,…}). Выход: exit 0 (промпт НЕ блокируем). Fail-open на любой ошибке.
+// Выход: exit 0 (ни промпт, ни тул НЕ блокируем). Fail-open на любой ошибке.
 import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "node:fs"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 import {
   isOperatorApproval, isGate2Approval, planReadyForApproval, currentGreenfieldSlices, mergeReadyForApproval,
-  prRefFromText, gateMarkerContent, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR,
+  prRefFromText, gateMarkerContent, answerTextFromToolResponse, DESIGN_DIR, PLAN_REVIEW_MARK, CHORES_DIR,
   SLICES_MARK, CHANGE_DIR_MARK, CHORE_DIR_MARK, MODE_MARK,
 } from "../shared.mjs"
 
@@ -55,7 +59,16 @@ try {
   const raw = await readStdin()
   let input = {}
   try { input = JSON.parse(raw) } catch { process.exit(0) }
-  const prompt = String(input?.prompt ?? input?.user_prompt ?? input?.message ?? "")
+  // Канал реплики: PostToolUse несёт tool_name — тогда акцепт берём ТОЛЬКО из выбора оператора
+  // (tool_response), и ни в коем случае не из tool_input: вопрос сочиняет агент, ответ даёт человек.
+  // Чужой тул в этом событии игнорируем — на prompt не откатываемся (в тул-пейлоаде его и нет).
+  const toolName = String(input?.tool_name ?? input?.toolName ?? "")
+  const viaQuestion = toolName === "AskUserQuestion"
+  if (toolName && !viaQuestion) process.exit(0)
+  const prompt = viaQuestion
+    ? answerTextFromToolResponse(input?.tool_response ?? input?.toolResponse)
+    : String(input?.prompt ?? input?.user_prompt ?? input?.message ?? "")
+  const source = viaQuestion ? "operator-approval-via-question" : "operator-approval-via-prompt"
   const gate1 = isOperatorApproval(prompt), gate2 = isGate2Approval(prompt)
   if (!gate1 && !gate2) process.exit(0)
 
@@ -86,7 +99,7 @@ try {
     if (planReady) {
       put("gate1.approved", gateMarkerContent({
         timestamp: new Date().toISOString(),
-        source: "operator-approval-via-prompt",
+        source,
         prompt,
         planHash: planHash(root),
       }))
@@ -98,7 +111,7 @@ try {
   if (gate2 && mergeReadyForApproval(existsFn)) {
     put("gate2.approved", gateMarkerContent({
       timestamp: new Date().toISOString(),
-      source: "operator-approval-via-prompt",
+      source,
       prompt,
       ref: prRefFromText(prompt),
     }))

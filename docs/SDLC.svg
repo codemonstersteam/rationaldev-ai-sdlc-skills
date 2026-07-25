@@ -223,7 +223,7 @@
   <!-- 13. Терминальный git + CI -->
   <rect x="270" y="1592" width="500" height="82" rx="12" fill="url(#card)" stroke="#00e5ff"/>
   <text x="292" y="1620" fill="#00e5ff" font-size="15" font-weight="700">ТЕРМИНАЛ · @git-hand mode=terminal (Torvalds)</text>
-  <text x="292" y="1642" fill="#e8ecf4" font-size="12.5">commit → push → PR (вес в заголовке) → CI</text>
+  <text x="292" y="1642" fill="#e8ecf4" font-size="12.5">commit (трейлеры Run/Weight/BR/Task) → push → PR (вес) → CI</text>
   <text x="292" y="1661" fill="#9aa3b8" font-size="12">component · contract (pinout) · lint · security-scan · RRA-утилиты</text>
   <path d="M268,1636 C150,1636 108,1560 108,1470" fill="none" stroke="#ff2d8e" stroke-width="2.5" stroke-dasharray="5 5" marker-end="url(#arrR)"/>
   <text x="152" y="1548" fill="#ff2d8e" font-size="10" text-anchor="middle">ci=red</text>
@@ -239,8 +239,8 @@
   <!-- 15. Закрытие прогона -->
   <rect x="230" y="1820" width="580" height="98" rx="12" fill="url(#card)" stroke="#c6ff3a"/>
   <text x="252" y="1850" fill="#c6ff3a" font-size="15" font-weight="700">ЗАКРЫТИЕ ПРОГОНА · @ledger (Rochkind) → close-run.mjs</text>
-  <text x="252" y="1874" fill="#e8ecf4" font-size="12.5">пруф мерджа → тег (semver-bump) → docs/changes/LEDGER.md</text>
-  <text x="252" y="1896" fill="#9aa3b8" font-size="12.5">→ атомарный вайп .agent/ — прогон закрыт</text>
+  <text x="252" y="1874" fill="#e8ecf4" font-size="12.5">пруф мерджа → тег на транке (semver-bump) → git-заметка refs/notes/ledger</text>
+  <text x="252" y="1896" fill="#9aa3b8" font-size="12.5">→ атомарный вайп .agent/ — прогон закрыт · журнал из git (ledger.mjs)</text>
   <path d="M810,1876 L1006,1876 L1006,2334 L736,2334" fill="none" stroke="#c6ff3a" stroke-width="2.5" marker-end="url(#arrG)"/>
   <text x="996" y="2090" fill="#c6ff3a" font-size="11" text-anchor="middle" transform="rotate(-90 996 2090)">no-bump (chore): тега нет → выката нет</text>
   <line x1="520" y1="1918" x2="520" y2="1952" stroke="#9aa3b8" stroke-width="3" marker-end="url(#arr)"/>

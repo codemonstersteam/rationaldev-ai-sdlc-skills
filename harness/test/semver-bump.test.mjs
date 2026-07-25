@@ -1,7 +1,7 @@
 // Ядро тег-автоматики транка (io: none): parseTag/latestRelease/touchesProduct/weightFrom/nextTag/canaryTag.
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { parseTag, latestRelease, isPlumbing, touchesProduct, weightFrom, nextTag, canaryTag } from "../../ci/semver-bump.mjs"
+import { parseTag, latestRelease, isPlumbing, touchesProduct, weightFrom, weightFromTrailers, nextTag, canaryTag } from "../../ci/semver-bump.mjs"
 
 test("parseTag: и голый X.Y.Z, и v-префикс — форма запоминается", () => {
   assert.deepEqual(parseTag("1.4.2"), { prefix: "", major: 1, minor: 4, patch: 2, pre: null, build: null })
@@ -141,4 +141,27 @@ test("canaryTag: нумерация с 1 и инкремент от максим
   assert.equal(canaryTag("1.4.3", ["1.4.3-canary.1", "1.4.3-canary.2"]), "1.4.3-canary.3")
   assert.equal(canaryTag("1.4.3", ["1.4.3-canary.9", "1.4.3-canary.10"]), "1.4.3-canary.11", "числовой максимум, не строковый")
   assert.equal(canaryTag("1.4.3", ["1.5.0-canary.7"]), "1.4.3-canary.1", "чужие канарейки не считаются")
+})
+
+// ── второй канал веса: трейлер `Weight:` в коммите ветки (неизменяем, в отличие от заголовка PR) ──
+test("weightFromTrailers: вес из футера коммита ветки", () => {
+  assert.equal(weightFromTrailers("chore: x\n\nRun: a\nWeight: minor\nBR: —"), "minor")
+  assert.equal(weightFromTrailers("Weight: greenfield"), "greenfield")
+  assert.equal(weightFromTrailers("Weight: CHORE"), "chore", "регистр не важен")
+})
+
+test("weightFromTrailers: последний футер выигрывает (amend дописывает ниже)", () => {
+  assert.equal(weightFromTrailers("Weight: patch\nWeight: major"), "major")
+})
+
+test("🔴 weightFromTrailers: мусор/нет трейлера → null (не гадаем)", () => {
+  assert.equal(weightFromTrailers("Weight: bogus"), null)
+  assert.equal(weightFromTrailers("нет футера"), null)
+  assert.equal(weightFromTrailers(""), null)
+  assert.equal(weightFromTrailers(null), null)
+})
+
+test("каналы независимы: трейлер несёт chore там, где заголовок молчит", () => {
+  assert.equal(weightFrom({ title: "chore: канон" }), null, "chore весом не считается заголовком")
+  assert.equal(weightFromTrailers("Weight: chore"), "chore", "а трейлер фиксирует его явно — для журнала")
 })

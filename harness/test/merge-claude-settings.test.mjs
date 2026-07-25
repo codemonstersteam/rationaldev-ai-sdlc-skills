@@ -18,7 +18,12 @@ const MANAGED = {
       { matcher: "Task", hooks: [{ type: "command", command: 'node "/h/gate-check.mjs"' }] },
       { matcher: "Bash", hooks: [{ type: "command", command: 'node "/h/gate-bash.mjs"' }] },
     ],
-    PostToolUse: [{ matcher: "Task", hooks: [{ type: "command", command: 'node "/h/log-decision.mjs"' }] }],
+    // gate-approve стоит в ДВУХ событиях: печатный токен (UserPromptSubmit) и выбор пункта меню
+    // (PostToolUse[AskUserQuestion]) — зеркало enforcement/claude/settings.harness.json.
+    PostToolUse: [
+      { matcher: "Task", hooks: [{ type: "command", command: 'node "/h/log-decision.mjs"' }] },
+      { matcher: "AskUserQuestion", hooks: [{ type: "command", command: 'node "/h/gate-approve.mjs"' }] },
+    ],
     UserPromptSubmit: [{ hooks: [{ type: "command", command: 'node "/h/gate-approve.mjs"' }] }],
   },
 }
@@ -49,7 +54,7 @@ test("merge идемпотентен — повтор не дублирует у
   merge(settings, managed); merge(settings, managed); merge(settings, managed)
   const s = read(settings)
   assert.equal(s.hooks.PreToolUse.length, 2, "gate-check/gate-bash не должны дублироваться")
-  assert.equal(s.hooks.PostToolUse.length, 1)
+  assert.equal(s.hooks.PostToolUse.length, 2, "log-decision + gate-approve[AskUserQuestion]")
   rmSync(dir, { recursive: true, force: true })
 })
 

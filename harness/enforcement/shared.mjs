@@ -230,6 +230,31 @@ export function answerTextFromEvent(event) {
   return out.join(" ")
 }
 
+// Близнец answerTextFromEvent для Claude Code: там меню — это ТУЛ `AskUserQuestion`, а не событие чата,
+// поэтому выбор пункта не порождает UserPromptSubmit и акцепт приходилось ПЕЧАТАТЬ вручную (наблюдение
+// прогона: «нажал кнопку — маркера нет»). Канал выбора — PostToolUse-пейлоад `tool_response`:
+// `{ answers: { "<вопрос>": "<лейбл выбора>" }, questions, annotations }`.
+// ВАЖНО (анти-спуф): читаем ТОЛЬКО ЗНАЧЕНИЯ выбора — ни текст вопроса, ни `tool_input`. Иначе агент,
+// вписавший токен в формулировку вопроса, поставил бы себе гейт сам, мимо человека.
+// io: none, никогда не бросает; нет выбора → "".
+export function answerTextFromToolResponse(response) {
+  const out = []
+  const walk = (v) => {
+    if (Array.isArray(v)) v.forEach(walk)
+    else if (v && typeof v === "object") Object.values(v).forEach(walk)   // ключ = вопрос (агентский), берём значение
+    else if (typeof v === "string") out.push(v)
+  }
+  const answers = (response && typeof response === "object") ? response.answers : undefined
+  if (answers !== undefined) walk(answers)
+  else {
+    // Деградация: некоторые сборки отдают tool_response строкой-конвертом
+    // `Your questions have been answered: "<вопрос>"="<выбор>", …` — берём правые части пар.
+    const text = typeof response === "string" ? response : String(response?.content ?? "")
+    for (const m of text.matchAll(/"[^"]*"\s*=\s*"([^"]*)"/g)) out.push(m[1])
+  }
+  return out.join(" ")
+}
+
 // ── anti-loop: детект застревания субагента (петля без прогресса) ────────────
 // Субагент (напр. hughes/Qwen на конфликте типа) уходит в петлю повтора ОДНОГО действия без
 // новых outputs. Детект — по СИГНАТУРАМ tool-call'ов: канонизируем (tool + отсортированные args);

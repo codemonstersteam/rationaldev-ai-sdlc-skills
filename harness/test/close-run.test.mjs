@@ -1,8 +1,9 @@
-// close-run pure core: planClose (guards + tag delegation) · ledgerEntry (self-sufficient) ·
+// close-run pure core: planClose (guards + tag delegation) · ledgerNote (постмерж-факты) ·
 // wipeTargets (B1 инверсия) · tagPlan (B2) · releaseNotes (B3) · debtToRemove (B4).
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { planClose, ledgerEntry, WIPE_KEEP, wipeTargets, tagPlan, releaseNotes, debtToRemove } from "../close-run.mjs"
+import { readFileSync } from "node:fs"
+import { planClose, ledgerNote, LEDGER_NOTES_REF, WIPE_KEEP, wipeTargets, tagPlan, releaseNotes, debtToRemove } from "../close-run.mjs"
 
 const bump = ({ weight, files }) =>
   weight === "patch" && files.some((f) => f.startsWith("src/")) ? { tag: "0.1.0", reason: "seed" }
@@ -26,16 +27,28 @@ test("planClose: plumbing → null tag is NOT a stop (normal outcome)", () => {
   assert.equal(r.tag, null)
 })
 
-test("ledgerEntry: self-sufficient — task text inline, survives change-dir deletion", () => {
-  const e = ledgerEntry({ ts: "2026-01-01T00:00:00Z", slug: "fix-x", weight: "patch",
-    pr: "https://…/pull/2", mergeSha: "abc123", tag: "0.1.0", reason: "seed", task: "fix leaked set" })
-  assert.match(e, /fix-x/); assert.match(e, /patch/); assert.match(e, /abc123/)
-  assert.match(e, /fix leaked set/, "task described in text, not by a link into the change-dir")
+test("ledgerNote: self-sufficient — task text inline, survives change-dir deletion", () => {
+  const n = ledgerNote({ ts: "2026-01-01T00:00:00Z", slug: "fix-x", weight: "patch",
+    pr: "https://…/pull/2", tag: "0.1.0", reason: "seed", task: "fix leaked set" })
+  assert.match(n, /run: fix-x/); assert.match(n, /weight: patch/); assert.match(n, /tag: 0\.1\.0/)
+  assert.match(n, /task: fix leaked set/, "task described in text, not by a link into the change-dir")
+  assert.match(n, /bump: tagged/)
 })
 
-test("ledgerEntry: no tag → records the no-bump reason, not an empty tag", () => {
-  const e = ledgerEntry({ ts: "t", slug: "s", weight: "patch", pr: "p", mergeSha: "m", tag: null, reason: "plumbing" })
-  assert.match(e, /no-bump: plumbing/)
+test("ledgerNote: no tag → records the no-bump reason, not an empty tag", () => {
+  const n = ledgerNote({ ts: "t", slug: "s", weight: "chore", pr: "p", tag: null, reason: "plumbing" })
+  assert.match(n, /tag: none/); assert.match(n, /bump: no-bump/); assert.match(n, /reason: plumbing/)
+})
+
+test("ledgerNote: форма `key: value` — её читает harness/ledger.mjs (общий контракт)", () => {
+  const n = ledgerNote({ ts: "t", slug: "s", weight: "patch", pr: "p", tag: "v1.0.1", reason: "r", task: "t" })
+  for (const line of n.split("\n").filter(Boolean)) assert.match(line, /^[a-z_]+: /, `строка не key: value → ${line}`)
+  assert.equal(LEDGER_NOTES_REF, "ledger", "ref заметок — общий с ledger.mjs (--notes=ledger)")
+})
+
+test("ledgerNote: НЕ дублирует то, что уже несут мерж-коммит и трейлеры (merge-SHA)", () => {
+  const n = ledgerNote({ ts: "t", slug: "s", weight: "patch", pr: "p", tag: null, reason: "r", task: "t" })
+  assert.doesNotMatch(n, /merge:/, "merge-SHA — это сам анкер заметки, дублировать незачем")
 })
 
 // ── B1 · вайп-инверсия — сносим .agent/ целиком, кроме белого списка ──────────────
@@ -98,4 +111,15 @@ test("B4 debtToRemove: битый маркер → null (не гадаем пу�
 
 test("B4 debtToRemove: мерж не подтверждён → долг цел даже с маркером", () => {
   assert.equal(debtToRemove({ resolvesDebt: "task-042", merged: false }), null)
+})
+
+// ── ACT 2 больше НЕ коммитит в транк: запись — заметка на merge-SHA ───────────────
+// Регрессия прогона report-canon-doc: ledger-коммит делался с HEAD рабочей ветки, а транк уже уехал
+// на мерж ⇒ push HEAD:trunk не fast-forward. Лишний коммит убран по конструкции — сторожим источник.
+test("close-run: ACT 2 не коммитит и не пушит в транк (только refs/notes)", () => {
+  const src = readFileSync(new URL("../close-run.mjs", import.meta.url), "utf8")
+  assert.doesNotMatch(src, /HEAD:\$\{trunk\}/, "push HEAD:<trunk> вернул бы non-fast-forward после мержа")
+  assert.doesNotMatch(src, /docs\/changes\/LEDGER\.md/, "файл-журнал упразднён — журнал собирается из git")
+  assert.match(src, /"notes", "--ref", LEDGER_NOTES_REF, "add"/, "запись — git-заметка на merge-SHA")
+  assert.match(src, /`refs\/notes\/\$\{LEDGER_NOTES_REF\}`/, "и её пуш отдельным ref")
 })

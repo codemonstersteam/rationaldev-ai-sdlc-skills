@@ -173,7 +173,10 @@ if [ "$HARD" = yes ]; then
       { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$gc"'" } ] },
       { "matcher": "Bash", "hooks": [ { "type": "command", "command": "'"$gb"'" } ] }
     ],
-    "PostToolUse": [ { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] } ],
+    "PostToolUse": [
+      { "matcher": "Task", "hooks": [ { "type": "command", "command": "'"$ld"'" } ] },
+      { "matcher": "AskUserQuestion", "hooks": [ { "type": "command", "command": "'"$ga"'" } ] }
+    ],
     "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "'"$ga"'" } ] } ]
   }
 }'

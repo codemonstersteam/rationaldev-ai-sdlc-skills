@@ -21,7 +21,9 @@
 - **Human Gates — три:** #1 акцепт плана (`GATE1 APPROVE`), #2 мерж (`GATE2 APPROVE` → маркер
   `.agent/gates/gate2.approved`), #3 приёмка прод-релиза после канарейки. Маркеры ставит только гардрейл.
 - **RUN-CLOSE (`@ledger` → `harness/close-run.mjs`):** пруф мерджа → тег на транке
-  (`ci/semver-bump.mjs`) → запись в `docs/changes/LEDGER.md` → атомарный вайп `.agent/`.
+  (`ci/semver-bump.mjs`) → git-заметка `refs/notes/ledger` на merge-SHA → атомарный вайп `.agent/`.
+  Журнал прогонов — производная от git (`harness/ledger.mjs`), файла `LEDGER.md` нет; вес несут
+  трейлеры коммита ветки (`Run/Weight/BR/Task`, пишет `@git-hand`) и заголовок PR.
   Бампы: greenfield→`1.0.0`, patch→`Z+1`, minor→`Y+1.0`, major→`X+1.0.0`, chore→**no-bump**.
   Форма тега — от последнего релизного тега репо; тегов нет → дефолт `v` (`DEFAULT_PREFIX`).
   Тег ставит **только** `@ledger`; `ci/recipes/*` — образец для репо без харнеса, в `template/` не кладётся.

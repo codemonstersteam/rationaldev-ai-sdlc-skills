@@ -176,5 +176,34 @@ runHook("gate-approve.mjs", { prompt: "gate2 approve" }, { CLAUDE_PROJECT_DIR: g
 assert.equal(readFileSync(m2, "utf8"), g2first, "повтор не клобберит первый акцепт мержа"); pass++
 await rm(g2dir, { recursive: true, force: true })
 
+// gate-approve (второй канал): выбор пункта меню — PostToolUse[AskUserQuestion]. Выбор опции промпта не
+// порождает, поэтому без этого канала «оператор нажал кнопку» гейт не открывал (наблюдение прогона).
+const qdir = await mkdtemp(join(tmpdir(), "claude-approve-q-"))
+const qmark = join(qdir, ".agent", "gates", "gate1.approved")
+const question = (answers) => ({ tool_name: "AskUserQuestion", tool_input: { questions: [] }, tool_response: { answers } })
+await mkdir(join(qdir, "docs", "design", "slice-x"), { recursive: true })
+await writeFile(join(qdir, "docs", "design", "slice-x", "PLAN.md"), "# plan\n")
+await mkdir(join(qdir, ".agent", "planner"), { recursive: true })
+await writeFile(join(qdir, ".agent", "planner", "slices.md"), "slices.md ready: slice-x\n")
+await writeFile(join(qdir, ".agent", "planner", "mode"), "greenfield")
+// анти-спуф: токен в ТЕКСТЕ ВОПРОСА (его сочиняет агент), выбран Reject → self-accept не проходит
+runHook("gate-approve.mjs", question({ "Печатать GATE1 APPROVE или доработать?": "Reject" }), { CLAUDE_PROJECT_DIR: qdir })
+assert.ok(!existsSync(qmark), "токен в вопросе + выбран Reject → маркера НЕТ (агент себе гейт не ставит)"); pass++
+// чужой тул в том же событии не читаем как акцепт (в tool_input агент пишет что угодно)
+runHook("gate-approve.mjs", { tool_name: "Bash", tool_input: { command: "echo GATE1 APPROVE" } }, { CLAUDE_PROJECT_DIR: qdir })
+assert.ok(!existsSync(qmark), "PostToolUse чужого тула → маркера нет"); pass++
+// выбор опции «GATE1 APPROVE» при готовом плане → маркер, provenance помечен каналом меню
+runHook("gate-approve.mjs", question({ "Акцептуешь план slice-x?": "GATE1 APPROVE" }), { CLAUDE_PROJECT_DIR: qdir })
+assert.ok(existsSync(qmark), "выбор пункта GATE1 APPROVE + PLAN.md → маркер создан"); pass++
+const qfirst = readFileSync(qmark, "utf8")
+assert.match(qfirst, /source\toperator-approval-via-question/, "маркер помечен каналом меню (provenance)"); pass++
+assert.match(qfirst, /prompt\tGATE1 APPROVE/, "маркер несёт лейбл выбранной опции"); pass++
+// Gate #2 тем же каналом (gate1 + ветка уже есть)
+await mkdir(join(qdir, ".agent", "vcs"), { recursive: true })
+await writeFile(join(qdir, ".agent", "vcs", "branch"), "feat/x\n")
+runHook("gate-approve.mjs", question({ "Мержим PR #42?": "GATE2 APPROVE #42" }), { CLAUDE_PROJECT_DIR: qdir })
+assert.ok(existsSync(join(qdir, ".agent", "gates", "gate2.approved")), "выбор пункта GATE2 APPROVE → маркер мержа создан"); pass++
+await rm(qdir, { recursive: true, force: true })
+
 await rm(dir, { recursive: true, force: true })
-console.log(`PASS ${pass}/41 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore[dir-pointer] + poka-yoke[ticket+chore] + gate-write + GATE1/GATE2-APPROVE-токены + provenance + @ledger/Gate #2)`)
+console.log(`PASS ${pass}/47 — claude hooks smoke (closed-set + фронтдор + Gate #1 + on-trunk + chore[dir-pointer] + poka-yoke[ticket+chore] + gate-write + GATE1/GATE2-APPROVE-токены[чат+меню] + provenance + @ledger/Gate #2)`)

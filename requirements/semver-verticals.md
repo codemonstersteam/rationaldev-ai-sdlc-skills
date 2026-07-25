@@ -104,16 +104,21 @@
 - **Primary actor:** оператор (акцептует мерж), исполнитель — `@ledger`.
 - **Precondition:** PR зелёный, оператор выдал `GATE2 APPROVE`, гардрейл поставил
   `.agent/gates/gate2.approved`, ветка **влита** в транк.
-- **Success guarantee:** на транке стоит тег следующей версии; в `docs/changes/LEDGER.md` есть
-  самодостаточная запись; `.agent/` состояние прогона атомарно стёрто.
+- **Success guarantee:** на транке стоит тег следующей версии; на merge-SHA висит самодостаточная
+  git-заметка `refs/notes/ledger`; `.agent/` состояние прогона атомарно стёрто.
 
 **MSS**
 1. `@ledger` вызывает детерминированный `harness/close-run.mjs --pr <N>` (сам ничего не вычисляет).
 2. Скрипт читает вес из `.agent/planner/mode`, факт мерджа и файлы PR из forge, список тегов —
-   из `git ls-remote origin` (не из локальных тегов, они отстают).
+   из `git ls-remote origin` (не из локальных тегов, они отстают). Вне прогона (CI на транке) вес
+   восстанавливается по трейлеру `Weight:` коммита ветки, а при его отсутствии — по
+   Conventional-заголовку PR.
 3. `ci/semver-bump.mjs` решает следующий тег: `patch → Z+1`, `minor → Y+1.0`, `major → X+1.0.0`,
    `greenfield → 1.0.0`; **форма тега берётся у последнего релизного тега репо** (`1.2.3` или `v1.2.3`).
-4. Запись в `LEDGER.md` (append-only) — **до** вайпа; затем атомарный вайп `.agent/`.
+4. Запись — git-заметка `refs/notes/ledger` на merge-SHA (постмерж-факты: тег/no-bump и причина),
+   **до** вайпа; затем атомарный вайп `.agent/`. Файла-журнала в репозитории нет и лишнего коммита в
+   транк тоже: журнал прогонов собирается из git (`harness/ledger.mjs`) по мерж-коммитам, трейлерам
+   `Run/Weight/BR/Task` из коммита ветки и этим заметкам.
 5. `@ledger` возвращает одну строку результата.
 
 **Extensions**
@@ -122,8 +127,9 @@
 - 3a. Дифф — только плумбинг (`.github/`, `*.md`, `docs/`, `Dockerfile`, lock-файлы) → **no-bump**:
   тега нет, канарейки нет; это **нормальный** исход, не отказ (`chore` — обычный его источник).
 - 3b. Целевой тег уже существует → отказ без перезаписи (`TAG_EXISTS`).
-- 4a. Запись в `LEDGER.md` не удалась → вайп **не выполняется** (порядок причинный: вайп стирает то,
-  что читают первые два акта).
+- 4a. Заметка не записалась → вайп **не выполняется** (порядок причинный: вайп стирает то, что читают
+  первые два акта). Не легла только **отправка** заметок (нет прав на `refs/notes/*`) → закрытие не
+  рушится: тег уже на форже, а вес/задача/источник влиты трейлерами в транк.
 
 ### UC-6 — Онбординг своего легаси (восстановление/сведение дизайн-пакета)
 
@@ -177,7 +183,10 @@
   зелёный CI ≠ влито.
 - **no-bump** — исход, при котором версия не двигается: дифф не трогает продуктовый код и контракт.
 - **Закрытие прогона** — перевод сделанной работы из **состояния** (`.agent/`) в **запись**
-  (`LEDGER.md`) с очисткой состояния, чтобы `gate1.approved` прошлой задачи не пропустил следующую.
+  (git-заметка `refs/notes/ledger` на merge-SHA) с очисткой состояния, чтобы `gate1.approved` прошлой
+  задачи не пропустил следующую.
+- **Журнал прогонов** — производная от git, а не файл: три слоя (мерж-коммит · трейлеры коммита ветки ·
+  заметка на merge-SHA), сборка — `harness/ledger.mjs`.
 
 ## Contract (draft)
 
@@ -187,11 +196,14 @@
 node ci/semver-bump.mjs --weight <patch|minor|major|greenfield> --files-from <f> [--tags-from <f>] [--json]
   → { "tag": "v1.3.0" | null, "reason": "bump|no-bump", "form": "v"|"" }
 node harness/close-run.mjs --pr <N> [--json]
-  → tag → append docs/changes/LEDGER.md → wipe .agent/   (порядок фиксирован)
+  → tag → git note refs/notes/ledger @ merge-SHA → wipe .agent/   (порядок фиксирован)
+node harness/ledger.mjs [--md|--json] [--since <ref>] [--limit N]
+  → журнал закрытых прогонов, собранный из git (файла LEDGER.md нет)
 ```
 
 Артефакты-обязательства: `.agent/planner/{brd,mode,change-dir}`, `<change-dir>/{change-delta,PLAN}.md`,
-`<change-dir>/tickets/ticket-N.md`, `.agent/gates/gate{1,2}.approved`, `docs/changes/LEDGER.md`.
+`<change-dir>/tickets/ticket-N.md`, `.agent/gates/gate{1,2}.approved`, заметка `refs/notes/ledger` на
+merge-SHA + трейлеры `Run/Weight/BR/Task` в коммите рабочей ветки.
 
 ## Failure-mode map
 
@@ -204,7 +216,7 @@ node harness/close-run.mjs --pr <N> [--json]
 | `GATE2_MISSING` | закрытие прогона до акцепта мерджа | выдать `GATE2 APPROVE` |
 | `PR_NOT_MERGED` | тег до влития | смержить PR, повторить закрытие |
 | `TAG_EXISTS` / `TAG_MALFORMED` | конфликт/битая форма тега | разобрать теги репо вручную |
-| `LEDGER_WRITE_FAILED` | запись не легла | чинить и повторять; `.agent/` **не** стёрт |
+| `LEDGER_WRITE_FAILED` | заметка не записалась | чинить и повторять; `.agent/` **не** стёрт |
 
 ## NFR / constraints
 

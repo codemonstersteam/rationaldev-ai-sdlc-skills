@@ -21,6 +21,12 @@
         "hooks": [
           { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-decision.mjs\"" }
         ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate-approve.mjs\"" }
+        ]
       }
     ],
     "UserPromptSubmit": [
