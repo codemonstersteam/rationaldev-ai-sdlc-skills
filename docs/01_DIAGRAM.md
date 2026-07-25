@@ -1,7 +1,7 @@
 # Диаграмма целевого процесса
 
 > Поток целиком: измеримый BRD → **вес по SemVer** → вертикаль → Gate #1 → реализация → DoD →
-> PR/CI → Gate #2 → **закрытие прогона** (пруф мерджа → тег → `LEDGER.md` → вайп `.agent/`) →
+> PR/CI → Gate #2 → **закрытие прогона** (пруф мерджа → тег → заметка `refs/notes/ledger` → вайп `.agent/`) →
 > канарейка + 4 золотых сигнала → Gate #3. Роли и правила — [`00_PROCESS.md`](00_PROCESS.md);
 > граф делегирования харнеса — [`harness-flow.md`](harness-flow.md); пошагово по весу —
 > [`flows/`](flows/).
@@ -61,7 +61,7 @@ flowchart TD
     Gate2{{"HUMAN GATE #2 — мерж<br/>токен GATE2 APPROVE"}}
     Gate2 --> Close
 
-    Close["ЗАКРЫТИЕ ПРОГОНА · @ledger → close-run.mjs<br/>пруф мерджа → тег (semver-bump) →<br/>docs/changes/LEDGER.md → вайп .agent/"]
+    Close["ЗАКРЫТИЕ ПРОГОНА · @ledger → close-run.mjs<br/>пруф мерджа → тег (semver-bump) →<br/>git-заметка refs/notes/ledger → вайп .agent/"]
     Close -->|no-bump| Done
     Close -->|тег| Deploy
 

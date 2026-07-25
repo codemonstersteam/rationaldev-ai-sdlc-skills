@@ -305,7 +305,7 @@ finished `.agent/` masquerades as the next task's.
 its one line — three ordered acts, no judgement: **proof of merge** (from the forge) → **tag** the
 trunk (weight from `.agent/planner/mode`, arithmetic in `ci/semver-bump.mjs`: `patch→Z+1`, `minor→Y+1.0`,
 `major→X+1.0.0`, `greenfield→1.0.0`; tag form from the repo's latest release tag) → append to
-`docs/changes/LEDGER.md` → atomically **wipe** `.agent/`.
+a git note on the merge-SHA (`refs/notes/ledger`) → atomically **wipe** `.agent/`.
 - `tag=null` (no-bump) is NORMAL (plumbing-only diff; chore/onboard usually) — no tag, no canary.
 - PR not merged / Gate #2 marker missing → the script refuses; pass to the operator, never work around
   it, never create the marker.
@@ -1840,7 +1840,20 @@ code yourself and never fix it.
 Inputs: `task-type`, `slug`, and a one-line `summary` for the commit/PR title. Steps:
 
 1. `commit_push`: `git add -A` → commit with a **git-conventions** message (`<key> (<type>): <текст>`, text
-   per the skill's policy) → push the branch to the provider.
+   per the skill's policy) → push the branch to the provider. The message MUST end with a **trailer footer**
+   — the run's durable record, since `.agent/` is wiped at close and the merge commit carries only the PR
+   title. Values are copied, never judged: `Weight` from `.agent/planner/mode`, `Task` = the one-line task
+   statement from `.agent/planner/brd.md`, `BR` = the source (`debt/…`, `requirements/…`; `—` if none):
+
+   ```
+   Run: <slug>
+   Weight: <patch|minor|major|greenfield|chore>
+   BR: <path|—>
+   Task: <one line>
+   ```
+
+   These trailers are read after the merge by `ci/semver-bump.mjs` (second, un-editable weight channel) and
+   by `harness/ledger.mjs` (the run journal is assembled from git, not from a committed file).
 2. `open_pr`: open or update the PR against trunk. **The title MUST carry the weight in Conventional
    Commits** — the tag automation reads the weight from there after the merge, so a mistyped prefix
    mis-versions the trunk. Derive the prefix **mechanically** from `.agent/planner/mode` (you do not judge
@@ -1925,8 +1938,11 @@ Three acts, ordered by **causality** — the wipe is last because the first two 
    (`gh`, per `harness/vcs-providers.json`; tags via `git ls-remote origin` — never local `git tag`,
    which lags), decision delegated to `ci/semver-bump.mjs`. A `null` tag (plumbing no-bump) is a **normal** outcome, not a failure. An existing
    tag is kept, never overwritten. The tag is verified **on the forge** after push.
-2. **Ledger** — a self-sufficient entry appended to `docs/changes/LEDGER.md` (it must stay meaningful after
-   the change-dir is retention-pruned).
+2. **Ledger** — a self-sufficient record written as a **git note** on the merge-SHA (`refs/notes/ledger`),
+   then pushed. No file, no commit: the journal is a **derivative of git** (`harness/ledger.mjs`), assembled
+   from the merge commit + `@git-hand`'s trailers + this note. The note carries only what no commit can —
+   the tag decision, computed *after* the merge. It must stay meaningful after the change-dir is
+   retention-pruned. Push not landing is not a failure: the tag is already on the forge.
 3. **Wipe** — the `.agent/` run-state removed atomically; `decisions.log` kept (that is the trace, not state).
 
 ## Report (one line to izi)

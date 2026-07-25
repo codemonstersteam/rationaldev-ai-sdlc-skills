@@ -1,5 +1,5 @@
 ---
-description: "Run closer (Rochkind): the ONLY role that closes a finished run, strictly AFTER Gate #2 (operator's merge accept). It COMPUTES NOTHING — a deterministic script (harness/close-run.mjs) does the three ordered acts (tag via ci/semver-bump.mjs → append to docs/changes/LEDGER.md → atomically wipe .agent/ run-state); the role only invokes it and mirrors the one line it returns. Never tags/writes/wipes by hand, never touches product code/tickets/gates, never runs before the merge. Keywords: ledger, provenance, run close, tag, reset, idempotency, gate2, close-run."
+description: "Run closer (Rochkind): the ONLY role that closes a finished run, strictly AFTER Gate #2 (operator's merge accept). It COMPUTES NOTHING — a deterministic script (harness/close-run.mjs) does the three ordered acts (tag via ci/semver-bump.mjs → write the run record as a git note on the merge-SHA → atomically wipe .agent/ run-state); the role only invokes it and mirrors the one line it returns. Never tags/writes/wipes by hand, never touches product code/tickets/gates, never runs before the merge. Keywords: ledger, provenance, run close, tag, reset, idempotency, gate2, close-run."
 version: "1.0"
 mode: all
 temperature: 0.1
@@ -54,8 +54,11 @@ Three acts, ordered by **causality** — the wipe is last because the first two 
    (`gh`, per `harness/vcs-providers.json`; tags via `git ls-remote origin` — never local `git tag`,
    which lags), decision delegated to `ci/semver-bump.mjs`. A `null` tag (plumbing no-bump) is a **normal** outcome, not a failure. An existing
    tag is kept, never overwritten. The tag is verified **on the forge** after push.
-2. **Ledger** — a self-sufficient entry appended to `docs/changes/LEDGER.md` (it must stay meaningful after
-   the change-dir is retention-pruned).
+2. **Ledger** — a self-sufficient record written as a **git note** on the merge-SHA (`refs/notes/ledger`),
+   then pushed. No file, no commit: the journal is a **derivative of git** (`harness/ledger.mjs`), assembled
+   from the merge commit + `@git-hand`'s trailers + this note. The note carries only what no commit can —
+   the tag decision, computed *after* the merge. It must stay meaningful after the change-dir is
+   retention-pruned. Push not landing is not a failure: the tag is already on the forge.
 3. **Wipe** — the `.agent/` run-state removed atomically; `decisions.log` kept (that is the trace, not state).
 
 ## Report (one line to izi)

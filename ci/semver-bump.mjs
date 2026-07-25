@@ -70,6 +70,18 @@ export const touchesProduct = (files) => (files || []).some((f) => f && !isPlumb
 // merge-commit subject выглядит как «Merge pull request #N …» и веса не несёт.
 const CC_HEADER = /^\s*(?<type>[a-z]+)(?:\([^)]*\))?(?<bang>!)?:\s*\S/i
 
+// Второй, НЕРЕДАКТИРУЕМЫЙ канал веса — трейлер `Weight:` в сообщении коммита рабочей ветки (его пишет
+// `@git-hand` при commit_push из `.agent/planner/mode`). Заголовок PR правится человеком в момент мержа и
+// на rebase-мерже исчезает вовсе; коммит ветки влит вместе с работой и неизменен. Приоритет каналов задаёт
+// вызывающий: явный --weight → трейлер → заголовок PR. Чистая (io: none); мусор/нет трейлера → null.
+const WEIGHTS = ["patch", "minor", "major", "greenfield", "chore"]
+
+export function weightFromTrailers(text) {
+  const found = [...String(text ?? "").matchAll(/^\s*Weight:\s*(\S+)\s*$/gim)].map((m) => m[1].toLowerCase())
+  const last = found.filter((w) => WEIGHTS.includes(w)).pop()   // последний выигрывает (amend дописывает ниже)
+  return last ?? null
+}
+
 export function weightFrom({ title = "", body = "" } = {}) {
   const m = CC_HEADER.exec(String(title))
   if (!m) return null                                       // не Conventional Commits → не гадаем
@@ -90,7 +102,7 @@ export const DEFAULT_PREFIX = "v"
 
 export function nextTag({ weight, files, tags, seed = "0.0.0" }) {
   if (!["patch", "minor", "major", "greenfield"].includes(weight)) {
-    return { tag: null, reason: `weight='${weight ?? "нет"}' не бампается (chore/unclear версию не двигают; нет сигнала — @git-hand не протащил weight в PR)` }
+    return { tag: null, reason: `weight='${weight ?? "нет"}' не бампается (chore/unclear версию не двигают; нет сигнала — ни трейлера Weight:, ни веса в заголовке PR)` }
   }
   if (!touchesProduct(files)) {
     return { tag: null, reason: `no-bump: ни один из ${(files || []).length} файлов diff'а не продуктовый (плумбинг)` }
@@ -131,6 +143,8 @@ if (isMain) {
   const git = (...a) => execFileSync("git", a, { encoding: "utf8" })
 
   let weight = arg("--weight")?.replace(/^weight[=:]\s*/i, "")   // defensive: `weight=patch` → `patch`
+  // Приоритет каналов: явный --weight → трейлер Weight: (коммит ветки, неизменяем) → заголовок PR.
+  if (!weight && arg("--trailers")) weight = weightFromTrailers(readFileSync(arg("--trailers"), "utf8"))
   if (!weight && (arg("--pr-title") || arg("--pr-body"))) {
     weight = weightFrom({
       title: arg("--pr-title") ? readFileSync(arg("--pr-title"), "utf8") : "",
@@ -149,6 +163,7 @@ if (isMain) {
       "",
       "  node ci/semver-bump.mjs --weight <patch|minor|major|greenfield> --files-from <f> [--tags-from <f>] [--json]",
       "  node ci/semver-bump.mjs --pr-title <f> [--pr-body <f>] --files-from <f> --tags-from <f> [--json]",
+      "  node ci/semver-bump.mjs --trailers <f> --files-from <f> --tags-from <f> [--json]   # вес из трейлера Weight:",
       "  node ci/semver-bump.mjs --weight patch --from-git      # теги и diff HEAD~1..HEAD берёт сам",
       "",
       "Вывод: `<tag>\\t<причина>` либо `NO_TAG\\t<причина>`; --json → {tag,reason,form,weight,files}.",

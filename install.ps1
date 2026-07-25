@@ -158,7 +158,10 @@ if (-not $Soft) {
           @{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $gc }) },
           @{ matcher = 'Bash'; hooks = @(@{ type = 'command'; command = $gb }) }
         )
-        PostToolUse = @(@{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $ld }) })
+        PostToolUse = @(
+          @{ matcher = 'Task'; hooks = @(@{ type = 'command'; command = $ld }) },
+          @{ matcher = 'AskUserQuestion'; hooks = @(@{ type = 'command'; command = $ga }) }
+        )
         UserPromptSubmit = @(@{ hooks = @(@{ type = 'command'; command = $ga }) })
       } }
       $json = $settings | ConvertTo-Json -Depth 8

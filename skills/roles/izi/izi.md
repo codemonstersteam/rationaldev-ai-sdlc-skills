@@ -303,7 +303,7 @@ finished `.agent/` masquerades as the next task's.
 its one line — three ordered acts, no judgement: **proof of merge** (from the forge) → **tag** the
 trunk (weight from `.agent/planner/mode`, arithmetic in `ci/semver-bump.mjs`: `patch→Z+1`, `minor→Y+1.0`,
 `major→X+1.0.0`, `greenfield→1.0.0`; tag form from the repo's latest release tag) → append to
-`docs/changes/LEDGER.md` → atomically **wipe** `.agent/`.
+a git note on the merge-SHA (`refs/notes/ledger`) → atomically **wipe** `.agent/`.
 - `tag=null` (no-bump) is NORMAL (plumbing-only diff; chore/onboard usually) — no tag, no canary.
 - PR not merged / Gate #2 marker missing → the script refuses; pass to the operator, never work around
   it, never create the marker.

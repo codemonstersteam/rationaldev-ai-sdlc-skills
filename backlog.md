@@ -174,6 +174,9 @@ _izi-фиксы (роутер glm-5.2 + вопросы по одному) — в
     влияет только на транспорт.
   - _DoD:_ харнес сам заводит ветку от свежего транка, коммитит/пушит провалидированное состояние, дожимает CI до
     зелёного и презентует Gate #2 с зелёным PR — без ручного git; провайдер переключается конфигом; демо на chore.
+- [ ] **🔴 Жизненный цикл долга (`/debt/`) и untracked — владелец `@git-hand`.** `close-run.mjs:206` удаляет файл
+  долга `rmSync`'ом, но удаление не коммитится ⇒ в репо с отслеживаемым `/debt/` уедет в чужой PR следующего
+  прогона (`git add -A`). Тикет: [`docs/features/tickets/ticket-debt-lifecycle.md`](docs/features/tickets/ticket-debt-lifecycle.md).
 
 ### Work-scoped тикеты — доработка/chore в СВОЕЙ durable-папке, не поверх greenfield (из live-прогона rework 18-07)
 Дефект: rework-конвейер пишет `modify`-тикеты в **тот же** `docs/design/slice-<name>/tickets/ticket-N.md`, что и

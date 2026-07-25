@@ -66,7 +66,7 @@
 | `linger` | Linger | large | локальный фикс, предохранитель K=2 |
 | `fagan` | Fagan | large | терминальная приёмка DoD, снятие `@wip` |
 | `git-hand` | Torvalds | small | ветка, коммит, push, PR, чтение CI |
-| `ledger` | Rochkind | small | закрытие прогона: тег → `LEDGER.md` → вайп `.agent/` |
+| `ledger` | Rochkind | small | закрытие прогона: тег → заметка `refs/notes/ledger` → вайп `.agent/` |
 | `michtom` | Michtom | small/large | канареечный выкат + 4 золотых сигнала + вердикт |
 
 **Разграничение:** большой тир несёт тяжесть рассуждения, малый — объём генерации и механику,
@@ -127,7 +127,7 @@
    ▼ validate-layout (раскладка) → @fagan — DoD + инвариант веса, снятие @wip
    ▼ @git-hand mode=terminal — commit → push → PR (вес в заголовке) → CI
    ▼ [HUMAN GATE #2] — токен GATE2 APPROVE, оператор мержит
-   ▼ @ledger → close-run.mjs: пруф мерджа → тег → docs/changes/LEDGER.md → вайп .agent/
+   ▼ @ledger → close-run.mjs: пруф мерджа → тег → git-заметка refs/notes/ledger → вайп .agent/
    │        └─ no-bump → прогон закрыт, канарейки нет
    ▼ @michtom — канарейка 1% → 5% → 25% → 100% + 4 золотых сигнала
    ▼ [HUMAN GATE #3] — приёмка прод-релиза
@@ -155,8 +155,9 @@
    `minor → Y+1.0`, `major → X+1.0.0`, `greenfield → 1.0.0`. Список тегов берётся из
    `git ls-remote origin` (локальные отстают); **форма тега** — от последнего релизного тега репо,
    при отсутствии тегов — дефолт `v`. Существующий тег не перезаписывается (`TAG_EXISTS`).
-3. **Запись** в `docs/changes/LEDGER.md` (append-only, самодостаточная) → **атомарный вайп**
-   `.agent/`; `decisions.log` сохраняется (это трасса, а не состояние).
+3. **Запись** — git-заметка `refs/notes/ledger` на merge-SHA (самодостаточная; постмерж-факты, которых
+   не может нести коммит) → **атомарный вайп** `.agent/`; `decisions.log` сохраняется (это трасса, а не
+   состояние). Журнал прогонов — производная от git: `node harness/ledger.mjs [--json]`.
 
 - **`no-bump` — нормальный исход**, а не отказ: дифф трогает только плумбинг (`.github/`, `*.md`,
   `docs/`, `Dockerfile`, lock-файлы) → тега нет, канарейки нет, прогон всё равно закрыт.
@@ -195,7 +196,6 @@
   docs/design/<slice>/         use-case · c4 · module-tree · contracts · adr/ · tickets/
   docs/design/<slice>/changes/<NNN-slug>/   change-delta · PLAN · tickets/ · adr/  (patch|minor|major)
   docs/chores/<NNN-slug>/CHORE-PLAN.md      chore
-  docs/changes/LEDGER.md       append-only запись закрытых прогонов
 ```
 
 Раскладка целиком — [`05_REPO_STRUCTURE.md`](05_REPO_STRUCTURE.md).

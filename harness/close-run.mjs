@@ -8,7 +8,9 @@
 //   1 tag : weight←.agent/planner/mode · title/files←forge · tags←`git ls-remote origin`
 //           → ci/semver-bump.mjs decides · TAG_EXISTS ⇒ STOP (не перезаписываем историю версий) ·
 //             git tag+push on trunk merge-sha · verify on the FORGE · release-археология best-effort
-//   2 led : append a self-sufficient entry → docs/changes/LEDGER.md · verify grep hits · снятие долга
+//   2 led : self-sufficient запись → git-заметка refs/notes/ledger на merge-SHA · verify read-back ·
+//           push заметок best-effort · снятие долга. Файла в репо НЕТ и коммита в транк НЕТ: журнал —
+//           производная от git (harness/ledger.mjs), см. ledgerNote.
 //   3 wipe: сносим .agent/ ЦЕЛИКОМ, сохраняя лишь белый список (decisions.log) · verify .agent/gates empty
 //   Order is causal: 1 and 2 READ what 3 erases, so wipe is last.
 //
@@ -16,7 +18,7 @@
 // Exit 0 = closed (tag may be null — plumbing no-bump is normal). Exit 2 = STOP (guard failed / act failed).
 
 import { execFileSync } from "node:child_process"
-import { readFileSync, writeFileSync, existsSync, rmSync, appendFileSync, mkdirSync, readdirSync, readlinkSync, lstatSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, rmSync, readdirSync, readlinkSync, lstatSync } from "node:fs"
 import { join, dirname } from "node:path"
 
 // ── pure core (io injected → unit-testable without git/forge) ────────────────────
@@ -31,15 +33,23 @@ export function planClose({ gate2, merged, weight, prTitle, files, tags, bump })
   return { stop: null, tag, reason }
 }
 
-// Where the ledger entry text comes from — self-sufficient by construction (survives change-dir retention).
-export function ledgerEntry({ ts, slug, weight, pr, mergeSha, tag, reason, task }) {
+// Ref заметок журнала — один на все репозитории харнеса (читает harness/ledger.mjs).
+export const LEDGER_NOTES_REF = "ledger"
+
+// Тело git-заметки на merge-SHA — ПОСТМЕРЖ-факты прогона, то есть ровно то, чего не может нести ни один
+// коммит: тег считается ПОСЛЕ мержа. Остальное (slug/вес/задача/источник) уже влито трейлерами
+// `@git-hand`, а PR/merge-SHA/дата — сам мерж-коммит; здесь не дублируем. Форма — `key: value` на строку
+// (её читает harness/ledger.mjs и любой grep). Чистая: io: none.
+export function ledgerNote({ ts, slug, weight, pr, tag, reason, task }) {
   return [
-    `## ${ts} — ${slug}`,
-    `- weight: ${weight}`,
-    `- PR: ${pr}`,
-    `- merge: ${mergeSha}`,
-    `- tag: ${tag || `no-bump: ${reason}`}`,
-    `- task: ${(task || "").replace(/\s+/g, " ").trim().slice(0, 200)}`,
+    `run: ${slug}`,
+    `weight: ${weight}`,
+    `closed_at: ${ts}`,
+    `pr: ${pr}`,
+    `tag: ${tag || "none"}`,
+    `bump: ${tag ? "tagged" : "no-bump"}`,
+    `reason: ${String(reason || "").replace(/\s+/g, " ").trim()}`,
+    `task: ${(task || "").replace(/\s+/g, " ").trim().slice(0, 200)}`,
     "",
   ].join("\n")
 }
@@ -164,26 +174,25 @@ if (isMain) {
     if (!onForge) stop(`tag ${tag} push did not land on the forge (branch/tag protection? token scope?)`)
   }
 
-  // ACT 2 — ledger (after the tag is real)
+  // ACT 2 — ledger (after the tag is real). Запись — git-ЗАМЕТКА на merge-SHA, НЕ файл и НЕ коммит:
+  // журнал собирается из git (`harness/ledger.mjs`) по мерж-коммитам + трейлерам `@git-hand` + этим
+  // заметкам. Прежний вариант (файл + коммит плумбинга в транк) стоил лишнего коммита на прогон и
+  // ломался non-fast-forward: HEAD после мержа стоит на рабочей ветке, а транк уже уехал.
   const slug = branch.replace(/^[a-z]+\//, "") || PR
-  const led = join(ROOT, "docs/changes/LEDGER.md")
-  if (!existsSync(led)) { mkdirSync(dirname(led), { recursive: true }); writeFileSync(led, "# LEDGER — closed runs\n\n") }
-  appendFileSync(led, ledgerEntry({ ts: new Date().toISOString(), slug, weight,
-    pr: prUrl(ROOT, PR, provider, Rq), mergeSha, tag, reason, task: read(".agent/planner/brd.md").split("\n").find((l) => l.trim() && !l.startsWith("#")) || slug }))
-  if (!readFileSync(led, "utf8").includes(slug)) stop("ledger entry not written")
+  const note = ledgerNote({ ts: new Date().toISOString(), slug, weight, pr: prUrl(ROOT, PR, provider, Rq),
+    tag, reason, task: read(".agent/planner/brd.md").split("\n").find((l) => l.trim() && !l.startsWith("#")) || slug })
+  R("git", "notes", "--ref", LEDGER_NOTES_REF, "add", "-f", "-m", note, mergeSha)
+  if (!Rq("git", "notes", "--ref", LEDGER_NOTES_REF, "show", mergeSha).includes(slug)) stop("ledger note not written")
 
-  // Запись обязана быть ДОЛГОВЕЧНОЙ: файл в рабочем дереве — не запись, а черновик. Он исчезнет при
-  // свежем клоне и, что хуже, будет подметён `git add -A` следующего прогона в чужой PR. Поэтому
-  // коммит плумбинга прямо в транк (диффа продукта нет ⇒ no-bump, канарейку не гонит).
+  // Заметка обязана быть ДОЛГОВЕЧНОЙ: локальный ref переживает вайп .agent/, но не переживает свежий
+  // клон. Пуш — best-effort: не легло (нет прав на refs/notes/*) ⇒ закрытие не рушим, тег уже стоит,
+  // а вес/задача/источник и так влиты трейлерами в транк.
   let ledgerPushed = false
   try {
-    R("git", "add", "docs/changes/LEDGER.md")
-    R("git", "commit", "-m", `chore(ledger): закрыт прогон ${slug} (PR #${PR}${tag ? `, ${tag}` : ", no-bump"})`)
-    R("git", "push", "origin", `HEAD:${trunk}`)
+    R("git", "push", "origin", `refs/notes/${LEDGER_NOTES_REF}`)
     ledgerPushed = true
   } catch (e) {
-    // Защита транка / отсутствие прав — не повод рушить закрытие: тег уже стоит, запись есть локально.
-    console.error(`WARN: ledger commit/push failed (${String((e && e.message) || e).slice(0, 120)}) — запись осталась в рабочем дереве`)
+    console.error(`WARN: notes push failed (${String((e && e.message) || e).slice(0, 120)}) — заметка осталась локально`)
   }
 
   // B3 — археология релиза (best-effort, после реального тега): GitHub Release от тега + комментарий
@@ -214,9 +223,9 @@ if (isMain) {
   }
   if (existsSync(join(ROOT, ".agent/gates"))) stop("run-state wipe incomplete")
 
-  const out = { closed: true, tag: tag || null, reason, ledger: "docs/changes/LEDGER.md", ledgerPushed, released, debtCleared: !!debtRel, wiped: true, slug }
+  const out = { closed: true, tag: tag || null, reason, ledger: `refs/notes/${LEDGER_NOTES_REF}@${mergeSha.slice(0, 12)}`, ledgerPushed, released, debtCleared: !!debtRel, wiped: true, slug }
   if (has("--json")) console.log(JSON.stringify(out))
-  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger ${ledgerPushed ? "committed to trunk" : "written (NOT pushed)"}, release ${released ? "published" : "skipped"}${debtRel ? `, debt ${debtRel} cleared` : ""}, run-state wiped`)
+  else console.log(`ledger → closed ${slug}: tag=${tag || `no-bump (${reason})`}, ledger note ${ledgerPushed ? "pushed" : "local only (NOT pushed)"}, release ${released ? "published" : "skipped"}${debtRel ? `, debt ${debtRel} cleared` : ""}, run-state wiped`)
   process.exit(0)
 }
 

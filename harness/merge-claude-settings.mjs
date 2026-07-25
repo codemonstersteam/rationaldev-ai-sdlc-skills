@@ -15,7 +15,9 @@ const MANAGED_FILES = ["gate-check.mjs", "gate-bash.mjs", "gate-approve.mjs", "l
 // Ожидаемая проводка событие → хук-файл (для check: все на месте и в своём событии).
 const EXPECTED = {
   PreToolUse: ["gate-check.mjs", "gate-bash.mjs"],
-  PostToolUse: ["log-decision.mjs"],
+  // gate-approve стоит в ДВУХ событиях: печатный токен (UserPromptSubmit) и выбор пункта меню
+  // (PostToolUse[AskUserQuestion]) — выбор опции промпта не порождает, без второго канала кнопка мертва.
+  PostToolUse: ["log-decision.mjs", "gate-approve.mjs"],
   UserPromptSubmit: ["gate-approve.mjs"],
 }
 

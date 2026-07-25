@@ -79,7 +79,7 @@ flowchart TD
 
   G2{{"Gate #2 — мерж · токен GATE2 APPROVE"}}:::gate
   OP -. GATE2 APPROVE + мерж .-> G2
-  G2 --> LED["@ledger (Rochkind) · close-run.mjs<br/>пруф мерджа → тег (semver-bump) → LEDGER.md → вайп .agent/"]:::s
+  G2 --> LED["@ledger (Rochkind) · close-run.mjs<br/>пруф мерджа → тег (semver-bump) → заметка refs/notes/ledger → вайп .agent/"]:::s
   LED -->|no-bump| DONE([прогон закрыт]):::done
   LED -->|тег| MICH["@michtom (Michtom)<br/>канарейка 1→5→25→100% + 4 сигнала"]:::s
   MICH --> G3{{"Gate #3 — приёмка после канарейки"}}:::gate
@@ -118,5 +118,5 @@ flowchart TD
   непустой discriminating-сценарий и покрытие, соответствующее весу.
 - **Локальный фикс:** Linger чинит там, где проблема, — не переписывает план; имплементатор своё красное не чинит.
 - **Без луупов:** `steps`-cap + счётчик попыток (K=2) + жёсткий блок guardrail → escalate оператору.
-- **Прогон закрывается явно:** тег/no-bump → запись в `docs/changes/LEDGER.md` → вайп `.agent/`;
+- **Прогон закрывается явно:** тег/no-bump → заметка `refs/notes/ledger` на merge-SHA → вайп `.agent/`;
   иначе `gate1.approved` прошлой задачи пропустит следующую.

@@ -60,7 +60,20 @@ code yourself and never fix it.
 Inputs: `task-type`, `slug`, and a one-line `summary` for the commit/PR title. Steps:
 
 1. `commit_push`: `git add -A` → commit with a **git-conventions** message (`<key> (<type>): <текст>`, text
-   per the skill's policy) → push the branch to the provider.
+   per the skill's policy) → push the branch to the provider. The message MUST end with a **trailer footer**
+   — the run's durable record, since `.agent/` is wiped at close and the merge commit carries only the PR
+   title. Values are copied, never judged: `Weight` from `.agent/planner/mode`, `Task` = the one-line task
+   statement from `.agent/planner/brd.md`, `BR` = the source (`debt/…`, `requirements/…`; `—` if none):
+
+   ```
+   Run: <slug>
+   Weight: <patch|minor|major|greenfield|chore>
+   BR: <path|—>
+   Task: <one line>
+   ```
+
+   These trailers are read after the merge by `ci/semver-bump.mjs` (second, un-editable weight channel) and
+   by `harness/ledger.mjs` (the run journal is assembled from git, not from a committed file).
 2. `open_pr`: open or update the PR against trunk. **The title MUST carry the weight in Conventional
    Commits** — the tag automation reads the weight from there after the merge, so a mistyped prefix
    mis-versions the trunk. Derive the prefix **mechanically** from `.agent/planner/mode` (you do not judge

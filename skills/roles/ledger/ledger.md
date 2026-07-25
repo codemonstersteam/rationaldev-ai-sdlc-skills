@@ -46,8 +46,11 @@ Three acts, ordered by **causality** — the wipe is last because the first two 
    (`gh`, per `harness/vcs-providers.json`; tags via `git ls-remote origin` — never local `git tag`,
    which lags), decision delegated to `ci/semver-bump.mjs`. A `null` tag (plumbing no-bump) is a **normal** outcome, not a failure. An existing
    tag is kept, never overwritten. The tag is verified **on the forge** after push.
-2. **Ledger** — a self-sufficient entry appended to `docs/changes/LEDGER.md` (it must stay meaningful after
-   the change-dir is retention-pruned).
+2. **Ledger** — a self-sufficient record written as a **git note** on the merge-SHA (`refs/notes/ledger`),
+   then pushed. No file, no commit: the journal is a **derivative of git** (`harness/ledger.mjs`), assembled
+   from the merge commit + `@git-hand`'s trailers + this note. The note carries only what no commit can —
+   the tag decision, computed *after* the merge. It must stay meaningful after the change-dir is
+   retention-pruned. Push not landing is not a failure: the tag is already on the forge.
 3. **Wipe** — the `.agent/` run-state removed atomically; `decisions.log` kept (that is the trace, not state).
 
 ## Report (one line to izi)

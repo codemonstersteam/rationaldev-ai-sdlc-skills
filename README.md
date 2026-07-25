@@ -51,8 +51,9 @@
 ## Закрытие прогона
 
 После Gate #2 `@ledger` вызывает `harness/close-run.mjs`: **пруф мерджа** → **тег** на транке
-(`ci/semver-bump.mjs`; форма тега — от последнего релизного тега репо) → запись в
-`docs/changes/LEDGER.md` → **атомарный вайп** `.agent/`. `no-bump` — нормальный исход.
+(`ci/semver-bump.mjs`; форма тега — от последнего релизного тега репо) → **git-заметка**
+`refs/notes/ledger` на merge-SHA → **атомарный вайп** `.agent/`. `no-bump` — нормальный исход.
+Журнал прогонов собирается из git: `node harness/ledger.mjs`.
 Тег ставит только `@ledger`; `ci/recipes/*` — образец для репозиториев **без** харнеса.
 
 ## Быстрый старт
@@ -99,7 +100,7 @@ cd rationaldev-ai-sdlc-skills
 1. Открываешь раннер в проекте с точкой входа **`izi`** и ставишь задачу («прочитай `./TASK.md` и веди задачу»).
 2. `@gilb` делает требование измеримым → `@wirth-triage` определяет **вес** → `izi` запускает вертикаль.
 3. На гейтах (#1 план, #2 мерж, #3 релиз) конвейер останавливается и ждёт твоего токена.
-4. После мерджа `@ledger` ставит тег, пишет `LEDGER.md` и стирает состояние прогона.
+4. После мерджа `@ledger` ставит тег, пишет git-заметку журнала и стирает состояние прогона.
 
 **Что получишь:** команду ролей с контрактами вход/выход вместо агента-«всезнайки»; человеческие
 гейты на границах + трассировку в `.agent/decisions.log`; рациональный минимум тестов (юниты по
@@ -119,7 +120,6 @@ cd rationaldev-ai-sdlc-skills
 docs/design/<slice>/        use-case · c4 · module-tree · contracts · tickets/ (greenfield)
 docs/design/<slice>/changes/<NNN-slug>/   change-delta · PLAN · tickets/ · adr/ (patch|minor|major)
 docs/chores/<NNN-slug>/CHORE-PLAN.md      chore
-docs/changes/LEDGER.md      append-only запись закрытых прогонов
 api-specification/          ОДИН замороженный контракт на сервис
 ```
 
