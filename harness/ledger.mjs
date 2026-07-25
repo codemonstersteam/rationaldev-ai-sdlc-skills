@@ -14,6 +14,9 @@
 
 import { execFileSync } from "node:child_process"
 
+// Ref заметок журнала — зеркало LEDGER_NOTES_REF в close-run.mjs (пишет он, читаем мы).
+const NOTES_REF = "ledger"
+
 // ── pure core (io injected → unit-testable without git) ──────────────────────────
 
 // Трейлеры git-футера (`Key: value` в конце сообщения). Последний выигрывает: amend/повторный коммит
@@ -114,7 +117,10 @@ if (isMain) {
   const trunk = g("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD").replace(/^origin\//, "") || "main"
   const range = arg("--since") ? `${arg("--since")}..origin/${trunk}` : `origin/${trunk}`
   const US = "\x1f", RS = "\x1e"
-  const raw = g("log", `--max-count=${arg("--limit") || 100}`, "--notes=ledger",
+  // `--notes=ledger` на репозитории БЕЗ заметок печатает в stderr «notes ref … is invalid» — шум на
+  // ровном месте (журнал при этом корректен, просто без постмерж-фактов). Спрашиваем ref заранее.
+  const hasNotes = Boolean(g("rev-parse", "--verify", "--quiet", `refs/notes/${NOTES_REF}`))
+  const raw = g("log", `--max-count=${arg("--limit") || 100}`, ...(hasNotes ? [`--notes=${NOTES_REF}`] : []),
     `--format=%H${US}%cI${US}%s${US}%b${US}%N${RS}`, range)
 
   // Вес из Conventional-заголовка — общий модуль, а не своя копия правила. ci/ лежит РЯДОМ с harness/
