@@ -35,6 +35,15 @@ into module source — tickets and design artifacts only.
 - **contract frozen**, one per service; `io:` present on modules (presence, not review);
 - **NFRs/SLIs not dropped**; module boundaries held;
 - **package coherent** — every link in PLAN.md resolves, no dangling artifacts.
+- **node signature: one data input (REVIEW gate — NO validator can decide it)** — reading
+  `docs/design/slice-<name>/{module-tree,contracts}.md`: every pipe node takes **one data entity**;
+  each 2+-parameter node is either declared in `contracts.md` as a **join with a named input type**
+  (its constructor node) or rewritten as a **collaborator bound in the composition root**
+  (`BuildX(...) -> X`, then `x.M(data)` — a port/clock/validated config scalar is never a second
+  parameter); and **no shared `Context`/`State` is threaded through the pipe** (one input ≠ one common
+  object: it widens every antecedent, kills isolated testability, makes the antecedent→consequent table
+  fiction). A script cannot tell a port from data by the signature — this one is **yours by eye**;
+  quote the offending signature. Violation = **blocker** (`program-design` Step 3/5/7).
 - **input artifacts correct (antecedents at the boundary)** — you **MUST** run the deterministic validators;
   non-zero exit = **blocker**:
   - `node harness/validate-frd.mjs` — FRD complete AND free of pseudo-UCs (framework/boot/generic-error = Extensions, not UCs);

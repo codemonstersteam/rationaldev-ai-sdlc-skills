@@ -84,8 +84,17 @@ The full text of each rule is in its step's file.
 - **Single `Request` (Step 3, lesson D1).** 1 slice = 1 external input = exactly one
   `Request`; flag/option = a `Request` field; no side-injections past `Request`; no
   test-only I/O method; a branch on a field = logic (unit), not a component scenario.
-- **One data argument (Step 3).** Each tree node takes exactly one data entity; 2+ → introduce
-  a domain entity and a constructor node `NewT(...)`.
+- **One data input per node (Step 3).** A pipe node takes exactly **one data entity — the one that
+  step owns**. Environment (ports, clock, clients, config scalars already validated at boot) is bound
+  **before** the pipe, in the composition root, and enters the step as a ready **collaborator with a
+  one-argument method** (`BuildSpecLoader(provider, timeout, client) -> SpecLoader`; in the pipe
+  `loader.Load()`), never as a second parameter. A real **join** of two flows is materialized as a
+  separate **named input type** with its own constructor node `NewT(...)` — the only node taking 2+.
+- **No shared `Context`/`State` (Step 3, counter-rule to the above).** One input **≠** one common
+  object threaded through the whole pipe: a carrier gives every node access to everything, the
+  antecedent stops being narrow, the step cannot be tested in isolation, and the
+  antecedent→consequent table in `contracts.md` becomes fiction. Review gate, not scriptable
+  (a port is indistinguishable from data by signature) — `@mills` reads it at Gate #1.
 - **Invariant — subtype, not guard (Step 3).** Checking an invariant over a domain struct =
   a subtype constructor, not a guard function `-> ()`.
 - **I/O isolation (Step 5/6).** No raw `*sql.DB`/`*http.Client`/broker-conn in

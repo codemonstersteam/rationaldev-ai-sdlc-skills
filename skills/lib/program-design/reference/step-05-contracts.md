@@ -12,11 +12,19 @@ have no antecedent/consequent (Step 3):
 ### <ModuleName>
 
 - **Signature:** `name(input: Type) -> Result<out: Type, Error>`
-- **Input (data):** one domain struct, or a Request DTO, or void.
-                    If there are 2+ data arguments — it violates Step 3's
-                    "hard rule of the single argument": return to Step 3.
+- **Input (data):** one domain struct, or a Request DTO, or void — the entity THIS
+                    step owns. 2+ data arguments violate Step 3's "one data input":
+                    either the extra is environment (→ `Dependencies`, bound as a
+                    collaborator) or it is a real join (→ a NAMED input type declared
+                    here, built by its own constructor node). A shared `Context`/`State`
+                    carrier is **FORBIDDEN** as Input: it is not one input, it is access
+                    to everything — the antecedent below stops being narrow and the
+                    antecedent→consequent table becomes fiction.
 - **Dependencies (deps):** the autonomous I/O object (`Store`/`Client`/`Publisher`),
-                            `clock.Clock`, `*Logger`, config (`RPConfig`). **NEVER** a raw
+                            `clock.Clock`, `*Logger`, config (`RPConfig`). Bound **before** the
+                            pipe in the composition root (Step 7) by a factory
+                            `BuildX(...) -> X`; the node then calls `x.M(data)` — a port or a
+                            validated config scalar is never a second data parameter. **NEVER** a raw
                             `*sql.DB`/`*http.Client`/broker-conn — those are hidden inside the
                             I/O object (Step 6). If there are no deps — write `—`.
 - **io:** `none | http | llm | queue | db` — **mandatory on every module.**
