@@ -198,7 +198,9 @@ if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $
     $env:RATIONALDEV_MODELS -and (Test-Path $env:RATIONALDEV_MODELS) -and ((Get-Item $env:RATIONALDEV_MODELS).Length -gt 0)) {
   $dirty = git -C $Bundle status --porcelain -- harness/agents skills/roles 2>$null
   if ($dirty) {
-    git -C $Bundle checkout -- harness/agents skills/roles 2>$null
+    # ТОЛЬКО генерируемые пути: harness/agents/_shared — источник правды ролей, слепой checkout
+    # стирал ручные правки. Зеркало install.sh.
+    git -C $Bundle checkout -- harness/agents/claude harness/agents/codex harness/agents/opencode skills/roles harness/instructions/AGENTS.codex.md 2>$null
     $modelsPristineNote = "override-модели скопированы в проект; клон восстановлен pristine"
   }
 }

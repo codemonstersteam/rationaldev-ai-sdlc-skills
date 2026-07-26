@@ -237,8 +237,15 @@ if [ -d "$BUNDLE/.git" ] && [ -s "${RATIONALDEV_MODELS:-/nonexistent-override}" 
     mkdir -p "$(dirname "$AGENTS_DST")"; ln -sfn "$OUTDIR" "$AGENTS_DST"
     MODELS_PRISTINE_NOTE="проекции '$RUNNER' с override-моделями → $OUTDIR (клон pristine, симлинк перецелен)"
   fi
-  # Восстановить ЛЮБУЮ генерённую грязь (проекции всех раннеров + контракт skills/roles) → клон снова pristine.
-  git -C "$BUNDLE" checkout -- harness/agents skills/roles 2>/dev/null || true
+  # Восстановить ГЕНЕРЁННУЮ грязь (проекции раннеров + контракт skills/roles) → клон снова pristine.
+  # ТОЛЬКО генерируемые пути: `harness/agents` целиком сюда брать НЕЛЬЗЯ — внутри `_shared/` лежит
+  # ИСТОЧНИК ПРАВДЫ ролей, и слепой checkout молча стирал ручные правки (потеря работы наблюдалась).
+  # Правки источника переживают установку; расходящиеся с ними проекции вернутся при gen-agents.
+  git -C "$BUNDLE" checkout -- harness/agents/claude harness/agents/codex harness/agents/opencode \
+    skills/roles harness/instructions/AGENTS.codex.md 2>/dev/null || true
+  if [ -n "$(git -C "$BUNDLE" status --porcelain -- harness/agents/_shared 2>/dev/null)" ]; then
+    echo "  примечание: локальные правки harness/agents/_shared/ сохранены (источник правды не откатываем)"
+  fi
 fi
 
 MODELS_MSG="(node не найден)"
