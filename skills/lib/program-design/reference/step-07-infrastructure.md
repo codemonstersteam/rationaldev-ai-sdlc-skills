@@ -17,6 +17,14 @@ which input types the service has (see Step 2):
 - if there are CLI/cron slices — registers the entry points in the scheduler or CLI router;
 - passes the slice its initialized dependencies via DI / parameters.
 
+**This is the composition root — the ONLY place where environment is bound (Step 3).** Every port,
+clock, client and **validated config scalar** is closed over by a factory returning a ready
+collaborator — `BuildSpecLoader(provider, timeout, client) -> SpecLoader`,
+`BuildReportWriter(settings) -> ReportWriter` — so the pipe node calls a one-argument method
+(`loader.Load()` / `writer.Write(report)`) and keeps its single data input. Threading a scalar or a
+port as a node's second parameter (or a shared `Context`/`State` through the pipe) means the binding
+was skipped here: return to Step 3.
+
 This module has **no business logic**, not a single line. Its job is to assemble the program
 from ready slices and bring it up. No orchestration between slices — impossible by construction,
 because the slices are independent.

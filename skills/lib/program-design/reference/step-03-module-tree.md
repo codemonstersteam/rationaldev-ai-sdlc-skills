@@ -37,8 +37,9 @@ entry», «sort the catalogue»):
   bytes process↔external (DB/broker/API), **no business logic**. → *Why:* a swappable seam, and the domain
   never touches transport (full I/O design: Step 6).
 
-- **One data argument (HARD).** A node takes exactly one data entity; 2+ ⇒ unite them in a domain struct
-  via a new constructor node. → *Why:* leaking fields (`f(id, handle, ttl, db)`) hide the domain entity.
+- **One data input (HARD).** A node takes exactly one data entity — its own for that step; 2+ ⇒ bind it
+  as a collaborator or name the join (see "Node signature" below). → *Why:* leaking fields
+  (`f(id, handle, ttl, db)`) hide the domain entity.
 - **Invariant = subtype, not guard.** An invariant over a valid struct → a subtype constructor
   (`NewFreshEntity`), not a `-> ()` guard. → *Why:* a guard leaves the type unchanged (easy to skip); a
   subtype makes "unchecked" fail to compile.
@@ -53,15 +54,39 @@ entry», «sort the catalogue»):
 - **Two things in one module = composite — split it.** → *Why:* one phrase per module keeps the tree
   readable and each ticket small.
 
+#### Node signature — one data input, environment bound in the composition root (HARD)
+
+**A pipe node has exactly ONE data input — the one that step owns.** Everything else is not an
+argument:
+
+- **Environment → collaborator.** Ports, clock, clients, and **config scalars already validated at
+  boot** (Step 7) are bound **before** the pipe, in the composition root, by a factory that returns a
+  ready collaborator: `BuildSpecLoader(provider, timeout, client) -> SpecLoader`,
+  `BuildReportWriter(settings) -> ReportWriter`. In the pipe the node calls a **one-argument method** —
+  `loader.Load()` / `writer.Write(report)`. A port or a scalar is **never** a second parameter.
+- **Real join → named input type.** When two genuinely different data flows must meet, materialize the
+  meeting as a **separate named type** with its own constructor node (`NewT(a, b) -> T`); that
+  constructor is the **only** node taking 2+, and the type is declared in `contracts.md` (Step 5).
+- **FORBIDDEN: a shared `Context`/`State` threaded through the pipe.** One input **≠** one common
+  object. → *Why:* a carrier hands every node access to everything — the antecedent stops being narrow,
+  the step cannot be tested in isolation, and the antecedent→consequent table in `contracts.md` turns
+  into fiction. This degenerate form is worse than the flat argument list the rule was meant to kill.
+
+Not mechanizable: a validator cannot tell a port from data by the signature. It is a **review gate** —
+`@mills` reads it at Gate #1.
+
 #### Head-pipe pseudocode (the slice card's main artifact)
 
 A linear 5–10-step pipe, `Result<T, Error>` flowing, each step one child. No branches, no loops.
+Collaborators (`challenges`) come from the composition root; the only 2-argument node is the
+constructor that names the join.
 
 ```
 processRegistration(req: Request) -> Result<RegistrationResponse, Error>:
-    | NewRegistrationCommand(req)     -> RegistrationCommand
-    | persistChallenge(cmd, store)    -> ChallengeID
-    | buildResponse(cmd, challengeID) -> RegistrationResponse
+    | NewRegistrationCommand(req)         -> RegistrationCommand
+    | challenges.Persist(cmd)             -> ChallengeID          # Store bound at the root
+    | NewResponseInput(cmd, challengeID)  -> ResponseInput        # named join
+    | buildResponse(in)                   -> RegistrationResponse
 ```
 → The implementer writes the head body straight from this.
 
