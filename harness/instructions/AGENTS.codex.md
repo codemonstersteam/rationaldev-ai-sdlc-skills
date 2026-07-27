@@ -264,6 +264,13 @@ author (`@hughes-rework` never writes README). **Purely internal edit** → do N
 `patch`/`chore`/`onboard` never call it. Later `@fagan: FAIL: README stale` → re-delegate `@dijkstra`
 change-mode (NOT `@linger`), re-run `@fagan`.
 
+**Canon sync — AFTER `@fagan accepted`, before `@git-hand mode=terminal` (SemVer lanes with a change
+folder).** Delta touched `<change-dir>/{module-tree,contracts,c4}.md`? → re-delegate
+`@wirth-moduledesigner` in **`mode=canon-sync`**: he folds the accepted delta into
+`docs/design/<slice>/*` and stamps `> Current as of change <NNN-slug> (lane <weight>)`; the change folder
+is untouched (provenance). Canon is LIVE, the delta is its history — a reader takes truth from the canon.
+Gate: `node harness/validate-design-sync.mjs`. `design=skip`/`chore` → nothing to fold.
+
 **`@fagan` — terminal acceptance inspector** (never the author/fixer — separation of duties). Input =
 slice path + slug → `accepted | FAIL: <item>`: runs the deterministic DoD gate
 (`validate-component-tests` re-check + `validate-dod --run` + README structure), judges the semantic
@@ -893,12 +900,22 @@ Resolve your **design-dir** once, up front — read `.agent/planner/change-dir`:
 - **Present** (a SemVer lane, `minor`/`major` with `design=needed`) → `<design-dir>` = `<change-dir>` =
   `docs/design/<slice>/changes/<slug>/`. You **EVOLVE** the affected modules into
   `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` — additively on `minor`, with the redesign+migration
-  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. The slice's
-  greenfield `docs/design/<slice>/*` is frozen design — you read it, you never overwrite it.
+  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. While
+  DESIGNING you never touch `docs/design/<slice>/*` — it is the pre-change invariant you reason from.
+  Folding the delta into it happens later, after acceptance (see **Canon sync**).
 - **Absent** (greenfield) → `<design-dir>` = `docs/design/<slice>/`.
 Every design-package path below — the idempotency **done-sentinel**, In/Out, ADRs, the C4 render check — roots
 at `<design-dir>`; the sentinel key stays `moduledesigner <slice>`. (The layout check roots at code
 `internal/<slug>/`, unaffected.)
+
+## Canon sync — after `@fagan accepted`, fold the delta into the slice package (SemVer lanes)
+
+`izi` re-delegates you in **`mode=canon-sync`** once acceptance is green, before the terminal commit. You
+fold the ACCEPTED delta into `docs/design/<slice>/{module-tree,contracts,c4}.md` (+ `adr/`) so the canon
+states the **current** design, and stamp each touched file's header:
+`> Current as of change <NNN-slug> (lane <weight>)`. The change folder is **not** rewritten — it stays the
+provenance record ("what moved and why"). No new decisions, no scope past the accepted delta: this is a
+sweep, not a redesign. Gate: `node harness/validate-design-sync.mjs`.
 
 ## Idempotency — check FIRST, before designing
 izi may restart this stage after a failure, repeating ALL slices. Check cheaply and robustly via the
@@ -1733,6 +1750,11 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
   failure mode is now documented (the affected API/command block + a matching row in `## Карта режимов
   отказа`). A stale README on a surface-changing delta → `FAIL: README stale` — izi routes the fix to
   `@dijkstra` change-mode (the sole README author), **not** `@linger`.
+- **Canon synced with the accepted delta.** `node harness/validate-design-sync.mjs` — a delta that touched
+  `module-tree`/`contracts`/`c4` must be folded into `docs/design/<slice>/*`, which carries
+  `> Current as of change <NNN-slug>`. Non-zero → `FAIL: canon stale` — izi routes it to
+  `@wirth-moduledesigner` in `mode=canon-sync` (the design author), **not** `@linger`. The canon is what the
+  next run reads; a stale one makes it design against nodes that no longer exist.
 Where the contract is not machine-readable, `validate-contract-diff` cannot prove additivity — then **you** are
 the proof: existing tests untouched + the whole suite green. Any missing item → `FAIL: <item>`, never a soft pass.
 

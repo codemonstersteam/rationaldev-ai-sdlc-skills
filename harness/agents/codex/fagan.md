@@ -59,6 +59,11 @@ The weight is a promise to the consumer; acceptance is where it is **proven**, n
   failure mode is now documented (the affected API/command block + a matching row in `## Карта режимов
   отказа`). A stale README on a surface-changing delta → `FAIL: README stale` — izi routes the fix to
   `@dijkstra` change-mode (the sole README author), **not** `@linger`.
+- **Canon synced with the accepted delta.** `node harness/validate-design-sync.mjs` — a delta that touched
+  `module-tree`/`contracts`/`c4` must be folded into `docs/design/<slice>/*`, which carries
+  `> Current as of change <NNN-slug>`. Non-zero → `FAIL: canon stale` — izi routes it to
+  `@wirth-moduledesigner` in `mode=canon-sync` (the design author), **not** `@linger`. The canon is what the
+  next run reads; a stale one makes it design against nodes that no longer exist.
 Where the contract is not machine-readable, `validate-contract-diff` cannot prove additivity — then **you** are
 the proof: existing tests untouched + the whole suite green. Any missing item → `FAIL: <item>`, never a soft pass.
 

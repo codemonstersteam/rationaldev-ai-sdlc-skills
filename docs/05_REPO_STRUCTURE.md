@@ -44,8 +44,14 @@
 ```
 
 **Правило размещения по весу:** `greenfield` пишет в `docs/design/<slice>/` (+ `tickets/`);
-`patch|minor|major` — **только** в `changes/<NNN-slug>/` того же среза (greenfield-запись «как
-построили» не затирается); `chore` — в top-level `docs/chores/<NNN-slug>/`.
+`patch|minor|major` — в `changes/<NNN-slug>/` того же среза; `chore` — в top-level
+`docs/chores/<NNN-slug>/`.
+
+**Канон живой, дельта — провенанс.** Пакет среза (`module-tree`/`contracts`/`c4`/`adr`) описывает
+**текущее** состояние: после приёмки изменения `@wirth-moduledesigner` сводит в него дельту, и канон
+несёт маркер `> Current as of change <NNN-slug> (lane <вес>)`. Change-папка не переписывается — она
+остаётся записью «что и почему сдвинулось» (дельта, рационал, ADR, тикеты). Читатель берёт правду из
+канона, историю — из `changes/`; расходиться им нельзя (`validate-design-sync`).
 
 **Несколько контекстов** — появляется корневой `CONTEXT-MAP.md`, а `CONTEXT.md`/`docs/adr`
 переезжают внутрь контекста:
