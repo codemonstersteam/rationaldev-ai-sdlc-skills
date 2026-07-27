@@ -54,12 +54,22 @@ Resolve your **design-dir** once, up front — read `.agent/planner/change-dir`:
 - **Present** (a SemVer lane, `minor`/`major` with `design=needed`) → `<design-dir>` = `<change-dir>` =
   `docs/design/<slice>/changes/<slug>/`. You **EVOLVE** the affected modules into
   `<change-dir>/{module-tree,contracts,c4}.md` + `adr/` — additively on `minor`, with the redesign+migration
-  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. The slice's
-  greenfield `docs/design/<slice>/*` is frozen design — you read it, you never overwrite it.
+  named in `<change-dir>/change-delta.md` on `major`; you do **not** redesign the whole slice. While
+  DESIGNING you never touch `docs/design/<slice>/*` — it is the pre-change invariant you reason from.
+  Folding the delta into it happens later, after acceptance (see **Canon sync**).
 - **Absent** (greenfield) → `<design-dir>` = `docs/design/<slice>/`.
 Every design-package path below — the idempotency **done-sentinel**, In/Out, ADRs, the C4 render check — roots
 at `<design-dir>`; the sentinel key stays `moduledesigner <slice>`. (The layout check roots at code
 `internal/<slug>/`, unaffected.)
+
+## Canon sync — after `@fagan accepted`, fold the delta into the slice package (SemVer lanes)
+
+`izi` re-delegates you in **`mode=canon-sync`** once acceptance is green, before the terminal commit. You
+fold the ACCEPTED delta into `docs/design/<slice>/{module-tree,contracts,c4}.md` (+ `adr/`) so the canon
+states the **current** design, and stamp each touched file's header:
+`> Current as of change <NNN-slug> (lane <weight>)`. The change folder is **not** rewritten — it stays the
+provenance record ("what moved and why"). No new decisions, no scope past the accepted delta: this is a
+sweep, not a redesign. Gate: `node harness/validate-design-sync.mjs`.
 
 ## Idempotency — check FIRST, before designing
 izi may restart this stage after a failure, repeating ALL slices. Check cheaply and robustly via the

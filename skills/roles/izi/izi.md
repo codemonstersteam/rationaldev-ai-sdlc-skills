@@ -262,6 +262,13 @@ author (`@hughes-rework` never writes README). **Purely internal edit** → do N
 `patch`/`chore`/`onboard` never call it. Later `@fagan: FAIL: README stale` → re-delegate `@dijkstra`
 change-mode (NOT `@linger`), re-run `@fagan`.
 
+**Canon sync — AFTER `@fagan accepted`, before `@git-hand mode=terminal` (SemVer lanes with a change
+folder).** Delta touched `<change-dir>/{module-tree,contracts,c4}.md`? → re-delegate
+`@wirth-moduledesigner` in **`mode=canon-sync`**: he folds the accepted delta into
+`docs/design/<slice>/*` and stamps `> Current as of change <NNN-slug> (lane <weight>)`; the change folder
+is untouched (provenance). Canon is LIVE, the delta is its history — a reader takes truth from the canon.
+Gate: `node harness/validate-design-sync.mjs`. `design=skip`/`chore` → nothing to fold.
+
 **`@fagan` — terminal acceptance inspector** (never the author/fixer — separation of duties). Input =
 slice path + slug → `accepted | FAIL: <item>`: runs the deterministic DoD gate
 (`validate-component-tests` re-check + `validate-dod --run` + README structure), judges the semantic
